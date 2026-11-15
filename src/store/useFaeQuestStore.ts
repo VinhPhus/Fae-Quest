@@ -26,6 +26,13 @@ import {
 import { INITIAL_SYSTEM_QUESTS, SYSTEM_TITLES } from '../constants/systemQuests';
 import { playSoundEffect } from '../utils/soundEffects';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
+import {
+  syncProfileAndStateToCloud,
+  restoreUserStateFromCloud,
+  getOrInitHunterId,
+  setStoredHunterId,
+  UserStateCloud,
+} from '../utils/syncManager';
 
 interface FaeQuestState {
   playerName: string;
@@ -46,6 +53,11 @@ interface FaeQuestState {
   unlockedTitleIds: string[];
   equippedTitleId: string;
   focusSessionsCompleted: number;
+
+  // Supabase Cloud Sync
+  hunterId: string;
+  cloudSyncStatus: 'idle' | 'syncing' | 'synced' | 'error';
+  lastSyncedAt?: string;
 
   // UI state
   activeTab: ActiveTab;
@@ -109,6 +121,9 @@ interface FaeQuestState {
   claimSystemQuestReward: (questId: string) => void;
   equipTitle: (titleId: string) => void;
   checkSystemMilestones: () => void;
+  setHunterId: (id: string) => void;
+  syncToCloud: (silent?: boolean) => Promise<boolean>;
+  restoreFromCloud: (targetHunterId: string) => Promise<boolean>;
 }
 
 const getTodayString = () => {
@@ -117,6 +132,14 @@ const getTodayString = () => {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+let autoSyncTimer: any = null;
+const debouncedAutoSync = (store: any) => {
+  if (autoSyncTimer) clearTimeout(autoSyncTimer);
+  autoSyncTimer = setTimeout(() => {
+    store.syncToCloud(true);
+  }, 1800);
 };
 
 export const useFaeQuestStore = create<FaeQuestState>()(
@@ -141,6 +164,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       equippedTitleId: 'title_tan_binh_gai_do',
       focusSessionsCompleted: 2,
 
+      hunterId: getOrInitHunterId(),
+      cloudSyncStatus: 'idle',
+      lastSyncedAt: undefined,
+
       activeTab: 'quests',
       activeCategoryFilter: 'all',
       activeStatusFilter: 'all',
@@ -164,11 +191,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         if (trimmed) {
           set({ playerName: trimmed });
           get().addToast(`Đã đổi tên nhân vật thành "${trimmed}"`, 'success');
+          debouncedAutoSync(get());
         }
       },
 
       setAvatarUrl: (url: string) => {
         set({ avatarUrl: url });
+        debouncedAutoSync(get());
       },
 
       toggleSound: () => {
@@ -346,6 +375,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             playSoundEffect('complete', state.soundEnabled);
             get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
           }
+          debouncedAutoSync(get());
         } else {
           // Anti-Cheat: Uncheck Task - Check if coins are sufficient to revoke
           const streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
@@ -383,6 +413,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }));
 
           get().addToast(`Đã hoàn tác nhiệm vụ (-${deductedExp} EXP, -${deductedCoins} Xu)`, 'info');
+          debouncedAutoSync(get());
         }
       },
 
@@ -501,6 +532,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           `🎉 Tuyệt vời! Đã hoàn thành nhiệm vụ & phiên Focus: Nhận tổng +${totalExp} EXP và +${totalCoins} Xu Vàng!`,
           'success'
         );
+        debouncedAutoSync(get());
       },
 
       buyShopItem: (itemId: string, coords) => {
@@ -544,6 +576,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         playSoundEffect('coin', state.soundEnabled);
         get().addToast(`Đã đổi "${item.title}"! Kiểm tra trong Kho Phần Thưởng nhé.`, 'success');
+        debouncedAutoSync(get());
       },
 
       addShopItem: (title, desc, cost, emoji) => {
@@ -643,6 +676,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           playSoundEffect('complete', state.soundEnabled);
           get().addToast(`Đã cộng thử +${amount} EXP!`, 'success');
         }
+        debouncedAutoSync(get());
       },
 
       closeRankUpModal: () => set({ rankUpData: null }),
@@ -742,6 +776,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         } else {
           get().addToast(`🔥 Điểm danh thành công ngày ${nextStreak}/${quest.targetDays}! Giữ vững ngọn lửa kỷ luật!`, 'success');
         }
+        debouncedAutoSync(get());
       },
 
       resetStreakQuest: (questId: string) => {
@@ -766,6 +801,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           '🔄 Đã đưa bộ đếm về Ngày 0! Vì hôm nay bạn đã Reset, hãy chấn chỉnh lại tinh thần và bắt đầu điểm danh Ngày 1 sau 00:00 đêm nay.',
           'info'
         );
+        debouncedAutoSync(get());
       },
 
       claimSystemQuestReward: (questId: string) => {
@@ -811,6 +847,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           `🎉 Nhận thưởng thành công: +${quest.expReward} EXP, +${quest.coinReward} Xu và mở khóa Danh hiệu "${quest.rewardTitleName}"!`,
           'success'
         );
+        debouncedAutoSync(get());
       },
 
       equipTitle: (titleId: string) => {
@@ -823,6 +860,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         set({ equippedTitleId: titleId });
         playSoundEffect('click', state.soundEnabled);
         get().addToast(`Đã trang bị danh hiệu "${titleInfo?.name || titleId}"!`, 'success');
+        debouncedAutoSync(get());
       },
 
       checkSystemMilestones: () => {
@@ -893,10 +931,114 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
         }
       },
+
+      setHunterId: (id: string) => {
+        const clean = id.trim();
+        if (clean) {
+          setStoredHunterId(clean);
+          set({ hunterId: clean });
+        }
+      },
+
+      syncToCloud: async (silent = false) => {
+        const state = get();
+        if (!state.hunterId) return false;
+        set({ cloudSyncStatus: 'syncing' });
+
+        const snapshot: UserStateCloud = {
+          playerName: state.playerName,
+          avatarUrl: state.avatarUrl,
+          exp: state.exp,
+          coins: state.coins,
+          completedTotal: state.completedTotal,
+          streakDays: state.streakDays,
+          dailyCompletedCount: state.dailyCompletedCount,
+          dailyBossCompletedCount: state.dailyBossCompletedCount,
+          tasks: state.tasks,
+          shopItems: state.shopItems,
+          inventory: state.inventory,
+          rivals: state.rivals,
+          systemQuests: state.systemQuests,
+          unlockedTitleIds: state.unlockedTitleIds,
+          equippedTitleId: state.equippedTitleId,
+          focusSessionsCompleted: state.focusSessionsCompleted,
+        };
+
+        const res = await syncProfileAndStateToCloud(state.hunterId, snapshot);
+        if (res.success) {
+          const nowStr = new Date().toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+          set({ cloudSyncStatus: 'synced', lastSyncedAt: nowStr });
+          if (!silent) {
+            get().addToast('☁️ Đã đồng bộ dữ liệu lên Supabase thành công!', 'success');
+          }
+          return true;
+        } else {
+          set({ cloudSyncStatus: 'error' });
+          if (!silent) {
+            get().addToast(`⚠️ Lỗi đồng bộ đám mây: ${res.error}`, 'error');
+          }
+          return false;
+        }
+      },
+
+      restoreFromCloud: async (targetHunterId: string) => {
+        const cleanId = targetHunterId.trim();
+        if (!cleanId) {
+          get().addToast('Vui lòng nhập Mã Định Danh Thợ Săn để khôi phục!', 'error');
+          return false;
+        }
+        set({ cloudSyncStatus: 'syncing' });
+        const res = await restoreUserStateFromCloud(cleanId);
+        if (res.success && res.state) {
+          const s = res.state;
+          setStoredHunterId(cleanId);
+          set({
+            hunterId: cleanId,
+            playerName: s.playerName || get().playerName,
+            avatarUrl: s.avatarUrl || '',
+            exp: typeof s.exp === 'number' ? s.exp : get().exp,
+            coins: typeof s.coins === 'number' ? s.coins : get().coins,
+            completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : get().completedTotal,
+            streakDays: typeof s.streakDays === 'number' ? s.streakDays : get().streakDays,
+            dailyCompletedCount: s.dailyCompletedCount || 0,
+            dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
+            tasks: Array.isArray(s.tasks) ? s.tasks : get().tasks,
+            shopItems: Array.isArray(s.shopItems) ? s.shopItems : get().shopItems,
+            inventory: Array.isArray(s.inventory) ? s.inventory : get().inventory,
+            rivals: Array.isArray(s.rivals) ? s.rivals : get().rivals,
+            systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : get().systemQuests,
+            unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : get().unlockedTitleIds,
+            equippedTitleId: s.equippedTitleId || get().equippedTitleId,
+            focusSessionsCompleted: s.focusSessionsCompleted || 0,
+            cloudSyncStatus: 'synced',
+            lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }),
+          });
+          playSoundEffect('complete', get().soundEnabled);
+          get().addToast(
+            `🎉 Đã khôi phục thành công dữ liệu của "${s.playerName || cleanId}" từ Supabase!`,
+            'success'
+          );
+          return true;
+        } else {
+          set({ cloudSyncStatus: 'error' });
+          get().addToast(`❌ Khôi phục thất bại: ${res.error}`, 'error');
+          return false;
+        }
+      },
     }),
     {
       name: 'faequest_rpg_todo_storage_v2',
       partialize: (state) => ({
+        hunterId: state.hunterId,
+        lastSyncedAt: state.lastSyncedAt,
         playerName: state.playerName,
         avatarUrl: state.avatarUrl,
         exp: state.exp,

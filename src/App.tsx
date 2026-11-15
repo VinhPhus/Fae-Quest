@@ -29,6 +29,8 @@ export const App: React.FC = () => {
   useEffect(() => {
     checkDailyReset();
     checkSystemMilestones();
+    // Tự động đồng bộ nhẹ lên Supabase khi khởi chạy ứng dụng
+    useFaeQuestStore.getState().syncToCloud(true);
   }, [checkDailyReset, checkSystemMilestones]);
 
   return (

@@ -20,6 +20,10 @@ import {
   Maximize2,
   Building2,
   QrCode,
+  Cloud,
+  CloudUpload,
+  CloudDownload,
+  RefreshCw,
 } from 'lucide-react';
 
 export const SettingsModal: React.FC = () => {
@@ -33,12 +37,21 @@ export const SettingsModal: React.FC = () => {
     grantDemoBoost,
     setResetOpen,
     addToast,
+    hunterId,
+    cloudSyncStatus,
+    lastSyncedAt,
+    syncToCloud,
+    restoreFromCloud,
   } = useFaeQuestStore();
 
   const [activeTab, setActiveTab] = useState<'general' | 'data' | 'about'>('general');
   const [editingName, setEditingName] = useState(playerName);
   const [isQrZoomed, setIsQrZoomed] = useState(false);
   const [copiedStk, setCopiedStk] = useState(false);
+  const [inputHunterId, setInputHunterId] = useState('');
+  const [copiedHunterId, setCopiedHunterId] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isSettingsOpen) return null;
@@ -66,6 +79,42 @@ export const SettingsModal: React.FC = () => {
     setCopiedStk(true);
     addToast('Đã sao chép STK: 6511259236164', 'success');
     setTimeout(() => setCopiedStk(false), 3000);
+  };
+
+  const handleCopyHunterId = () => {
+    if (!hunterId) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(hunterId);
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.value = hunterId;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    setCopiedHunterId(true);
+    addToast('Đã sao chép Mã Định Danh Thợ Săn!', 'success');
+    setTimeout(() => setCopiedHunterId(false), 3000);
+  };
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    await syncToCloud(false);
+    setIsSyncing(false);
+  };
+
+  const handleRestoreFromCloud = async () => {
+    if (!inputHunterId.trim()) {
+      addToast('Vui lòng nhập Mã Định Danh Thợ Săn để khôi phục!', 'error');
+      return;
+    }
+    setIsRestoring(true);
+    const success = await restoreFromCloud(inputHunterId.trim());
+    setIsRestoring(false);
+    if (success) {
+      setInputHunterId('');
+    }
   };
 
   // Export current localStorage data as JSON file
@@ -326,6 +375,95 @@ export const SettingsModal: React.FC = () => {
           {/* TAB 2: DATA & BACKUP & RESET */}
           {activeTab === 'data' && (
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Cloud Sync Supabase */}
+              <div className="space-y-3">
+                <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
+                  <Cloud className="w-4 h-4 text-fae" />
+                  <span>Đồng Bộ Đám Mây Supabase (Cloud Sync)</span>
+                </label>
+
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-thorn-dark via-[#2D1036] to-thorn-dark border border-fae/40 shadow-lg space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-rpg font-bold text-sm text-parchment">
+                        Mã Định Danh Thợ Săn (Sync Code)
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border w-fit ${
+                        cloudSyncStatus === 'syncing'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 animate-pulse'
+                          : cloudSyncStatus === 'synced'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                          : cloudSyncStatus === 'error'
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-400/40'
+                          : 'bg-thorn text-parchment/60 border-parchment/20'
+                      }`}
+                    >
+                      {cloudSyncStatus === 'syncing'
+                        ? '🔄 Đang đồng bộ...'
+                        : cloudSyncStatus === 'synced'
+                        ? `✓ Đã đồng bộ: ${lastSyncedAt || 'Vừa xong'}`
+                        : cloudSyncStatus === 'error'
+                        ? '⚠️ Lỗi đồng bộ'
+                        : 'Sẵn sàng'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-parchment/70 leading-relaxed">
+                    Mã này đại diện cho nhân vật của bạn trên cơ sở dữ liệu Supabase. Sử dụng mã này để đồng bộ và tiếp tục hành trình trên máy tính hoặc điện thoại khác.
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex-1 px-3 py-2 rounded-xl bg-thorn font-mono text-xs font-bold text-fae border border-opal/40 select-all truncate">
+                      {hunterId}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyHunterId}
+                      className="px-3.5 py-2 rounded-xl bg-thorn-dark hover:bg-thorn border border-fae/40 text-xs font-bold text-parchment flex items-center justify-center gap-1.5 transition"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-fae" />
+                      <span>{copiedHunterId ? 'Đã Chép' : 'Sao Chép'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleManualSync}
+                      disabled={isSyncing}
+                      className="px-4 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment flex items-center justify-center gap-1.5 shadow hover:scale-105 transition disabled:opacity-50"
+                    >
+                      <CloudUpload className={`w-3.5 h-3.5 ${isSyncing ? 'animate-bounce' : ''}`} />
+                      <span>{isSyncing ? 'Đang Đẩy...' : 'Đồng Bộ Ngay'}</span>
+                    </button>
+                  </div>
+
+                  {/* Khôi Phục Dữ Liệu Bằng Mã Định Danh */}
+                  <div className="pt-3 border-t border-parchment/10 space-y-2">
+                    <label className="text-[11px] font-bold uppercase text-parchment/80 block">
+                      Khôi Phục Dữ Liệu Bằng Mã Định Danh
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        type="text"
+                        value={inputHunterId}
+                        onChange={(e) => setInputHunterId(e.target.value)}
+                        placeholder="Dán mã hunter_xxx..."
+                        className="flex-1 px-3 py-2 rounded-xl bg-thorn border border-opal/40 text-xs text-parchment font-mono placeholder-parchment/40 focus:outline-none focus:border-fae"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRestoreFromCloud}
+                        disabled={isRestoring}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition flex items-center justify-center gap-1.5 shadow disabled:opacity-50"
+                      >
+                        <CloudDownload className={`w-3.5 h-3.5 ${isRestoring ? 'animate-bounce' : ''}`} />
+                        <span>{isRestoring ? 'Đang Khôi Phục...' : 'Tải Dữ Liệu Về Máy'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Backup & Restore */}
               <div className="space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
