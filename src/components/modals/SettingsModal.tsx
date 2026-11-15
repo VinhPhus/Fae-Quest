@@ -11,7 +11,6 @@ import {
   RotateCcw,
   Download,
   Upload,
-  Zap,
   ShieldAlert,
   Sparkles,
   Check,
@@ -36,7 +35,6 @@ export const SettingsModal: React.FC = () => {
     toggleSound,
     playerName,
     setPlayerName,
-    grantDemoBoost,
     setResetOpen,
     addToast,
     hunterId,
@@ -340,10 +338,11 @@ export const SettingsModal: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="px-3 py-1.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow"
+                        className="px-3 py-1.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow hover:scale-105 active:scale-95"
+                        title="Đăng xuất khỏi tài khoản"
                       >
                         <LogOut className="w-3.5 h-3.5 text-fae" />
-                        <span>🚪 Đăng Xuất</span>
+                        <span>Đăng Xuất</span>
                       </button>
                     </div>
                   </div>
@@ -379,7 +378,7 @@ export const SettingsModal: React.FC = () => {
               <div className="space-y-3 pt-2 border-t border-parchment/10">
                 <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
                   <Volume2 className="w-4 h-4 text-fae" />
-                  <span>Hiệu Ứng Âm Thanh RPG (Web Audio Synth)</span>
+                  <span>Hiệu Ứng Âm Thanh</span>
                 </label>
 
                 <div className="flex items-center justify-between p-4 rounded-2xl bg-thorn-dark/80 border border-opal/30">
@@ -428,27 +427,6 @@ export const SettingsModal: React.FC = () => {
                     className="px-3 py-1.5 rounded-lg bg-thorn-dark border border-fae/30 text-xs text-fae hover:text-parchment transition"
                   >
                     🎺 Nghe thử âm thanh Thăng Rank
-                  </button>
-                </div>
-              </div>
-
-              {/* Developer Test Tools (Hidden neatly in settings) */}
-              <div className="space-y-3 pt-2 border-t border-parchment/10">
-                <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400" />
-                  <span>Công Cụ Thử Nghiệm Nhanh</span>
-                </label>
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-thorn-dark/60 border border-parchment/10">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-semibold text-parchment">Cộng Điểm EXP Thử Nghiệm (+150 EXP)</p>
-                    <p className="text-[11px] text-parchment/60">Dành để kiểm tra hiệu ứng thăng cấp Rank và bắn pháo hoa mà không cần làm task.</p>
-                  </div>
-                  <button
-                    onClick={() => grantDemoBoost(150)}
-                    className="px-3.5 py-2 rounded-xl bg-opal/40 hover:bg-opal/60 border border-opal-light/50 text-xs font-bold text-parchment flex items-center gap-1.5 transition shrink-0 ml-3"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-fae fill-fae" />
-                    <span>+150 EXP</span>
                   </button>
                 </div>
               </div>
@@ -630,31 +608,27 @@ export const SettingsModal: React.FC = () => {
                   <span>FaeQuest — Gamified RPG Todo v2.0</span>
                 </div>
                 <p className="text-xs text-parchment/70 leading-relaxed">
-                  Ứng dụng biến mục tiêu rèn luyện cá nhân mỗi ngày thành hành trình chinh phục đỉnh cao Thách Đấu. Lấy cảm hứng từ bảng màu Dark Fantasy Illustration #7.
+                  Ứng dụng biến mục tiêu rèn luyện kỷ luật cá nhân mỗi ngày thành hành trình chinh phục đỉnh cao Thách Đấu. Hoàn thành nhiệm vụ, tích lũy EXP, mở khóa Danh Hiệu và tự thưởng xứng đáng.
                 </p>
               </div>
 
-              {/* Card 2: Tech Specs */}
-              <div className="p-4 rounded-2xl bg-thorn-dark/60 border border-parchment/10 text-xs text-parchment/60 space-y-1">
-                <p>• <strong>Kiến trúc:</strong> React 18 + TypeScript + Vite + Tailwind CSS</p>
-                <p>• <strong>State:</strong> Zustand + LocalStorage Persist Middleware</p>
-                <p>• <strong>Âm thanh:</strong> Web Audio API Native Synthesizer</p>
-                <p>• <strong>Bảo mật:</strong> 100% dữ liệu lưu trữ phía client trên trình duyệt người dùng</p>
-              </div>
-
-              {/* Card 3: Donate / Support Developer */}
+              {/* Card 2: Donate / Support Developer */}
               <div className="rounded-2xl border border-[#D97352]/40 bg-gradient-to-br from-[#2D1036]/90 via-[#3E174B]/40 to-[#6B0733]/30 p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5">
                   {/* Left Column: Information, Message, Copy Action */}
                   <div className="space-y-3 flex-1 min-w-0 text-center sm:text-left">
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-fae/20 border border-fae/40 flex items-center justify-center text-fae">
+                    <div className="flex items-center justify-center sm:justify-start gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-fae/20 border border-fae/40 flex items-center justify-center text-fae shrink-0 shadow-sm">
                         <CoinIcon size="sm" />
                       </div>
-                      <h4 className="text-base font-extrabold text-parchment font-rpg tracking-wide flex items-center gap-1.5">
-                        <span>Tiếp Sức Nhà Phát Hành</span>
-                        <span className="text-fae">(Donate)</span>
-                      </h4>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-sm sm:text-base font-extrabold text-parchment font-rpg tracking-wide">
+                          Tiếp Sức Nhà Phát Hành
+                        </h4>
+                        <span className="text-[10px] font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-fae/20 border border-fae/50 text-fae-light uppercase shadow-sm">
+                          DONATE
+                        </span>
+                      </div>
                     </div>
 
                     <p className="text-xs text-parchment/75 leading-relaxed">
@@ -731,23 +705,10 @@ export const SettingsModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-thorn-dark/90 border-t border-parchment/10 flex items-center justify-between shrink-0">
-          {currentUser ? (
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] font-bold text-xs text-parchment flex items-center gap-1.5 shadow hover:scale-105 transition"
-              title="Lưu dữ liệu và đăng xuất an toàn"
-            >
-              <LogOut className="w-4 h-4 text-fae" />
-              <span>🚪 Đăng Xuất Tài Khoản</span>
-            </button>
-          ) : (
-            <div />
-          )}
-
+        <div className="p-4 bg-thorn-dark/90 border-t border-parchment/10 flex justify-end shrink-0">
           <button
             onClick={() => setSettingsOpen(false)}
-            className="px-5 py-2.5 rounded-xl rpg-btn-primary font-bold text-xs text-parchment shadow"
+            className="px-5 py-2.5 rounded-xl rpg-btn-primary font-bold text-xs text-parchment shadow hover:scale-105 active:scale-95 transition"
           >
             Đóng Cài Đặt
           </button>

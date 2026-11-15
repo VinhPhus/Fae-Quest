@@ -57,7 +57,7 @@ export const LeftSidebar: React.FC = () => {
   const menuItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     {
       id: 'quests',
-      label: 'Bảng Nhiệm Vụ',
+      label: 'Nhiệm Vụ',
       icon: <CheckSquare className="w-5 h-5 shrink-0" />,
       badge: pendingCount,
     },
@@ -69,7 +69,7 @@ export const LeftSidebar: React.FC = () => {
     },
     {
       id: 'shop',
-      label: 'Cửa Hàng Tự Thưởng',
+      label: 'Cửa Hàng',
       icon: <ShoppingBag className="w-5 h-5 shrink-0" />,
     },
     {
@@ -94,9 +94,8 @@ export const LeftSidebar: React.FC = () => {
     <>
       {/* ================= DESKTOP / TABLET SIDEBAR (>= 768px) ================= */}
       <aside
-        className={`hidden md:flex flex-col h-screen sticky top-0 shrink-0 z-30 bg-thorn-dark/95 backdrop-blur-md border-r border-fae/20 overflow-hidden no-scrollbar transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] ${
-          isSidebarCollapsed ? 'w-[76px]' : 'w-[260px]'
-        }`}
+        className={`hidden md:flex flex-col h-screen sticky top-0 shrink-0 z-30 bg-thorn-dark/95 backdrop-blur-md border-r border-fae/20 overflow-hidden no-scrollbar transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] ${isSidebarCollapsed ? 'w-[76px]' : 'w-[260px]'
+          }`}
       >
         {/* 1. Header of Sidebar: Brand & Logo */}
         <div className="px-3.5 py-3 border-b border-parchment/10 h-[68px] flex items-center shrink-0 overflow-hidden">
@@ -111,11 +110,10 @@ export const LeftSidebar: React.FC = () => {
 
             {/* Smooth Fade + Slide Brand Text */}
             <div
-              className={`flex flex-col min-w-0 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                  : 'opacity-100 max-w-[170px] translate-x-0 ml-1'
-              }`}
+              className={`flex flex-col min-w-0 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
+                : 'opacity-100 max-w-[170px] translate-x-0 ml-1'
+                }`}
             >
               <div className="flex items-center gap-1">
                 <h1 className="font-rpg font-bold text-base tracking-wider text-parchment truncate leading-tight">
@@ -141,11 +139,10 @@ export const LeftSidebar: React.FC = () => {
                 <CoinIcon size="sm" />
               </div>
               <span
-                className={`text-fae font-bold whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                  isSidebarCollapsed
-                    ? 'opacity-0 max-w-0 -translate-x-1 ml-0 pointer-events-none'
-                    : 'opacity-100 max-w-[80px] translate-x-0'
-                }`}
+                className={`text-fae font-bold whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                  ? 'opacity-0 max-w-0 -translate-x-1 ml-0 pointer-events-none'
+                  : 'opacity-100 max-w-[80px] translate-x-0'
+                  }`}
               >
                 {coins} Xu
               </span>
@@ -153,11 +150,10 @@ export const LeftSidebar: React.FC = () => {
 
             {/* Divider & Streak */}
             <div
-              className={`flex items-center gap-2 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
-                  : 'opacity-100 max-w-[120px] translate-x-0'
-              }`}
+              className={`flex items-center gap-2 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                ? 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+                : 'opacity-100 max-w-[120px] translate-x-0'
+                }`}
             >
               <span className="text-parchment/30">•</span>
               <div className="flex items-center gap-1 text-amber-300 font-bold">
@@ -183,11 +179,10 @@ export const LeftSidebar: React.FC = () => {
                       : item.label
                     : undefined
                 }
-                className={`w-full flex items-center px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 relative ${
-                  isActive
-                    ? 'bg-gradient-to-r from-fae to-bargain text-parchment shadow-md border border-fae/50 scale-[1.01]'
-                    : 'text-parchment/70 hover:text-parchment hover:bg-thorn border border-transparent'
-                }`}
+                className={`w-full flex items-center px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 relative ${isActive
+                  ? 'bg-gradient-to-r from-fae to-bargain text-parchment shadow-md border border-fae/50 scale-[1.01]'
+                  : 'text-parchment/70 hover:text-parchment hover:bg-thorn border border-transparent'
+                  }`}
               >
                 {/* Fixed Icon Container */}
                 <div className="w-6 h-6 shrink-0 flex items-center justify-center relative">
@@ -200,20 +195,18 @@ export const LeftSidebar: React.FC = () => {
 
                 {/* Smooth Fade + Slide + Max-Width Text Container */}
                 <div
-                  className={`flex items-center justify-between flex-1 min-w-0 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                    isSidebarCollapsed
-                      ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                      : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-                  }`}
+                  className={`flex items-center justify-between flex-1 min-w-0 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                    ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
+                    : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
+                    }`}
                 >
                   <span className="truncate text-left">{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
                     <span
-                      className={`ml-2 px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${
-                        isActive
-                          ? 'bg-thorn-dark text-fae border border-fae/40'
-                          : 'bg-fae text-thorn-dark'
-                      }`}
+                      className={`ml-2 px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${isActive
+                        ? 'bg-thorn-dark text-fae border border-fae/40'
+                        : 'bg-fae text-thorn-dark'
+                        }`}
                     >
                       {item.badge}
                     </span>
@@ -236,11 +229,10 @@ export const LeftSidebar: React.FC = () => {
               <Scroll className="w-4 h-4 text-fae" />
             </div>
             <span
-              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                  : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-              }`}
+              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
+                : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
+                }`}
             >
               Khế Ước Thợ Săn
             </span>
@@ -256,11 +248,10 @@ export const LeftSidebar: React.FC = () => {
               <Settings className="w-4 h-4 text-fae" />
             </div>
             <span
-              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                  : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-              }`}
+              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
+                : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
+                }`}
             >
               Cài Đặt
             </span>
@@ -280,11 +271,10 @@ export const LeftSidebar: React.FC = () => {
               )}
             </div>
             <span
-              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out text-xs font-medium ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                  : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-              }`}
+              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out text-xs font-medium ${isSidebarCollapsed
+                ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
+                : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
+                }`}
             >
               Thu gọn Sidebar
             </span>
@@ -300,11 +290,10 @@ export const LeftSidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition relative ${
-                isActive
-                  ? 'text-fae font-bold scale-105'
-                  : 'text-parchment/60 hover:text-parchment'
-              }`}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition relative ${isActive
+                ? 'text-fae font-bold scale-105'
+                : 'text-parchment/60 hover:text-parchment'
+                }`}
             >
               <div className="relative">
                 {item.icon}
