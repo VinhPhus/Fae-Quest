@@ -32,7 +32,6 @@ export const PlayerStatusCard: React.FC = () => {
     streakDays,
     rivals,
     equippedTitleId,
-    cloudSyncStatus,
     setActiveTab,
     setRoadmapOpen,
     setOathOpen,
@@ -274,20 +273,6 @@ export const PlayerStatusCard: React.FC = () => {
               <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-opal/30 border border-opal-light/40 text-parchment flex items-center gap-1">
                 <Trophy className="w-3 h-3 text-amber-300" />
                 <span>Hạng #{playerRankPos} BXH</span>
-              </span>
-
-              {/* Cloud Sync Status Indicator */}
-              <span
-                className={`px-2 py-0.5 rounded-md text-[11px] font-bold border flex items-center gap-1 ${
-                  cloudSyncStatus === 'synced'
-                    ? 'bg-emerald-500/15 border-emerald-400/30 text-emerald-300'
-                    : cloudSyncStatus === 'syncing'
-                    ? 'bg-amber-500/15 border-amber-400/30 text-amber-300 animate-pulse'
-                    : 'bg-thorn-dark border-parchment/15 text-parchment/60'
-                }`}
-                title="Dữ liệu tài khoản đã được đồng bộ hóa với Supabase Cloud"
-              >
-                <span>{cloudSyncStatus === 'syncing' ? '☁️ Đang lưu...' : '☁️ Đã lưu đám mây'}</span>
               </span>
 
               {streakDays >= 3 && (

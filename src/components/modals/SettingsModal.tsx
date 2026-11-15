@@ -321,14 +321,31 @@ export const SettingsModal: React.FC = () => {
                       )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="px-3 py-1.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow"
-                    >
-                      <LogOut className="w-3.5 h-3.5 text-fae" />
-                      <span>🚪 Đăng Xuất Tài Khoản</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsSyncing(true);
+                          await syncToCloud(false);
+                          setIsSyncing(false);
+                        }}
+                        disabled={isSyncing}
+                        className="px-3 py-1.5 rounded-xl bg-opal/40 hover:bg-opal/60 border border-opal/50 text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow disabled:opacity-50"
+                        title="Đẩy dữ liệu mới nhất lên Supabase"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 text-fae ${isSyncing ? 'animate-spin' : ''}`} />
+                        <span>{isSyncing ? 'Đang lưu...' : 'Lưu Ngay'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="px-3 py-1.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow"
+                      >
+                        <LogOut className="w-3.5 h-3.5 text-fae" />
+                        <span>🚪 Đăng Xuất</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

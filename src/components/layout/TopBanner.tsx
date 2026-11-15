@@ -1,9 +1,9 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { Sword, Volume2, VolumeX, Settings } from 'lucide-react';
+import { Sword, Settings } from 'lucide-react';
 
 export const TopBanner: React.FC = () => {
-  const { soundEnabled, toggleSound, setSettingsOpen } = useFaeQuestStore();
+  const { setSettingsOpen } = useFaeQuestStore();
 
   return (
     <div className="relative overflow-hidden border-b border-fae/30 bg-gradient-to-r from-thorn-dark via-bargain to-opal/70">
@@ -42,28 +42,8 @@ export const TopBanner: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Controls: Sound & Settings */}
+        {/* Action Controls: Settings */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Sound Toggle */}
-          <button
-            onClick={toggleSound}
-            className="px-3 py-1.5 rounded-xl bg-thorn-dark/80 hover:bg-thorn border border-opal/40 text-xs font-medium flex items-center gap-1.5 transition text-parchment shadow-sm"
-            title="Bật/Tắt âm thanh hiệu ứng RPG"
-          >
-            {soundEnabled ? (
-              <>
-                <Volume2 className="w-4 h-4 text-fae" />
-                <span className="hidden sm:inline">Âm thanh: Bật</span>
-              </>
-            ) : (
-              <>
-                <VolumeX className="w-4 h-4 text-parchment/50" />
-                <span className="hidden sm:inline">Âm thanh: Tắt</span>
-              </>
-            )}
-          </button>
-
-          {/* Settings Button */}
           <button
             onClick={() => setSettingsOpen(true)}
             className="px-3.5 py-1.5 rounded-xl bg-thorn-dark/80 hover:bg-thorn border border-opal/40 hover:border-fae/50 text-xs font-semibold text-parchment flex items-center gap-1.5 transition shadow-sm"

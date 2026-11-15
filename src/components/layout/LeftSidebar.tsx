@@ -10,13 +10,10 @@ import {
   Backpack,
   BarChart2,
   Flame,
-  Volume2,
-  VolumeX,
   Settings,
   Scroll,
   ChevronLeft,
   ChevronRight,
-  Cloud,
 } from 'lucide-react';
 
 export const LeftSidebar: React.FC = () => {
@@ -28,14 +25,10 @@ export const LeftSidebar: React.FC = () => {
     systemQuests,
     coins,
     streakDays,
-    soundEnabled,
-    toggleSound,
     setSettingsOpen,
     setOathOpen,
     isSidebarCollapsed,
     toggleSidebar,
-    cloudSyncStatus,
-    lastSyncedAt,
   } = useFaeQuestStore();
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
@@ -250,67 +243,6 @@ export const LeftSidebar: React.FC = () => {
             </span>
           </button>
 
-          {/* Sound Toggle Button */}
-          <button
-            onClick={toggleSound}
-            title={isSidebarCollapsed ? (soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh') : undefined}
-            className="w-full flex items-center px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-parchment hover:bg-thorn border border-opal/30"
-          >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center">
-              {soundEnabled ? (
-                <Volume2 className="w-4 h-4 text-fae" />
-              ) : (
-                <VolumeX className="w-4 h-4 text-parchment/50" />
-              )}
-            </div>
-            <span
-              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                  : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-              }`}
-            >
-              {soundEnabled ? 'Âm thanh: Bật' : 'Âm thanh: Tắt'}
-            </span>
-          </button>
-
-          {/* Cloud Sync Status Indicator */}
-          <div
-            title={`Trạng thái lưu trữ Đám Mây: ${
-              cloudSyncStatus === 'synced'
-                ? `Đã lưu an toàn (${lastSyncedAt || 'Vừa xong'})`
-                : cloudSyncStatus === 'syncing'
-                ? 'Đang đồng bộ lên Supabase...'
-                : 'Sẵn sàng lưu trữ'
-            }`}
-            className="w-full flex items-center px-3.5 py-2 rounded-xl text-xs bg-thorn/50 border border-opal/20 overflow-hidden cursor-default"
-          >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center">
-              <Cloud
-                className={`w-4 h-4 ${
-                  cloudSyncStatus === 'syncing'
-                    ? 'text-amber-400 animate-pulse'
-                    : 'text-emerald-400'
-                }`}
-              />
-            </div>
-            <span
-              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out font-medium ${
-                isSidebarCollapsed
-                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                  : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-              }`}
-            >
-              {cloudSyncStatus === 'syncing' ? (
-                <span className="text-amber-300">☁️ Đang đồng bộ...</span>
-              ) : cloudSyncStatus === 'synced' ? (
-                <span className="text-emerald-400">☁️ Đã lưu đám mây</span>
-              ) : (
-                <span className="text-parchment/60">☁️ Đám mây sẵn sàng</span>
-              )}
-            </span>
-          </div>
-
           {/* Settings Button */}
           <button
             onClick={() => setSettingsOpen(true)}
@@ -413,18 +345,6 @@ export const LeftSidebar: React.FC = () => {
           >
             <Scroll className="w-3.5 h-3.5 text-fae" />
             <span className="hidden sm:inline">Khế Ước</span>
-          </button>
-
-          <button
-            onClick={toggleSound}
-            className="p-1.5 rounded-lg bg-thorn border border-opal/30 text-parchment"
-            title="Bật/Tắt âm thanh"
-          >
-            {soundEnabled ? (
-              <Volume2 className="w-4 h-4 text-fae" />
-            ) : (
-              <VolumeX className="w-4 h-4 text-parchment/50" />
-            )}
           </button>
 
           <button
