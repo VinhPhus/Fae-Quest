@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useFaeQuestStore } from './store/useFaeQuestStore';
+import { AuthScreen } from './components/auth/AuthScreen';
 import { LeftSidebar } from './components/layout/LeftSidebar';
 import { PlayerStatusCard } from './components/hero/PlayerStatusCard';
 import { AddQuestForm } from './components/quests/AddQuestForm';
@@ -22,16 +23,57 @@ import { HuntersOathModal } from './components/modals/HuntersOathModal';
 import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
+import { Sword } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { activeTab, checkDailyReset, checkSystemMilestones } = useFaeQuestStore();
+  const {
+    currentUser,
+    authLoading,
+    initAuth,
+    activeTab,
+    checkDailyReset,
+    checkSystemMilestones,
+  } = useFaeQuestStore();
 
   useEffect(() => {
-    checkDailyReset();
-    checkSystemMilestones();
-    // Tự động đồng bộ nhẹ lên Supabase khi khởi chạy ứng dụng
-    useFaeQuestStore.getState().syncToCloud(true);
-  }, [checkDailyReset, checkSystemMilestones]);
+    initAuth();
+  }, [initAuth]);
+
+  useEffect(() => {
+    if (currentUser) {
+      checkDailyReset();
+      checkSystemMilestones();
+      // Tự động đồng bộ nhẹ lên Supabase khi khởi chạy ứng dụng
+      useFaeQuestStore.getState().syncToCloud(true);
+    }
+  }, [currentUser, checkDailyReset, checkSystemMilestones]);
+
+  // Loading state while checking authentication session
+  if (authLoading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-thorn-dark thorn-pattern p-4">
+        <div className="relative flex flex-col items-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fae to-bargain border-2 border-fae flex items-center justify-center text-parchment shadow-[0_0_30px_rgba(217,119,82,0.6)] rank-pulse-fx">
+            <Sword className="w-8 h-8 text-parchment" />
+          </div>
+          <div className="flex items-center gap-2 text-sm font-bold text-parchment tracking-wide">
+            <div className="w-4 h-4 border-2 border-fae border-t-transparent rounded-full animate-spin" />
+            <span>Đang mở Cổng Thợ Săn FaeQuest...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is not authenticated, show the Dark Fantasy Auth Screen
+  if (!currentUser) {
+    return (
+      <>
+        <AuthScreen />
+        <Toast />
+      </>
+    );
+  }
 
   return (
     <div className="thorn-pattern antialiased min-h-screen selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row">

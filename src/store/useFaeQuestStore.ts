@@ -14,7 +14,9 @@ import {
   ToastMessage,
   SystemQuest,
   UserTitle,
+  HunterUser,
 } from '../types';
+import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
 import { DIFFICULTIES } from '../constants/categories';
 import {
@@ -54,7 +56,9 @@ interface FaeQuestState {
   equippedTitleId: string;
   focusSessionsCompleted: number;
 
-  // Supabase Cloud Sync
+  // Supabase Auth & Cloud Sync
+  currentUser: HunterUser | null;
+  authLoading: boolean;
   hunterId: string;
   cloudSyncStatus: 'idle' | 'syncing' | 'synced' | 'error';
   lastSyncedAt?: string;
@@ -124,6 +128,12 @@ interface FaeQuestState {
   setHunterId: (id: string) => void;
   syncToCloud: (silent?: boolean) => Promise<boolean>;
   restoreFromCloud: (targetHunterId: string) => Promise<boolean>;
+
+  // Authentication Actions
+  initAuth: () => Promise<void>;
+  signUp: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
 }
 
 const getTodayString = () => {
@@ -139,18 +149,21 @@ const debouncedAutoSync = (store: any) => {
   if (autoSyncTimer) clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(() => {
     store.syncToCloud(true);
-  }, 1800);
+  }, 500);
 };
 
 export const useFaeQuestStore = create<FaeQuestState>()(
   persist(
     (set, get) => ({
+      currentUser: null,
+      authLoading: true,
+
       playerName: 'Thợ Săn Fae',
       avatarUrl: '',
-      exp: 110,
+      exp: 0,
       coins: 25,
-      completedTotal: 2,
-      streakDays: 3,
+      completedTotal: 0,
+      streakDays: 0,
       lastActiveDate: getTodayString(),
       soundEnabled: true,
       dailyCompletedCount: 0,
@@ -238,6 +251,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         playSoundEffect('complete', get().soundEnabled);
         get().addToast('Đã khắc nhiệm vụ mới lên bảng!', 'success');
+        debouncedAutoSync(get());
       },
 
       updateTaskFocusDuration: (taskId: string, duration: number) => {
@@ -247,6 +261,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             t.id === taskId ? { ...t, focusDuration: clean, pomodoroMinutes: clean } : t
           ),
         }));
+        debouncedAutoSync(get());
       },
 
       toggleTask: (id: string, coords) => {
@@ -422,6 +437,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           tasks: prev.tasks.filter((t) => t.id !== id),
         }));
         get().addToast('Đã xóa nhiệm vụ khỏi danh sách', 'info');
+        debouncedAutoSync(get());
       },
 
       completePomodoro: (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => {
@@ -942,7 +958,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       syncToCloud: async (silent = false) => {
         const state = get();
-        if (!state.hunterId) return false;
+        const activeUserId = state.currentUser?.id || state.hunterId;
+        if (!activeUserId) return false;
         set({ cloudSyncStatus: 'syncing' });
 
         const snapshot: UserStateCloud = {
@@ -964,7 +981,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           focusSessionsCompleted: state.focusSessionsCompleted,
         };
 
-        const res = await syncProfileAndStateToCloud(state.hunterId, snapshot);
+        const res = await syncProfileAndStateToCloud(activeUserId, snapshot);
         if (res.success) {
           const nowStr = new Date().toLocaleTimeString('vi-VN', {
             hour: '2-digit',
@@ -1033,10 +1050,459 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return false;
         }
       },
+
+      initAuth: async () => {
+        set({ authLoading: true });
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const user = session.user;
+            const hunterId = user.id;
+            setStoredHunterId(hunterId);
+
+            // Fetch user profile and state from Supabase
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', hunterId)
+              .maybeSingle();
+
+            const { data: stateRow } = await supabase
+              .from('user_states')
+              .select('*')
+              .eq('user_id', hunterId)
+              .maybeSingle();
+
+            const hunterName =
+              profile?.username ||
+              user.user_metadata?.display_name ||
+              user.email?.split('@')[0] ||
+              'Thợ Săn Fae';
+
+            if (stateRow?.state_json) {
+              const s = stateRow.state_json;
+              set({
+                currentUser: { id: user.id, email: user.email || '', name: hunterName },
+                hunterId,
+                playerName: s.playerName || hunterName,
+                avatarUrl: s.avatarUrl || profile?.avatar_url || '',
+                exp: typeof s.exp === 'number' ? s.exp : (profile?.exp || 0),
+                coins: typeof s.coins === 'number' ? s.coins : (profile?.coins || 25),
+                completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : (profile?.completed_tasks_count || 0),
+                streakDays: typeof s.streakDays === 'number' ? s.streakDays : (profile?.streak || 0),
+                dailyCompletedCount: s.dailyCompletedCount || 0,
+                dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
+                tasks: Array.isArray(s.tasks) ? s.tasks : [],
+                shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
+                inventory: Array.isArray(s.inventory) ? s.inventory : [],
+                rivals: Array.isArray(s.rivals) ? s.rivals : INITIAL_RIVALS,
+                systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : INITIAL_SYSTEM_QUESTS,
+                unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
+                equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
+                focusSessionsCompleted: s.focusSessionsCompleted || 0,
+                cloudSyncStatus: 'synced',
+                lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                authLoading: false,
+              });
+            } else {
+              // Brand new user profile in auth but no user_states: initialize clean
+              const starterTasks: Task[] = [
+                {
+                  id: 'task_starter_oath',
+                  title: 'Tuyên thệ Khế Ước Thợ Săn & Khám phá thế giới FaeQuest',
+                  category: 'ca-nhan',
+                  difficulty: 'easy',
+                  completed: false,
+                  createdAt: Date.now(),
+                  rewardClaimed: false,
+                },
+                {
+                  id: 'task_starter_focus',
+                  title: 'Hoàn thành 1 phiên tập trung Fae Focus 25 phút đầu tiên',
+                  category: 'hoc-tap',
+                  difficulty: 'medium',
+                  completed: false,
+                  createdAt: Date.now(),
+                  focusDuration: 25,
+                  rewardClaimed: false,
+                },
+              ];
+
+              set({
+                currentUser: { id: user.id, email: user.email || '', name: hunterName },
+                hunterId,
+                playerName: hunterName,
+                avatarUrl: profile?.avatar_url || '',
+                exp: profile?.exp || 0,
+                coins: profile?.coins || 25,
+                completedTotal: 0,
+                streakDays: 0,
+                dailyCompletedCount: 0,
+                dailyBossCompletedCount: 0,
+                tasks: starterTasks,
+                shopItems: INITIAL_SHOP_ITEMS,
+                inventory: [],
+                rivals: INITIAL_RIVALS,
+                systemQuests: INITIAL_SYSTEM_QUESTS,
+                unlockedTitleIds: ['title_tan_binh_gai_do'],
+                equippedTitleId: 'title_tan_binh_gai_do',
+                focusSessionsCompleted: 0,
+                isOathOpen: true,
+                cloudSyncStatus: 'synced',
+                authLoading: false,
+              });
+
+              await get().syncToCloud(true);
+            }
+          } else {
+            set({ currentUser: null, authLoading: false });
+          }
+        } catch (err) {
+          console.error('Error in initAuth:', err);
+          set({ currentUser: null, authLoading: false });
+        }
+
+        // Keep auth session listener
+        supabase.auth.onAuthStateChange(async (event) => {
+          if (event === 'SIGNED_OUT') {
+            set({ currentUser: null, cloudSyncStatus: 'idle' });
+          }
+        });
+      },
+
+      signUp: async (name: string, email: string, password: string) => {
+        const cleanName = name.trim();
+        const cleanEmail = email.trim();
+        if (!cleanName) return { success: false, error: 'Vui lòng nhập Tên Thợ Săn' };
+        if (!cleanEmail) return { success: false, error: 'Vui lòng nhập Email' };
+        if (password.length < 6) return { success: false, error: 'Mật khẩu phải chứa ít nhất 6 ký tự' };
+
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              data: {
+                display_name: cleanName,
+              },
+            },
+          });
+
+          if (error) {
+            return { success: false, error: error.message };
+          }
+
+          if (!data.user) {
+            return { success: false, error: 'Không thể khởi tạo tài khoản Thợ Săn, vui lòng thử lại' };
+          }
+
+          const newUserId = data.user.id;
+          setStoredHunterId(newUserId);
+
+          const starterTasks: Task[] = [
+            {
+              id: 'task_starter_oath',
+              title: 'Tuyên thệ Khế Ước Thợ Săn & Khám phá thế giới FaeQuest',
+              category: 'ca-nhan',
+              difficulty: 'easy',
+              completed: false,
+              createdAt: Date.now(),
+              rewardClaimed: false,
+            },
+            {
+              id: 'task_starter_focus',
+              title: 'Hoàn thành 1 phiên tập trung Fae Focus 25 phút đầu tiên',
+              category: 'hoc-tap',
+              difficulty: 'medium',
+              completed: false,
+              createdAt: Date.now(),
+              focusDuration: 25,
+              rewardClaimed: false,
+            },
+          ];
+
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('faequest_oath_accepted', 'false');
+          }
+
+          const freshState: UserStateCloud = {
+            playerName: cleanName,
+            avatarUrl: '',
+            exp: 0,
+            coins: 25, // Quà Tân Binh 25 Xu Vàng
+            completedTotal: 0,
+            streakDays: 0,
+            dailyCompletedCount: 0,
+            dailyBossCompletedCount: 0,
+            tasks: starterTasks,
+            shopItems: INITIAL_SHOP_ITEMS,
+            inventory: [],
+            rivals: INITIAL_RIVALS,
+            systemQuests: INITIAL_SYSTEM_QUESTS,
+            unlockedTitleIds: ['title_tan_binh_gai_do'],
+            equippedTitleId: 'title_tan_binh_gai_do',
+            focusSessionsCompleted: 0,
+          };
+
+          // Save immediately to public.profiles and public.user_states
+          await syncProfileAndStateToCloud(newUserId, freshState);
+
+          if (data.session) {
+            set({
+              currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
+              hunterId: newUserId,
+              playerName: cleanName,
+              avatarUrl: '',
+              exp: 0,
+              coins: 25,
+              completedTotal: 0,
+              streakDays: 0,
+              dailyCompletedCount: 0,
+              dailyBossCompletedCount: 0,
+              tasks: starterTasks,
+              shopItems: INITIAL_SHOP_ITEMS,
+              inventory: [],
+              rivals: INITIAL_RIVALS,
+              systemQuests: INITIAL_SYSTEM_QUESTS,
+              unlockedTitleIds: ['title_tan_binh_gai_do'],
+              equippedTitleId: 'title_tan_binh_gai_do',
+              focusSessionsCompleted: 0,
+              isOathOpen: true,
+              cloudSyncStatus: 'synced',
+              lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            });
+            playSoundEffect('rankup', get().soundEnabled);
+            get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
+            return { success: true };
+          } else {
+            // Auto sign in with password in case confirmation isn't blocking
+            const signInRes = await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password,
+            });
+
+            if (signInRes.data.session) {
+              set({
+                currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
+                hunterId: newUserId,
+                playerName: cleanName,
+                avatarUrl: '',
+                exp: 0,
+                coins: 25,
+                completedTotal: 0,
+                streakDays: 0,
+                dailyCompletedCount: 0,
+                dailyBossCompletedCount: 0,
+                tasks: starterTasks,
+                shopItems: INITIAL_SHOP_ITEMS,
+                inventory: [],
+                rivals: INITIAL_RIVALS,
+                systemQuests: INITIAL_SYSTEM_QUESTS,
+                unlockedTitleIds: ['title_tan_binh_gai_do'],
+                equippedTitleId: 'title_tan_binh_gai_do',
+                focusSessionsCompleted: 0,
+                isOathOpen: true,
+                cloudSyncStatus: 'synced',
+              });
+              playSoundEffect('rankup', get().soundEnabled);
+              get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
+              return { success: true };
+            }
+
+            return {
+              success: true,
+              error: 'Đăng ký thành công! Vui lòng kiểm tra email xác nhận hoặc đăng nhập ngay.',
+            };
+          }
+        } catch (err: any) {
+          return { success: false, error: err.message || 'Lỗi khi đăng ký' };
+        }
+      },
+
+      signIn: async (email: string, password: string) => {
+        const cleanEmail = email.trim();
+        if (!cleanEmail || !password) {
+          return { success: false, error: 'Vui lòng nhập đầy đủ Email và Mật khẩu' };
+        }
+
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password,
+          });
+
+          if (error) {
+            let msg = error.message;
+            if (msg.toLowerCase().includes('invalid login credentials')) {
+              msg = 'Email hoặc mật khẩu không chính xác';
+            }
+            return { success: false, error: msg };
+          }
+
+          if (!data.user) {
+            return { success: false, error: 'Không tìm thấy thông tin tài khoản' };
+          }
+
+          const userId = data.user.id;
+          setStoredHunterId(userId);
+
+          // Load profile & state
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+
+          const { data: stateRow } = await supabase
+            .from('user_states')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          const hunterName =
+            profile?.username ||
+            data.user.user_metadata?.display_name ||
+            cleanEmail.split('@')[0] ||
+            'Thợ Săn Fae';
+
+          if (stateRow?.state_json) {
+            const s = stateRow.state_json;
+            set({
+              currentUser: { id: userId, email: cleanEmail, name: hunterName },
+              hunterId: userId,
+              playerName: s.playerName || hunterName,
+              avatarUrl: s.avatarUrl || profile?.avatar_url || '',
+              exp: typeof s.exp === 'number' ? s.exp : (profile?.exp || 0),
+              coins: typeof s.coins === 'number' ? s.coins : (profile?.coins || 25),
+              completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : (profile?.completed_tasks_count || 0),
+              streakDays: typeof s.streakDays === 'number' ? s.streakDays : (profile?.streak || 0),
+              dailyCompletedCount: s.dailyCompletedCount || 0,
+              dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
+              tasks: Array.isArray(s.tasks) ? s.tasks : [],
+              shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
+              inventory: Array.isArray(s.inventory) ? s.inventory : [],
+              rivals: Array.isArray(s.rivals) ? s.rivals : INITIAL_RIVALS,
+              systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : INITIAL_SYSTEM_QUESTS,
+              unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
+              equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
+              focusSessionsCompleted: s.focusSessionsCompleted || 0,
+              cloudSyncStatus: 'synced',
+              lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            });
+          } else {
+            // First time login with no user_states:
+            const starterTasks: Task[] = [
+              {
+                id: 'task_starter_oath',
+                title: 'Tuyên thệ Khế Ước Thợ Săn & Khám phá thế giới FaeQuest',
+                category: 'ca-nhan',
+                difficulty: 'easy',
+                completed: false,
+                createdAt: Date.now(),
+                rewardClaimed: false,
+              },
+              {
+                id: 'task_starter_focus',
+                title: 'Hoàn thành 1 phiên tập trung Fae Focus 25 phút đầu tiên',
+                category: 'hoc-tap',
+                difficulty: 'medium',
+                completed: false,
+                createdAt: Date.now(),
+                focusDuration: 25,
+                rewardClaimed: false,
+              },
+            ];
+
+            set({
+              currentUser: { id: userId, email: cleanEmail, name: hunterName },
+              hunterId: userId,
+              playerName: hunterName,
+              avatarUrl: profile?.avatar_url || '',
+              exp: profile?.exp || 0,
+              coins: profile?.coins || 25,
+              completedTotal: 0,
+              streakDays: 0,
+              dailyCompletedCount: 0,
+              dailyBossCompletedCount: 0,
+              tasks: starterTasks,
+              shopItems: INITIAL_SHOP_ITEMS,
+              inventory: [],
+              rivals: INITIAL_RIVALS,
+              systemQuests: INITIAL_SYSTEM_QUESTS,
+              unlockedTitleIds: ['title_tan_binh_gai_do'],
+              equippedTitleId: 'title_tan_binh_gai_do',
+              focusSessionsCompleted: 0,
+              isOathOpen: true,
+              cloudSyncStatus: 'synced',
+            });
+            await get().syncToCloud(true);
+          }
+
+          playSoundEffect('complete', get().soundEnabled);
+          get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');
+          return { success: true };
+        } catch (err: any) {
+          return { success: false, error: err.message || 'Lỗi khi đăng nhập' };
+        }
+      },
+
+      signOut: async () => {
+        // 1. Final sync to Supabase
+        if (get().currentUser) {
+          try {
+            await get().syncToCloud(true);
+          } catch (e) {
+            console.warn('Final sync before sign out failed:', e);
+          }
+        }
+
+        // 2. Supabase sign out
+        try {
+          await supabase.auth.signOut();
+        } catch (e) {
+          console.error('Error signing out:', e);
+        }
+
+        // 3. Reset in-memory store
+        set({
+          currentUser: null,
+          hunterId: getOrInitHunterId(),
+          playerName: 'Thợ Săn Fae',
+          avatarUrl: '',
+          exp: 0,
+          coins: 0,
+          completedTotal: 0,
+          streakDays: 0,
+          dailyCompletedCount: 0,
+          dailyBossCompletedCount: 0,
+          tasks: [],
+          shopItems: INITIAL_SHOP_ITEMS,
+          inventory: [],
+          rivals: INITIAL_RIVALS,
+          systemQuests: INITIAL_SYSTEM_QUESTS,
+          unlockedTitleIds: ['title_tan_binh_gai_do'],
+          equippedTitleId: 'title_tan_binh_gai_do',
+          focusSessionsCompleted: 0,
+          cloudSyncStatus: 'idle',
+          lastSyncedAt: undefined,
+        });
+
+        get().addToast('🚪 Đã đăng xuất an toàn. Dữ liệu đã được lưu trữ trên Đám Mây.', 'info');
+      },
     }),
     {
       name: 'faequest_rpg_todo_storage_v2',
       partialize: (state) => ({
+        currentUser: state.currentUser,
         hunterId: state.hunterId,
         lastSyncedAt: state.lastSyncedAt,
         playerName: state.playerName,

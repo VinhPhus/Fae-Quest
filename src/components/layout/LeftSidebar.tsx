@@ -16,6 +16,7 @@ import {
   Scroll,
   ChevronLeft,
   ChevronRight,
+  Cloud,
 } from 'lucide-react';
 
 export const LeftSidebar: React.FC = () => {
@@ -33,6 +34,8 @@ export const LeftSidebar: React.FC = () => {
     setOathOpen,
     isSidebarCollapsed,
     toggleSidebar,
+    cloudSyncStatus,
+    lastSyncedAt,
   } = useFaeQuestStore();
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
@@ -270,6 +273,43 @@ export const LeftSidebar: React.FC = () => {
               {soundEnabled ? 'Âm thanh: Bật' : 'Âm thanh: Tắt'}
             </span>
           </button>
+
+          {/* Cloud Sync Status Indicator */}
+          <div
+            title={`Trạng thái lưu trữ Đám Mây: ${
+              cloudSyncStatus === 'synced'
+                ? `Đã lưu an toàn (${lastSyncedAt || 'Vừa xong'})`
+                : cloudSyncStatus === 'syncing'
+                ? 'Đang đồng bộ lên Supabase...'
+                : 'Sẵn sàng lưu trữ'
+            }`}
+            className="w-full flex items-center px-3.5 py-2 rounded-xl text-xs bg-thorn/50 border border-opal/20 overflow-hidden cursor-default"
+          >
+            <div className="w-6 h-6 shrink-0 flex items-center justify-center">
+              <Cloud
+                className={`w-4 h-4 ${
+                  cloudSyncStatus === 'syncing'
+                    ? 'text-amber-400 animate-pulse'
+                    : 'text-emerald-400'
+                }`}
+              />
+            </div>
+            <span
+              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out font-medium ${
+                isSidebarCollapsed
+                  ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
+                  : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
+              }`}
+            >
+              {cloudSyncStatus === 'syncing' ? (
+                <span className="text-amber-300">☁️ Đang đồng bộ...</span>
+              ) : cloudSyncStatus === 'synced' ? (
+                <span className="text-emerald-400">☁️ Đã lưu đám mây</span>
+              ) : (
+                <span className="text-parchment/60">☁️ Đám mây sẵn sàng</span>
+              )}
+            </span>
+          </div>
 
           {/* Settings Button */}
           <button

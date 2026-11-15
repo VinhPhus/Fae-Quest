@@ -24,6 +24,8 @@ import {
   CloudUpload,
   CloudDownload,
   RefreshCw,
+  LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const SettingsModal: React.FC = () => {
@@ -38,6 +40,8 @@ export const SettingsModal: React.FC = () => {
     setResetOpen,
     addToast,
     hunterId,
+    currentUser,
+    signOut,
     cloudSyncStatus,
     lastSyncedAt,
     syncToCloud,
@@ -55,6 +59,11 @@ export const SettingsModal: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isSettingsOpen) return null;
+
+  const handleLogout = async () => {
+    setSettingsOpen(false);
+    await signOut();
+  };
 
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,6 +276,63 @@ export const SettingsModal: React.FC = () => {
           {/* TAB 1: GENERAL & AUDIO */}
           {activeTab === 'general' && (
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Account & Supabase Auth Info Section */}
+              {currentUser && (
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-[#2D1036] via-thorn-dark to-[#6B0733]/50 border border-fae/40 shadow-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fae to-bargain border border-fae/50 flex items-center justify-center text-parchment shadow">
+                        <ShieldCheck className="w-5 h-5 text-parchment" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-rpg font-bold text-sm text-parchment">
+                            {currentUser.name || playerName}
+                          </h4>
+                          <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-400/30">
+                            Thợ Săn Đã Ký Khế Ước
+                          </span>
+                        </div>
+                        <p className="text-xs text-parchment/60 font-mono mt-0.5">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-parchment/10 text-xs">
+                    <div className="flex items-center gap-1.5 text-parchment/70">
+                      <Cloud className="w-3.5 h-3.5 text-fae" />
+                      <span>Trạng thái:</span>
+                      {cloudSyncStatus === 'synced' ? (
+                        <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          <span>Đã lưu đám mây {lastSyncedAt ? `(${lastSyncedAt})` : ''}</span>
+                        </span>
+                      ) : cloudSyncStatus === 'syncing' ? (
+                        <span className="text-amber-400 font-semibold flex items-center gap-1">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          <span>Đang đồng bộ...</span>
+                        </span>
+                      ) : (
+                        <span className="text-parchment/60 font-semibold">
+                          Sẵn sàng đồng bộ
+                        </span>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="px-3 py-1.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-fae" />
+                      <span>🚪 Đăng Xuất Tài Khoản</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Profile Rename Section */}
               <div className="space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
@@ -648,7 +714,20 @@ export const SettingsModal: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-thorn-dark/90 border-t border-parchment/10 flex justify-end shrink-0">
+        <div className="p-4 bg-thorn-dark/90 border-t border-parchment/10 flex items-center justify-between shrink-0">
+          {currentUser ? (
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] font-bold text-xs text-parchment flex items-center gap-1.5 shadow hover:scale-105 transition"
+              title="Lưu dữ liệu và đăng xuất an toàn"
+            >
+              <LogOut className="w-4 h-4 text-fae" />
+              <span>🚪 Đăng Xuất Tài Khoản</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
           <button
             onClick={() => setSettingsOpen(false)}
             className="px-5 py-2.5 rounded-xl rpg-btn-primary font-bold text-xs text-parchment shadow"

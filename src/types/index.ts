@@ -120,3 +120,9 @@ export interface UserTitle {
   iconUrl: string;
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
+
+export interface HunterUser {
+  id: string;
+  email: string;
+  name: string;
+}
