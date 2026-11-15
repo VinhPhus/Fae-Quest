@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { DIFFICULTIES } from '../../constants/categories';
 import { CoinIcon } from '../ui/CoinIcon';
-import { Timer, Play, Pause, RotateCcw, X, Check, Lock, Sparkles } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, X, Check, Lock, Sparkles, Info } from 'lucide-react';
 
 const FOCUS_PRESETS = [10, 15, 25, 45, 60];
 
@@ -23,6 +23,7 @@ export const PomodoroTimerModal: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(initialDuration * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [customInput, setCustomInput] = useState(String(initialDuration));
+  const [showRewardInfo, setShowRewardInfo] = useState(false);
 
   // Sync with task when activePomodoroTaskId or task.focusDuration changes
   useEffect(() => {
@@ -208,31 +209,61 @@ export const PomodoroTimerModal: React.FC = () => {
             />
           </div>
 
-          {/* Combined Reward Preview Card */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#2D1036]/90 via-thorn-dark to-[#6B0733]/50 border border-amber-400/40 shadow-lg text-left space-y-2">
+          {/* Combined Reward Preview Card (Gọn gàng & có icon i giải thích) */}
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#2D1036]/90 via-thorn-dark to-[#6B0733]/50 border border-amber-400/40 shadow-lg text-left space-y-2 relative">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-extrabold text-amber-300 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Xem Trước Tổng Phần Thưởng</span>
-              </span>
+              <div className="flex items-center gap-1.5">
+                {/* Icon 'i' chứa toàn bộ mô tả chi tiết khi hover / click */}
+                <div className="relative inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRewardInfo(!showRewardInfo);
+                    }}
+                    onMouseEnter={() => setShowRewardInfo(true)}
+                    onMouseLeave={() => setShowRewardInfo(false)}
+                    className="w-4 h-4 rounded-full bg-parchment/15 hover:bg-amber-500/25 text-parchment/80 hover:text-amber-300 flex items-center justify-center transition border border-parchment/30 hover:border-amber-400/60 shrink-0"
+                    title="Bấm hoặc rê chuột để xem chi tiết phần thưởng"
+                  >
+                    <Info className="w-2.5 h-2.5" />
+                  </button>
+
+                  {/* Tooltip Popover */}
+                  {showRewardInfo && (
+                    <div className="absolute left-0 bottom-full mb-2 z-40 w-72 p-3 rounded-2xl bg-[#1D0924] border border-amber-400/70 shadow-2xl text-[11px] text-parchment leading-relaxed backdrop-blur-md animate-in fade-in zoom-in-95">
+                      <p className="font-semibold text-emerald-300 flex items-center gap-1 mb-1">
+                        <span>⚡ Tự Động Hoàn Thành Nhiệm Vụ</span>
+                      </p>
+                      <p className="text-parchment/90">
+                        Khi phiên đếm ngược hoàn tất (hoặc bấm Xong Sớm hợp lệ), nhiệm vụ sẽ được nghiệm thu ngay lập tức.
+                      </p>
+                      <div className="mt-2 pt-2 border-t border-parchment/15 space-y-0.5 text-parchment/80">
+                        <div>
+                          • <strong className="text-fae">+{totalCombinedExp} EXP</strong>: gồm +{taskExp} EXP từ nhiệm vụ và +{maxFocusExp} EXP từ {targetMinutes}p Focus.
+                        </div>
+                        <div>
+                          • <strong className="text-fae">+{totalCombinedCoins} Xu</strong>: gồm +{taskCoins} Xu từ nhiệm vụ và +{maxFocusCoins} Xu từ {targetMinutes}p Focus.
+                        </div>
+                      </div>
+                      <div className="absolute left-2.5 top-full w-2 h-2 bg-[#1D0924] border-r border-b border-amber-400/70 transform rotate-45 -mt-1" />
+                    </div>
+                  )}
+                </div>
+
+                <span className="font-extrabold text-amber-300 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>Tổng Phần Thưởng</span>
+                </span>
+              </div>
+
               <span className="text-[10px] text-emerald-300 font-bold bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-400/30">
                 ⚡ Tự Động Xong Nhiệm Vụ
               </span>
             </div>
 
-            <p className="text-[11px] text-parchment/85 leading-relaxed">
-              Hoàn thành phiên này sẽ <strong className="text-emerald-300 font-bold">tự động hoàn thành nhiệm vụ</strong> • Tổng nhận:{' '}
-              <strong className="text-fae font-bold">+{totalCombinedExp} EXP</strong>{' '}
-              <span className="text-parchment/60 font-medium">
-                (+{taskExp} Nhiệm vụ + {maxFocusExp} Focus)
-              </span>{' '}
-              & <strong className="text-fae font-bold">+{totalCombinedCoins} Xu</strong>{' '}
-              <span className="text-parchment/60 font-medium">
-                (+{taskCoins} Nhiệm vụ + {maxFocusCoins} Focus)
-              </span>
-            </p>
-
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {/* Badges phần thưởng gộp */}
+            <div className="flex flex-wrap items-center gap-2">
               <div className="px-3 py-1.5 rounded-xl bg-thorn-dark/95 border border-fae/40 flex items-center gap-1.5 shadow-sm">
                 <span className="text-xs sm:text-sm font-extrabold text-fae">
                   +{totalCombinedExp} EXP
