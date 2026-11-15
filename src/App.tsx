@@ -97,7 +97,7 @@ export const App: React.FC = () => {
       <LeftSidebar />
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 min-w-0 flex flex-col pb-24 md:pb-12">
+      <div className="flex-1 min-w-0 flex flex-col pb-24 md:pb-8">
         <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-5">
           {/* Streamlined Profile Header Card */}
           <PlayerStatusCard />

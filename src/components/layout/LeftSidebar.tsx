@@ -54,38 +54,44 @@ export const LeftSidebar: React.FC = () => {
     return false;
   }).length;
 
-  const menuItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
+  const menuItems: { id: ActiveTab; label: string; mobileLabel: string; icon: React.ReactNode; badge?: number }[] = [
     {
       id: 'quests',
       label: 'Nhiệm Vụ',
+      mobileLabel: 'Nhiệm Vụ',
       icon: <CheckSquare className="w-5 h-5 shrink-0" />,
       badge: pendingCount,
     },
     {
       id: 'system-quests',
       label: 'Thành Tựu',
+      mobileLabel: 'Thành Tựu',
       icon: <Scroll className="w-5 h-5 shrink-0" />,
       badge: actionableSystemQuestsCount,
     },
     {
       id: 'shop',
       label: 'Cửa Hàng',
+      mobileLabel: 'Cửa Hàng',
       icon: <ShoppingBag className="w-5 h-5 shrink-0" />,
     },
     {
       id: 'leaderboard',
       label: 'Đấu Trường BXH',
+      mobileLabel: 'BXH',
       icon: <Trophy className="w-5 h-5 shrink-0" />,
     },
     {
       id: 'inventory',
       label: 'Túi Đồ',
+      mobileLabel: 'Túi Đồ',
       icon: <Backpack className="w-5 h-5 shrink-0" />,
       badge: validUnusedInventoryCount,
     },
     {
       id: 'analytics',
       label: 'Thống Kê Năng Suất',
+      mobileLabel: 'Thống Kê',
       icon: <BarChart2 className="w-5 h-5 shrink-0" />,
     },
   ];
@@ -283,71 +289,84 @@ export const LeftSidebar: React.FC = () => {
       </aside>
 
       {/* ================= MOBILE BOTTOM NAVIGATION (< 768px) ================= */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-thorn-dark/95 backdrop-blur-xl border-t border-opal/40 px-2 py-2 flex items-center justify-around shadow-2xl">
+      <nav
+        aria-label="Mobile Navigation"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-[#16071b]/95 backdrop-blur-lg border-t border-white/10 px-1 py-1 flex items-center justify-around shadow-2xl"
+      >
         {menuItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-2.5 rounded-xl transition relative ${isActive
-                ? 'text-fae font-bold scale-105'
-                : 'text-parchment/60 hover:text-parchment'
-                }`}
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1.5 rounded-xl transition relative flex-1 min-w-0 ${
+                isActive
+                  ? 'text-fae font-bold'
+                  : 'text-parchment/60 hover:text-parchment'
+              }`}
             >
               <div className="relative">
                 {item.icon}
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-fae text-thorn-dark">
+                  <span className="absolute -top-1.5 -right-2 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-fae text-thorn-dark shadow-sm">
                     {item.badge}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] truncate max-w-[60px] leading-tight">
-                {item.label}
+              <span className={`text-[10px] truncate max-w-[56px] leading-tight ${isActive ? 'text-fae font-bold' : 'text-parchment/70'}`}>
+                {item.mobileLabel}
               </span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
       {/* ================= MOBILE TOP HEADER (< 768px) ================= */}
-      <div className="md:hidden sticky top-0 z-30 bg-thorn-dark/95 backdrop-blur-md border-b border-opal/30 px-4 py-2.5 flex items-center justify-between">
+      <header className="md:hidden sticky top-0 z-30 bg-[#16071b]/95 backdrop-blur-md border-b border-white/10 px-3.5 py-2.5 flex items-center justify-between">
+        {/* Left: Brand Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fae to-bargain flex items-center justify-center text-parchment shadow border border-parchment/20">
-            <Sword className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-fae to-bargain flex items-center justify-center text-parchment shadow border border-parchment/20 shrink-0">
+            <Sword className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h1 className="font-rpg font-bold text-sm tracking-wider text-parchment">
+            <h1 className="font-rpg font-extrabold text-sm tracking-wider text-parchment">
               FAE<span className="text-fae">QUEST</span>
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-thorn border border-opal/30 text-xs">
+        {/* Middle: Coins & Streak */}
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-thorn/90 border border-white/10 text-xs font-bold shadow-sm">
             <CoinIcon size="xs" />
-            <span className="font-bold text-fae">{coins}</span>
+            <span className="text-fae">{coins}</span>
           </div>
 
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-thorn/90 border border-white/10 text-xs font-bold text-amber-300 shadow-sm">
+            <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+            <span>{streakDays}N</span>
+          </div>
+        </div>
+
+        {/* Right: Quick Action Buttons (Khế Ước & Cài Đặt) */}
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => setOathOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-thorn border border-opal/30 text-xs font-bold text-fae-light hover:text-parchment"
+            className="p-1.5 rounded-lg bg-thorn/90 border border-white/10 text-fae hover:text-parchment hover:border-fae/40 transition shadow-sm"
             title="Khế Ước Thợ Săn"
           >
-            <Scroll className="w-3.5 h-3.5 text-fae" />
-            <span className="hidden sm:inline">Khế Ước</span>
+            <Scroll className="w-4 h-4" />
           </button>
 
           <button
             onClick={() => setSettingsOpen(true)}
-            className="p-1.5 rounded-lg bg-thorn border border-opal/30 text-parchment"
-            title="Cài đặt"
+            className="p-1.5 rounded-lg bg-thorn/90 border border-white/10 text-parchment/80 hover:text-parchment hover:border-fae/40 transition shadow-sm"
+            title="Cài Đặt Hệ Thống"
           >
             <Settings className="w-4 h-4 text-fae" />
           </button>
         </div>
-      </div>
+      </header>
     </>
   );
 };

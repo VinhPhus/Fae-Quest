@@ -8,6 +8,7 @@ import { PlusCircle, Sparkles, Repeat, Timer } from 'lucide-react';
 export const AddQuestForm: React.FC = () => {
   const addTask = useFaeQuestStore((state) => state.addTask);
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<TaskCategory>('hoc-tap');
   const [difficulty, setDifficulty] = useState<TaskDifficulty>('medium');
@@ -23,14 +24,37 @@ export const AddQuestForm: React.FC = () => {
     setTitle('');
     setFocusDuration(null);
     setCustomFocus('25');
+    setIsMobileOpen(false);
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="rpg-card rounded-3xl p-5 sm:p-6 space-y-5 border border-fae/30 shadow-xl"
+      className="rpg-card rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-fae/30 shadow-xl"
     >
-      <div className="flex items-center justify-between pb-3 border-b border-parchment/10">
+      {/* Mobile Toggle Button (< lg) */}
+      <div
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className="lg:hidden flex items-center justify-between cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-fae/20 border border-fae/40 flex items-center justify-center text-fae shrink-0">
+            <PlusCircle className="w-4 h-4" />
+          </div>
+          <span className="font-rpg font-bold text-sm text-parchment">
+            Khắc Lệnh Nhiệm Vụ Mới
+          </span>
+        </div>
+        <button
+          type="button"
+          className="px-2.5 py-1 rounded-lg bg-thorn-dark/90 text-[11px] font-bold text-fae border border-fae/30 hover:border-fae transition"
+        >
+          {isMobileOpen ? 'Thu gọn ▲' : '➕ Mở form ▼'}
+        </button>
+      </div>
+
+      {/* Desktop Header Banner (>= lg) */}
+      <div className="hidden lg:flex items-center justify-between pb-3 border-b border-parchment/10">
         <h3 className="font-rpg font-bold text-lg text-parchment flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-fae" />
           <span>Khắc Lệnh Nhiệm Vụ</span>
@@ -40,20 +64,22 @@ export const AddQuestForm: React.FC = () => {
         </span>
       </div>
 
-      {/* Task Title Input */}
-      <div>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-parchment/80 mb-2">
-          Tên Nhiệm Vụ Cần Chinh Phục *
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="VD: Đọc 20 trang sách, Giải bài tập thuật toán, Chạy bộ..."
-          required
-          className="w-full px-4 py-3 rounded-2xl bg-thorn-dark/90 border border-opal/40 text-sm text-parchment placeholder-parchment/40 focus:outline-none focus:border-fae focus:ring-1 focus:ring-fae transition shadow-inner"
-        />
-      </div>
+      {/* Collapsible Form Body on Mobile / Always visible on Desktop */}
+      <div className={`${isMobileOpen ? 'block' : 'hidden'} lg:block space-y-4 pt-3 lg:pt-0`}>
+        {/* Task Title Input */}
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wider text-parchment/80 mb-2">
+            Tên Nhiệm Vụ Cần Chinh Phục *
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="VD: Đọc 20 trang sách, Giải bài tập thuật toán, Chạy bộ..."
+            required
+            className="w-full px-4 py-3 rounded-2xl bg-thorn-dark/90 border border-opal/40 text-sm text-parchment placeholder-parchment/40 focus:outline-none focus:border-fae focus:ring-1 focus:ring-fae transition shadow-inner"
+          />
+        </div>
 
       {/* Category Selection */}
       <div>
@@ -229,14 +255,15 @@ export const AddQuestForm: React.FC = () => {
         </label>
       </div>
 
-      {/* Submit Button */}
-      <button
-        type="submit"
-        className="w-full py-3.5 rounded-2xl rpg-btn-primary font-bold text-sm text-parchment flex items-center justify-center gap-2 shadow-xl"
-      >
-        <PlusCircle className="w-5 h-5 text-parchment" />
-        <span>Ghi Vào Bảng Nhiệm Vụ</span>
-      </button>
+        {/* Submit Button */}
+        <button
+          type="submit"
+          className="w-full py-3.5 rounded-2xl rpg-btn-primary font-bold text-sm text-parchment flex items-center justify-center gap-2 shadow-xl"
+        >
+          <PlusCircle className="w-5 h-5 text-parchment" />
+          <span>Ghi Vào Bảng Nhiệm Vụ</span>
+        </button>
+      </div>
     </form>
   );
 };

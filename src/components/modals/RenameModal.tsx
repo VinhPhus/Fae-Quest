@@ -21,8 +21,8 @@ export const RenameModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-3xl max-w-sm w-full p-6 space-y-4 border border-fae/50 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
+      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-sm w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-5 sm:p-6 space-y-4 border border-fae/50 shadow-2xl relative">
         <button
           onClick={() => setRenameOpen(false)}
           className="absolute top-4 right-4 text-parchment/40 hover:text-parchment p-1 transition"

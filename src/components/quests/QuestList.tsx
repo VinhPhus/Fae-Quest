@@ -53,71 +53,71 @@ export const QuestList: React.FC = () => {
         return (
           <div
             key={task.id}
-            className={`rpg-card rounded-2xl p-4 sm:p-5 transition-all duration-200 hover:border-fae/60 ${
+            className={`rpg-card rounded-2xl p-3.5 sm:p-5 transition-all duration-200 hover:border-fae/60 ${
               task.completed ? 'opacity-65 bg-thorn-dark/50' : ''
             }`}
           >
-            <div className="flex items-start sm:items-center justify-between gap-3.5">
+            <div className="flex items-start sm:items-center justify-between gap-2.5 sm:gap-3.5">
               {/* Custom RPG Checkbox + Task Info */}
-              <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+              <div className="flex items-start sm:items-center gap-2.5 sm:gap-3.5 flex-1 min-w-0">
                 <button
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     toggleTask(task.id, { x: rect.right + 10, y: rect.top });
                   }}
-                  className={`mt-0.5 sm:mt-0 w-7 h-7 rounded-xl border-2 flex items-center justify-center shrink-0 transition-all ${
+                  className={`mt-0.5 sm:mt-0 w-6 h-6 sm:w-7 sm:h-7 rounded-xl border-2 flex items-center justify-center shrink-0 transition-all ${
                     task.completed
                       ? 'bg-fae border-fae text-thorn-dark shadow-md'
                       : 'bg-thorn-dark/90 border-fae/60 hover:border-fae hover:scale-110 text-transparent'
                   }`}
                   title={task.completed ? 'Nhấn để hoàn tác' : 'Nhấn để hoàn thành & nhận EXP'}
                 >
-                  <Check className="w-4 h-4 stroke-[3]" />
+                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3]" />
                 </button>
 
-                <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="space-y-1 sm:space-y-1.5 flex-1 min-w-0">
                   <p
-                    className={`text-sm sm:text-base font-bold leading-snug break-words ${
+                    className={`text-xs sm:text-base font-bold leading-snug break-words ${
                       task.completed ? 'line-through text-parchment/50' : 'text-parchment'
                     }`}
                   >
                     {task.title}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     {/* Category Pill */}
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-xs font-medium ${cat.badgeBg}`}
+                      className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-lg border text-[10px] sm:text-xs font-medium ${cat.badgeBg}`}
                     >
                       <span>{cat.label}</span>
                     </span>
 
                     {/* Difficulty Pill */}
                     <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-xs font-bold ${diff.badgeClass}`}
+                      className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-lg border text-[10px] sm:text-xs font-bold ${diff.badgeClass}`}
                     >
                       <span>{diff.label}</span>
                     </span>
 
                     {/* Daily Recurring badge */}
                     {task.isDailyRecurring && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-thorn-dark/80 text-[10px] text-parchment/60 border border-parchment/10">
-                        <Repeat className="w-3 h-3 text-fae" />
-                        <span>Lặp lại mỗi ngày</span>
+                      <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-thorn-dark/80 text-[9px] sm:text-[10px] text-parchment/60 border border-parchment/10">
+                        <Repeat className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-fae" />
+                        <span>Hằng ngày</span>
                       </span>
                     )}
 
-                    {/* Focus Duration badge (Chỉ hiển thị khi có Fae Focus) */}
+                    {/* Focus Duration badge */}
                     {Boolean(task.focusDuration) && (
                       <span
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!task.completed) setActivePomodoroTaskId(task.id);
                         }}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-thorn-dark/80 text-[10px] text-fae-light border border-fae/20 hover:border-fae/50 cursor-pointer transition"
+                        className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-thorn-dark/80 text-[9px] sm:text-[10px] text-fae-light border border-fae/20 hover:border-fae/50 cursor-pointer transition"
                         title={`Bật Đồng Hồ Fae Focus (${task.focusDuration} phút)`}
                       >
-                        <Timer className="w-3 h-3 text-fae" />
+                        <Timer className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-fae" />
                         <span>{task.focusDuration}p</span>
                         {task.focusRewardClaimed && (
                           <span className="text-[9px] text-emerald-400 font-bold ml-0.5">✓</span>
@@ -129,12 +129,12 @@ export const QuestList: React.FC = () => {
               </div>
 
               {/* Right: EXP/Coin Reward + Pomodoro + Delete */}
-              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                <div className="text-right px-3 py-1.5 rounded-xl bg-thorn-dark/85 border border-fae/30">
-                  <span className="block text-xs sm:text-sm font-extrabold text-fae">
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+                <div className="text-right px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-thorn-dark/85 border border-fae/30">
+                  <span className="block text-[11px] sm:text-sm font-extrabold text-fae whitespace-nowrap">
                     +{diff.exp} EXP
                   </span>
-                  <span className="flex items-center justify-end gap-1 text-[11px] font-semibold text-parchment/75">
+                  <span className="flex items-center justify-end gap-1 text-[10px] sm:text-[11px] font-semibold text-parchment/75">
                     <span>+{diff.coins}</span>
                     <CoinIcon size="xs" />
                   </span>
@@ -143,19 +143,19 @@ export const QuestList: React.FC = () => {
                 {!task.completed && Boolean(task.focusDuration) && (
                   <button
                     onClick={() => setActivePomodoroTaskId(task.id)}
-                    className="p-2 rounded-xl bg-thorn-dark/80 hover:bg-opal/50 border border-opal/30 text-opal-light hover:text-parchment transition"
+                    className="p-1.5 sm:p-2 rounded-xl bg-thorn-dark/80 hover:bg-opal/50 border border-opal/30 text-opal-light hover:text-parchment transition"
                     title="Bật Đồng Hồ Tập Trung (Pomodoro)"
                   >
-                    <Timer className="w-4 h-4" />
+                    <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 )}
 
                 <button
                   onClick={() => deleteTask(task.id)}
-                  className="p-2 rounded-xl bg-thorn-dark/60 hover:bg-rose-950/60 border border-rose-500/20 text-parchment/40 hover:text-rose-300 transition"
+                  className="p-1.5 sm:p-2 rounded-xl bg-thorn-dark/60 hover:bg-rose-950/60 border border-rose-500/20 text-parchment/40 hover:text-rose-300 transition"
                   title="Xóa nhiệm vụ"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>

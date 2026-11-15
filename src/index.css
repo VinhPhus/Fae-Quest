@@ -21,6 +21,13 @@ body {
   overflow-x: hidden;
 }
 
+/* Chống tự động zoom trên iOS Safari khi chạm vào ô input */
+@media screen and (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Custom Decorative RPG Cards */
 .rpg-card {
   background: linear-gradient(145deg, rgba(107, 7, 51, 0.78) 0%, rgba(45, 16, 54, 0.92) 100%);

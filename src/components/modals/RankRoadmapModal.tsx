@@ -24,8 +24,8 @@ export const RankRoadmapModal: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-fae/50 shadow-2xl animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
+      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-3xl w-[94vw] sm:w-full max-h-[88vh] flex flex-col overflow-hidden border border-fae/50 shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-parchment/10 flex items-center justify-between bg-thorn-dark/70 shrink-0">
           <div className="flex items-center gap-3">

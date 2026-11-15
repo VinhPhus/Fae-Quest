@@ -126,8 +126,8 @@ export const HuntersOathModal: React.FC = () => {
         <X className="w-5 h-5" />
       </button>
 
-      {/* 3D PERSPECTIVE CONTAINER */}
-      <div className="relative z-10 w-full max-w-xl perspective-1200 flex flex-col items-center justify-center py-6">
+      {/* 3D PERSPECTIVE CONTAINER (Tự động thu phóng tỷ lệ vừa khít màn hình điện thoại) */}
+      <div className="relative z-10 w-[94vw] sm:w-full max-w-xl perspective-1200 flex flex-col items-center justify-center py-4 sm:py-6 scale-90 sm:scale-100 origin-center transition-transform">
         {/* ============================================================ */}
         {/* STATE 1: CUỘN GIẤY ĐANG ĐÓNG (isScrollOpen = false)         */}
         {/* ============================================================ */}

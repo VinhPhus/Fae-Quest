@@ -363,14 +363,14 @@ export const SystemQuestsView: React.FC = () => {
                 </div>
 
                 {/* Actions Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 w-full">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     {/* Check-In Button */}
                     {!quest.isCompleted && (
                       <button
                         onClick={() => checkInStreakQuest(quest.id)}
                         disabled={isCheckedInToday || isResetToday}
-                        className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition ${
+                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
                           isResetToday
                             ? 'bg-[#2D1036]/80 border border-[#6B0733]/60 text-gray-400 cursor-not-allowed shadow-inner'
                             : isCheckedInToday
@@ -381,7 +381,7 @@ export const SystemQuestsView: React.FC = () => {
                         {isResetToday ? (
                           <>
                             <span className="text-sm">⏳</span>
-                            <span>Đã Reset • Mở điểm danh lại sau 00:00 đêm (còn {countdownString})</span>
+                            <span>Đã Reset • Mở điểm danh lại sau 00:00 (còn {countdownString})</span>
                           </>
                         ) : isCheckedInToday ? (
                           <>
@@ -401,7 +401,7 @@ export const SystemQuestsView: React.FC = () => {
                     {canClaim && (
                       <button
                         onClick={() => claimSystemQuestReward(quest.id)}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-parchment font-extrabold text-xs flex items-center gap-2 shadow-xl animate-bounce"
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-parchment font-extrabold text-xs flex items-center justify-center gap-2 shadow-xl animate-bounce"
                       >
                         <Gift className="w-4 h-4 text-amber-200" />
                         <span>🎁 Nhận Danh Hiệu & Phần Thưởng</span>
@@ -409,7 +409,7 @@ export const SystemQuestsView: React.FC = () => {
                     )}
 
                     {quest.isRewardClaimed && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-xs font-bold text-emerald-300">
+                      <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400/40 text-xs font-bold text-emerald-300">
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Đã Nhận Thưởng</span>
                       </span>
@@ -417,9 +417,9 @@ export const SystemQuestsView: React.FC = () => {
                   </div>
 
                   {/* Reset Button with Dialog */}
-                  <div>
+                  <div className="w-full sm:w-auto">
                     {confirmResetQuestId === quest.id ? (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-[#2D1036] p-3 rounded-2xl border border-rose-500/50 shadow-xl animate-in fade-in max-w-lg">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-[#2D1036] p-3 rounded-2xl border border-rose-500/50 shadow-xl animate-in fade-in w-full max-w-lg">
                         <div className="flex items-start gap-2 text-xs text-rose-200">
                           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                           <span className="leading-snug">
@@ -447,7 +447,7 @@ export const SystemQuestsView: React.FC = () => {
                     ) : isAtDayZero ? (
                       <button
                         disabled
-                        className="p-2 px-3 rounded-xl bg-thorn-dark/40 border border-parchment/10 text-parchment/30 text-xs flex items-center gap-1.5 cursor-not-allowed opacity-50"
+                        className="w-full sm:w-auto p-2 px-3 rounded-xl bg-thorn-dark/40 border border-parchment/10 text-parchment/30 text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
                         title="Bộ đếm đang ở Ngày 0, không cần Reset"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
@@ -456,7 +456,7 @@ export const SystemQuestsView: React.FC = () => {
                     ) : (
                       <button
                         onClick={() => setConfirmResetQuestId(quest.id)}
-                        className="p-2 px-3 rounded-xl bg-thorn-dark/70 hover:bg-rose-950/40 border border-parchment/15 hover:border-rose-400/40 text-parchment/50 hover:text-rose-300 text-xs flex items-center gap-1.5 transition"
+                        className="w-full sm:w-auto p-2 px-3 rounded-xl bg-thorn-dark/70 hover:bg-rose-950/40 border border-parchment/15 hover:border-rose-400/40 text-parchment/50 hover:text-rose-300 text-xs flex items-center justify-center gap-1.5 transition"
                         title="Reset chuỗi về ngày 0 để bắt đầu lại thử thách"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />

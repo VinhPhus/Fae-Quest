@@ -135,12 +135,13 @@ export const LeaderboardTable: React.FC = () => {
       <RivalTargetBanner />
 
       {/* Leaderboard List */}
-      <div className="rpg-card rounded-3xl overflow-hidden border border-opal/30 shadow-2xl">
-        <div className="px-6 py-4 bg-thorn-dark/90 border-b border-parchment/10 grid grid-cols-12 text-xs font-bold uppercase tracking-wider text-parchment/60">
-          <div className="col-span-2 sm:col-span-1">Hạng</div>
-          <div className="col-span-6 sm:col-span-5">Thợ Săn</div>
-          <div className="col-span-4 sm:col-span-3 text-center">Bậc Rank</div>
+      <div className="rpg-card rounded-2xl sm:rounded-3xl overflow-hidden border border-opal/30 shadow-2xl">
+        <div className="px-3.5 sm:px-6 py-3 sm:py-4 bg-thorn-dark/90 border-b border-parchment/10 flex items-center justify-between sm:grid sm:grid-cols-12 text-xs font-bold uppercase tracking-wider text-parchment/60">
+          <div className="hidden sm:block sm:col-span-1">Hạng</div>
+          <div className="flex-1 sm:col-span-5">Thợ Săn</div>
+          <div className="hidden sm:block sm:col-span-3 text-center">Bậc Rank</div>
           <div className="hidden sm:block sm:col-span-3 text-right">Điểm EXP</div>
+          <div className="sm:hidden text-right text-fae">Bậc & EXP</div>
         </div>
 
         <div className="divide-y divide-parchment/10">
@@ -150,23 +151,23 @@ export const LeaderboardTable: React.FC = () => {
             const tier = RANK_TIERS[rankIdx];
 
             let rankBadge = (
-              <span className="font-extrabold text-sm text-parchment/70">#{rankPos}</span>
+              <span className="font-extrabold text-xs sm:text-sm text-parchment/70">#{rankPos}</span>
             );
             if (rankPos === 1) {
               rankBadge = (
-                <span className="w-7 h-7 rounded-full bg-amber-400 text-thorn-dark font-black text-xs flex items-center justify-center shadow">
+                <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-amber-400 text-thorn-dark font-black text-[11px] sm:text-xs flex items-center justify-center shadow">
                   1
                 </span>
               );
             } else if (rankPos === 2) {
               rankBadge = (
-                <span className="w-7 h-7 rounded-full bg-slate-300 text-thorn-dark font-black text-xs flex items-center justify-center shadow">
+                <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-300 text-thorn-dark font-black text-[11px] sm:text-xs flex items-center justify-center shadow">
                   2
                 </span>
               );
             } else if (rankPos === 3) {
               rankBadge = (
-                <span className="w-7 h-7 rounded-full bg-amber-700 text-white font-black text-xs flex items-center justify-center shadow">
+                <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-amber-700 text-white font-black text-[11px] sm:text-xs flex items-center justify-center shadow">
                   3
                 </span>
               );
@@ -179,18 +180,20 @@ export const LeaderboardTable: React.FC = () => {
             return (
               <div
                 key={c.id}
-                className={`px-6 py-4 grid grid-cols-12 items-center transition ${
+                className={`px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between sm:grid sm:grid-cols-12 gap-2 sm:gap-0 transition ${
                   c.isPlayer
                     ? 'bg-gradient-to-r from-bargain via-bargain-light/40 to-transparent border-l-4 border-l-fae'
                     : 'hover:bg-thorn-dark/40'
                 }`}
               >
-                {/* Rank Pos */}
-                <div className="col-span-2 sm:col-span-1 flex items-center">{rankBadge}</div>
+                {/* Desktop: Rank Pos (1 col) */}
+                <div className="hidden sm:flex sm:col-span-1 items-center">{rankBadge}</div>
 
-                {/* Name & Title & Tags */}
-                <div className="col-span-6 sm:col-span-5 flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-thorn-dark/90 border border-opal/40 flex items-center justify-center text-xl shrink-0 shadow-inner overflow-hidden">
+                {/* Name & Title & Tags (Mobile: flex row with Rank and Avatar / Desktop: 5 cols) */}
+                <div className="flex items-center gap-2.5 sm:gap-3 flex-1 sm:col-span-5 min-w-0">
+                  <div className="sm:hidden flex items-center shrink-0">{rankBadge}</div>
+
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-thorn-dark/90 border border-opal/40 flex items-center justify-center text-lg sm:text-xl shrink-0 shadow-inner overflow-hidden">
                     {isAvatarUrl ? (
                       <img
                         src={c.avatar}
@@ -204,19 +207,19 @@ export const LeaderboardTable: React.FC = () => {
                   </div>
 
                   <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-parchment truncate">{c.name}</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs sm:text-sm font-bold text-parchment truncate">{c.name}</p>
                       {c.isPlayer ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-fae text-thorn-dark shadow">
+                        <span className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-fae text-thorn-dark shadow">
                           BẠN
                         </span>
                       ) : c.isCommunity ? (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 flex items-center gap-0.5">
+                        <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 items-center gap-0.5">
                           <Globe className="w-2.5 h-2.5" />
                           <span>Cộng Đồng</span>
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-400/30 flex items-center gap-0.5">
+                        <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-400/30 items-center gap-0.5">
                           <Bot className="w-2.5 h-2.5" />
                           <span>AI</span>
                         </span>
@@ -230,29 +233,29 @@ export const LeaderboardTable: React.FC = () => {
                       if (matchingTitle) {
                         return (
                           <div
-                            className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${matchingTitle.color}`}
+                            className={`inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold ${matchingTitle.color}`}
                           >
                             {matchingTitle.iconUrl ? (
                               <img
                                 src={matchingTitle.iconUrl}
                                 alt={matchingTitle.name}
-                                className="w-4 h-4 object-contain shrink-0 drop-shadow"
+                                className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain shrink-0 drop-shadow"
                                 loading="lazy"
                               />
                             ) : (
                               <span>{matchingTitle.icon}</span>
                             )}
-                            <span className="truncate">{c.title}</span>
+                            <span className="truncate max-w-[120px] sm:max-w-none">{c.title}</span>
                           </div>
                         );
                       }
-                      return <p className="text-xs text-parchment/60 truncate">{c.title}</p>;
+                      return <p className="text-[10px] sm:text-xs text-parchment/60 truncate">{c.title}</p>;
                     })()}
                   </div>
                 </div>
 
-                {/* Rank Tier Badge */}
-                <div className="col-span-4 sm:col-span-3 flex items-center justify-center gap-2">
+                {/* Desktop: Rank Tier Badge (3 cols) */}
+                <div className="hidden sm:flex sm:col-span-3 items-center justify-center gap-2">
                   <img
                     src={tier.iconUrl}
                     alt={tier.name}
@@ -266,10 +269,26 @@ export const LeaderboardTable: React.FC = () => {
                   </span>
                 </div>
 
-                {/* EXP */}
+                {/* Desktop: EXP (3 cols) */}
                 <div className="hidden sm:block sm:col-span-3 text-right">
                   <span className="text-sm font-extrabold text-fae">{c.exp.toLocaleString()}</span>
                   <span className="text-xs text-parchment/60 ml-1">EXP</span>
+                </div>
+
+                {/* Mobile Right Block: Compact Rank Badge + EXP on same row */}
+                <div className="sm:hidden flex flex-col items-end shrink-0 pl-1">
+                  <div className="flex items-center gap-1">
+                    <img
+                      src={tier.iconUrl}
+                      alt={tier.name}
+                      className="w-4 h-4 object-contain"
+                      loading="lazy"
+                    />
+                    <span className="text-[10px] font-bold text-parchment">{tier.name}</span>
+                  </div>
+                  <span className="text-[11px] font-extrabold text-fae">
+                    {c.exp.toLocaleString()} <span className="text-[9px] text-parchment/60 font-normal">EXP</span>
+                  </span>
                 </div>
               </div>
             );

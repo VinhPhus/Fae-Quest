@@ -12,8 +12,8 @@ export const RankUpModal: React.FC = () => {
   const { achievedTier, bonusCoins } = rankUpData;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-3xl max-w-md w-full p-7 text-center relative overflow-hidden border-2 border-fae shadow-2xl animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
+      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-5 sm:p-7 text-center relative overflow-hidden border-2 border-fae shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Glow rays */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 bg-fae/30 rounded-full blur-3xl pointer-events-none" />
 
