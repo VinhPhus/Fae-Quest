@@ -125,6 +125,7 @@ interface FaeQuestState {
   claimSystemQuestReward: (questId: string) => void;
   equipTitle: (titleId: string) => void;
   checkSystemMilestones: () => void;
+  cleanupExpiredInventory: () => void;
   setHunterId: (id: string) => void;
   syncToCloud: (silent?: boolean) => Promise<boolean>;
   restoreFromCloud: (targetHunterId: string) => Promise<boolean>;
@@ -219,7 +220,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         get().addToast(next ? 'Đã bật hiệu ứng âm thanh RPG' : 'Đã tắt âm thanh', 'info');
       },
 
-      setActiveTab: (tab: ActiveTab) => set({ activeTab: tab }),
+      setActiveTab: (tab: ActiveTab) => {
+        set({ activeTab: tab });
+        get().cleanupExpiredInventory();
+      },
 
       setCategoryFilter: (cat: string) => set({ activeCategoryFilter: cat }),
 
@@ -561,13 +565,17 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return;
         }
 
+        const now = Date.now();
         const newTicket: InventoryTicket = {
-          id: 'inv_' + Date.now(),
+          id: 'inv_' + now,
           title: item.title,
           emoji: item.emoji,
           cost: item.cost,
-          redeemedAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' hôm nay',
+          redeemedAt: new Date(now).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' hôm nay',
+          purchasedAt: now,
+          expiresAt: now + 7 * 24 * 60 * 60 * 1000,
           used: false,
+          usedAt: null,
         };
 
         if (coords) {
@@ -591,7 +599,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }));
 
         playSoundEffect('coin', state.soundEnabled);
-        get().addToast(`Đã đổi "${item.title}"! Kiểm tra trong Kho Phần Thưởng nhé.`, 'success');
+        get().addToast('🎒 Đã thêm vật phẩm vào Túi Đồ!', 'success');
         debouncedAutoSync(get());
       },
 
@@ -618,11 +626,54 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       useInventoryTicket: (ticketId: string) => {
+        const now = Date.now();
+        const state = get();
+        const target = state.inventory.find((t) => t.id === ticketId);
         set((prev) => ({
-          inventory: prev.inventory.map((t) => (t.id === ticketId ? { ...t, used: true } : t)),
+          inventory: prev.inventory.map((t) =>
+            t.id === ticketId ? { ...t, used: true, usedAt: now } : t
+          ),
         }));
         playSoundEffect('complete', get().soundEnabled);
-        get().addToast('Đã đánh dấu sử dụng phần thưởng ngoài đời thực!', 'success');
+        get().addToast(
+          target ? `✨ Đã kích hoạt "${target.title}"!` : '✨ Đã kích hoạt sử dụng vật phẩm!',
+          'success'
+        );
+        debouncedAutoSync(get());
+      },
+
+      cleanupExpiredInventory: () => {
+        const state = get();
+        const now = Date.now();
+        const THIRTY_MINUTES_MS = 30 * 60 * 1000;
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+        let hasChanged = false;
+        const cleaned = state.inventory.filter((item) => {
+          // Quy tắc 1 (Sau khi sử dụng 30 phút tự xóa)
+          if (item.used) {
+            const usedTime = item.usedAt || item.purchasedAt;
+            if (usedTime && now - usedTime >= THIRTY_MINUTES_MS) {
+              hasChanged = true;
+              return false;
+            }
+            return true;
+          }
+
+          // Quy tắc 2 (Hiệu lực 7 ngày sau khi đổi)
+          const expireTime = item.expiresAt || ((item.purchasedAt || 0) + SEVEN_DAYS_MS);
+          if (now >= expireTime) {
+            hasChanged = true;
+            return false;
+          }
+
+          return true;
+        });
+
+        if (hasChanged) {
+          set({ inventory: cleaned });
+          debouncedAutoSync(get());
+        }
       },
 
       simulateRivalActivity: () => {

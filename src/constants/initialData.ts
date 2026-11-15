@@ -101,7 +101,10 @@ export const INITIAL_INVENTORY: InventoryTicket[] = [
     emoji: '🍜',
     cost: 10,
     redeemedAt: 'Hôm qua',
+    purchasedAt: Date.now() - 3600000 * 24,
+    expiresAt: Date.now() + 3600000 * 24 * 6,
     used: false,
+    usedAt: null,
   },
 ];
 

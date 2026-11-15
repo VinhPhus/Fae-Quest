@@ -7,7 +7,10 @@ export const NavigationTabs: React.FC = () => {
   const { activeTab, setActiveTab, tasks, inventory } = useFaeQuestStore();
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
-  const unusedInventoryCount = inventory.filter((i) => !i.used).length;
+  const now = Date.now();
+  const validUnusedInventoryCount = inventory.filter(
+    (i) => !i.used && (!i.expiresAt || i.expiresAt > now)
+  ).length;
 
   const tabs: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     {
@@ -28,9 +31,9 @@ export const NavigationTabs: React.FC = () => {
     },
     {
       id: 'inventory',
-      label: 'Kho Phần Thưởng',
+      label: 'Túi Đồ',
       icon: <Backpack className="w-4 h-4" />,
-      badge: unusedInventoryCount,
+      badge: validUnusedInventoryCount,
     },
     {
       id: 'analytics',

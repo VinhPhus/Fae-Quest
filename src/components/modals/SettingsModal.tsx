@@ -602,7 +602,7 @@ export const SettingsModal: React.FC = () => {
 
                 <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-3">
                   <p className="text-xs text-parchment/75 leading-relaxed">
-                    Xóa toàn bộ tiến độ nhiệm vụ, điểm EXP, bậc Rank, Xu vàng và kho phần thưởng để bắt đầu lại từ đầu như tài khoản mới.
+                    Xóa toàn bộ tiến độ nhiệm vụ, điểm EXP, bậc Rank, Xu vàng và túi đồ để bắt đầu lại từ đầu như tài khoản mới.
                   </p>
 
                   <button

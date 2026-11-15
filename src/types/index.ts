@@ -52,8 +52,13 @@ export interface InventoryTicket {
   emoji: string;
   cost: number;
   redeemedAt: string;
+  purchasedAt?: number;
+  expiresAt?: number;
   used: boolean;
+  usedAt?: number | null;
 }
+
+export type InventoryItem = InventoryTicket;
 
 export interface Rival {
   id: string;

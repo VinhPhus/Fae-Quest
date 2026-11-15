@@ -32,7 +32,10 @@ export const LeftSidebar: React.FC = () => {
   } = useFaeQuestStore();
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
-  const unusedInventoryCount = inventory.filter((i) => !i.used).length;
+  const now = Date.now();
+  const validUnusedInventoryCount = inventory.filter(
+    (i) => !i.used && (!i.expiresAt || i.expiresAt > now)
+  ).length;
 
   const d = new Date();
   const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -76,9 +79,9 @@ export const LeftSidebar: React.FC = () => {
     },
     {
       id: 'inventory',
-      label: 'Kho Phần Thưởng',
+      label: 'Túi Đồ',
       icon: <Backpack className="w-5 h-5 shrink-0" />,
-      badge: unusedInventoryCount,
+      badge: validUnusedInventoryCount,
     },
     {
       id: 'analytics',

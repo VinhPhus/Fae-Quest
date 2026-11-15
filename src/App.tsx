@@ -33,6 +33,7 @@ export const App: React.FC = () => {
     activeTab,
     checkDailyReset,
     checkSystemMilestones,
+    cleanupExpiredInventory,
   } = useFaeQuestStore();
 
   useEffect(() => {
@@ -43,10 +44,25 @@ export const App: React.FC = () => {
     if (currentUser) {
       checkDailyReset();
       checkSystemMilestones();
+      cleanupExpiredInventory();
       // Tự động đồng bộ nhẹ lên Supabase khi khởi chạy ứng dụng
       useFaeQuestStore.getState().syncToCloud(true);
     }
-  }, [currentUser, checkDailyReset, checkSystemMilestones]);
+  }, [currentUser, checkDailyReset, checkSystemMilestones, cleanupExpiredInventory]);
+
+  // Periodic 30s background check for inventory item lifecycle (auto-cleanup)
+  useEffect(() => {
+    cleanupExpiredInventory();
+    const interval = setInterval(() => {
+      cleanupExpiredInventory();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [cleanupExpiredInventory]);
+
+  // Clean up inventory whenever switching tabs
+  useEffect(() => {
+    cleanupExpiredInventory();
+  }, [activeTab, cleanupExpiredInventory]);
 
   // Loading state while checking authentication session
   if (authLoading) {
