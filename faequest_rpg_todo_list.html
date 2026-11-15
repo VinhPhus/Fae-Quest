@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FaeQuest — Hệ Thống Nhiệm Vụ & Thăng Hạng</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & Cinzel Decorative for RPG Aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        thorn: {
+                            DEFAULT: '#2D1036', // Thorn Crown - Main Background
+                            dark: '#1D0924',
+                            light: '#3E174B'
+                        },
+                        bargain: {
+                            DEFAULT: '#6B0733', // Blood Bargain - Cards & Surfaces
+                            dark: '#4D0424',
+                            light: '#8A0B43'
+                        },
+                        opal: {
+                            DEFAULT: '#6850AD', // Opal - Mystical Secondary & Accents
+                            dark: '#4E3A87',
+                            light: '#8770CC'
+                        },
+                        fae: {
+                            DEFAULT: '#D97352', // Fae Fruit - Primary CTA, Highlights & Gold/Coral
+                            dark: '#B85A3B',
+                            light: '#EB9275'
+                        },
+                        parchment: '#FFF5EE'
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        rpg: ['"Cinzel"', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --fae-fruit: #D97352;
+            --opal: #6850AD;
+            --blood-bargain: #6B0733;
+            --thorn-crown: #2D1036;
+        }
+
+        body {
+            background-color: #2D1036;
+            background-image: 
+                radial-gradient(circle at 12% 18%, rgba(104, 80, 173, 0.25) 0%, transparent 45%),
+                radial-gradient(circle at 88% 22%, rgba(107, 7, 51, 0.45) 0%, transparent 50%),
+                radial-gradient(circle at 50% 90%, rgba(217, 119, 82, 0.14) 0%, transparent 50%),
+                linear-gradient(180deg, #1D0924 0%, #2D1036 55%, #230B2B 100%);
+            color: #FFF5EE;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Custom Decorative RPG Cards */
+        .rpg-card {
+            background: linear-gradient(145deg, rgba(107, 7, 51, 0.78) 0%, rgba(45, 16, 54, 0.92) 100%);
+            border: 1px solid rgba(217, 119, 82, 0.32);
+            box-shadow: 0 12px 32px -8px rgba(15, 4, 20, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+        }
+
+        .rpg-card-opal {
+            background: linear-gradient(145deg, rgba(104, 80, 173, 0.32) 0%, rgba(45, 16, 54, 0.92) 100%);
+            border: 1px solid rgba(135, 112, 204, 0.4);
+            box-shadow: 0 12px 32px -8px rgba(15, 4, 20, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+        }
+
+        .rpg-btn-primary {
+            background: linear-gradient(135deg, #D97352 0%, #B84A39 100%);
+            border: 1px solid rgba(255, 224, 204, 0.4);
+            box-shadow: 0 4px 15px rgba(217, 119, 82, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .rpg-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(217, 119, 82, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+            filter: brightness(1.06);
+        }
+        .rpg-btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .rpg-btn-opal {
+            background: linear-gradient(135deg, #6850AD 0%, #4E3A87 100%);
+            border: 1px solid rgba(190, 175, 240, 0.35);
+            box-shadow: 0 4px 14px rgba(104, 80, 173, 0.35);
+            transition: all 0.2s ease;
+        }
+        .rpg-btn-opal:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(104, 80, 173, 0.55);
+            filter: brightness(1.08);
+        }
+
+        /* Progress Bar Shimmer */
+        .exp-bar-fill {
+            background: linear-gradient(90deg, #6850AD 0%, #B8336A 50%, #D97352 100%);
+            background-size: 200% 100%;
+            animation: gradientShift 4s ease infinite;
+            transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Floating +EXP & +Coin Animation */
+        @keyframes floatUpFade {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.85);
+            }
+            40% {
+                opacity: 1;
+                transform: translateY(-24px) scale(1.08);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-58px) scale(0.95);
+            }
+        }
+        .floating-reward {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            animation: floatUpFade 1.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Pulse Glow for Rank Emblem */
+        @keyframes emblemFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(2deg); }
+        }
+        .emblem-animate {
+            animation: emblemFloat 3.8s ease-in-out infinite;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1D0924;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6B0733;
+            border-radius: 9999px;
+            border: 1px solid #D97352;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D97352;
+        }
+
+        /* Thorn Background SVG Pattern Overlay */
+        .thorn-pattern {
+            background-image: radial-gradient(rgba(217, 119, 82, 0.12) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="thorn-pattern antialiased selection:bg-fae selection:text-thorn-dark pb-16">
+
+    <!-- Top Decorative Banner Inspired by the Reference Sword & Fae Fruit Art -->
+    <div class="relative overflow-hidden border-b border-fae/30 bg-gradient-to-r from-thorn-dark via-bargain to-opal/70">
+        <!-- Decorative SVG Vines & Stars in Background -->
+        <svg class="absolute inset-0 w-full h-full opacity-20 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,60 Q150,10 300,60 T600,60 T900,60 T1200,60" fill="none" stroke="#D97352" stroke-width="3"/>
+            <path d="M0,90 Q200,30 400,80 T800,50 T1200,80" fill="none" stroke="#6850AD" stroke-width="2"/>
+            <polygon points="150,25 155,38 168,43 155,48 150,61 145,48 132,43 145,38" fill="#D97352"/>
+            <polygon points="620,15 624,25 634,29 624,33 620,43 616,33 606,29 616,25" fill="#FFF5EE"/>
+            <polygon points="1040,30 1045,42 1057,47 1045,52 1040,64 1035,52 1023,47 1035,42" fill="#D97352"/>
+        </svg>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3 relative z-10">
+            <div class="flex items-center gap-3">
+                <!-- Enchanted Sword & Fae Fruit Emblem -->
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-fae to-bargain flex items-center justify-center shadow-lg border border-parchment/30">
+                    <i class="ph-fill ph-sword text-xl text-parchment"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-rpg font-bold text-lg sm:text-xl tracking-wider text-parchment">
+                            FAE<span class="text-fae">QUEST</span>
+                        </h1>
+                        <span class="text-[11px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-opal/40 border border-opal-light/50 text-parchment">
+                            RPG Todo
+                        </span>
+                    </div>
+                    <p class="text-xs text-parchment/75 hidden sm:block">Biến mục tiêu mỗi ngày thành hành trình chinh phục đỉnh Thách Đấu</p>
+                </div>
+            </div>
+
+            <!-- Palette Indicator & Quick Actions -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Reference Palette Pill -->
+                <div class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-thorn-dark/80 border border-fae/25 text-xs" title="Bảng màu lấy cảm hứng từ Fae Fruit, Opal, Blood Bargain & Thorn Crown">
+                    <span class="text-parchment/70 mr-1">Palette:</span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-[#D97352] ring-1 ring-white/40" title="Fae Fruit #D97352"></span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-[#6850AD] ring-1 ring-white/40" title="Opal #6850AD"></span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-[#6B0733] ring-1 ring-white/40" title="Blood Bargain #6B0733"></span>
+                    <span class="w-3.5 h-3.5 rounded-full bg-[#2D1036] ring-1 ring-white/40" title="Thorn Crown #2D1036"></span>
+                </div>
+
+                <!-- Sound Toggle -->
+                <button id="soundToggleBtn" onclick="toggleSound()" class="px-3 py-1.5 rounded-xl bg-thorn-dark/80 hover:bg-thorn border border-opal/40 text-xs font-medium flex items-center gap-1.5 transition">
+                    <i id="soundIcon" class="ph-fill ph-speaker-high text-fae text-base"></i>
+                    <span id="soundLabel" class="hidden sm:inline">Âm thanh: Bật</span>
+                </button>
+
+                <!-- Demo Boost EXP Button for instant testing -->
+                <button onclick="grantDemoBoost()" class="px-3 py-1.5 rounded-xl bg-opal/40 hover:bg-opal/60 border border-opal-light/50 text-xs font-semibold text-parchment flex items-center gap-1.5 transition" title="Cộng thử 150 EXP để trải nghiệm hiệu ứng Thăng Rank nhanh">
+                    <i class="ph-fill ph-lightning text-fae"></i>
+                    <span>+150 EXP Thử Nghiệm</span>
+                </button>
+
+                <!-- Reset Button -->
+                <button onclick="openResetModal()" class="p-2 rounded-xl bg-bargain/50 hover:bg-bargain border border-fae/25 text-parchment/70 hover:text-parchment transition" title="Đặt lại dữ liệu gốc">
+                    <i class="ph ph-arrow-counter-clockwise text-base"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+
+        <!-- HERO PLAYER STATUS & RANK PROGRESSION CARD -->
+        <section class="rpg-card rounded-3xl p-5 sm:p-7 relative overflow-hidden">
+            <!-- Decorative glow -->
+            <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-fae/15 blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-opal/25 blur-3xl pointer-events-none"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center relative z-10">
+                
+                <!-- Left: Rank Emblem & Player Identity (5 cols) -->
+                <div class="lg:col-span-5 flex flex-col sm:flex-row items-center sm:items-start lg:items-center gap-5 text-center sm:text-left">
+                    <!-- Dynamic SVG Rank Badge Container -->
+                    <div class="relative group cursor-pointer" onclick="openRankRoadmapModal()" title="Nhấn để xem Chi tiết 7 Bậc Rank & Phần thưởng">
+                        <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-b from-thorn-dark via-bargain-dark to-thorn flex items-center justify-center border-2 border-fae/60 shadow-2xl emblem-animate relative">
+                            <div id="heroRankSvgContainer" class="w-24 h-24"></div>
+                        </div>
+                        <span class="absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-fae text-thorn-dark shadow-md">
+                            Chi tiết Rank
+                        </span>
+                    </div>
+
+                    <div class="space-y-1.5 flex-1">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-thorn-dark/80 border border-opal/40 text-xs text-opal-light font-semibold">
+                            <i class="ph-fill ph-sparkle text-fae"></i>
+                            <span>Hiệp Sĩ Gai Đỏ • Mùa Giải 2026</span>
+                        </div>
+                        <div class="flex items-center justify-center sm:justify-start gap-2">
+                            <h2 id="playerNameDisplay" class="text-2xl sm:text-3xl font-extrabold text-parchment tracking-tight">Thợ Săn Fae</h2>
+                            <button onclick="promptRenamePlayer()" class="text-parchment/50 hover:text-fae transition p-1" title="Đổi tên nhân vật">
+                                <i class="ph ph-pencil-simple text-base"></i>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                            <span class="text-xs uppercase tracking-wider text-parchment/60">Bậc hiện tại:</span>
+                            <span id="currentRankBadgeText" class="px-3 py-1 rounded-lg font-rpg font-bold text-sm bg-gradient-to-r from-fae to-bargain text-parchment shadow border border-parchment/20">
+                                ĐỒNG
+                            </span>
+                            <span id="leaderboardPositionBadge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-opal/30 border border-opal-light/40 text-parchment">
+                                Hạng #8 BXH
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle: EXP Bar & Next Rank Target (4 cols) -->
+                <div class="lg:col-span-4 bg-thorn-dark/70 rounded-2xl p-4 sm:p-5 border border-opal/30 space-y-3">
+                    <div class="flex items-center justify-between text-xs sm:text-sm">
+                        <span class="font-semibold text-parchment/80 flex items-center gap-1.5">
+                            <i class="ph-fill ph-star-four text-fae"></i>
+                            Điểm Kinh Nghiệm (EXP)
+                        </span>
+                        <span class="font-bold text-fae" id="expFractionText">120 / 200 EXP</span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full h-4 bg-thorn rounded-full overflow-hidden p-0.5 border border-opal/40 shadow-inner">
+                        <div id="expProgressBar" class="exp-bar-fill h-full rounded-full relative" style="width: 60%;">
+                            <div class="absolute right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white shadow"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-parchment/75 pt-0.5">
+                        <span id="nextRankHintText">Cần thêm <strong class="text-fae">80 EXP</strong> lên <strong class="text-parchment">BẠC</strong></span>
+                        <span id="nextRankRewardText" class="px-2 py-0.5 rounded-md bg-fae/20 border border-fae/40 text-fae-light font-semibold">
+                            Thưởng lên bậc: +60 Xu
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Right: Currency (Xu) & Completed Quests Stats (3 cols) -->
+                <div class="lg:col-span-3 grid grid-cols-2 lg:grid-cols-1 gap-3">
+                    <!-- Coin Balance Card -->
+                    <div class="bg-gradient-to-r from-bargain-dark to-thorn-dark rounded-2xl p-4 border border-fae/40 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-parchment/65 font-medium">Kho Báu Hiện Có</p>
+                            <div class="flex items-baseline gap-1.5 mt-0.5">
+                                <span id="coinBalanceText" class="text-2xl sm:text-3xl font-extrabold text-fae">35</span>
+                                <span class="text-sm font-bold text-fae-light">XU</span>
+                            </div>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-fae/20 border border-fae/50 flex items-center justify-center text-fae shadow-inner">
+                            <i class="ph-fill ph-coins text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <!-- Completed Quests & Streak -->
+                    <div class="bg-thorn-dark/75 rounded-2xl p-3.5 border border-opal/30 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs text-parchment/65">Nhiệm vụ hoàn tất</p>
+                            <p class="text-lg font-bold text-parchment mt-0.5">
+                                <span id="completedCountStat">0</span> <span class="text-xs font-normal text-parchment/60">nhiệm vụ</span>
+                            </p>
+                        </div>
+                        <button onclick="openRankRoadmapModal()" class="px-3 py-2 rounded-xl bg-opal/30 hover:bg-opal/50 border border-opal-light/40 text-xs font-semibold text-parchment transition flex items-center gap-1">
+                            <i class="ph-fill ph-trophy text-fae"></i>
+                            <span>7 Bậc Rank</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Mini 7-Rank Tier Progress Strip -->
+            <div class="mt-6 pt-5 border-t border-parchment/10">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-parchment/70 flex items-center gap-1.5">
+                        <i class="ph-fill ph-path text-fae"></i>
+                        Lộ Trình Thăng Tiến 7 Bậc Rank
+                    </span>
+                    <span class="text-xs text-parchment/60 hidden sm:inline">Hoàn thành task mỗi ngày để tích lũy EXP & nhận thưởng Xu thăng hạng</span>
+                </div>
+                <div id="rankStripContainer" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    <!-- Rendered dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- NAVIGATION TABS -->
+        <nav class="flex flex-wrap items-center justify-between gap-3 bg-thorn-dark/80 p-2 rounded-2xl border border-opal/30 backdrop-blur-md sticky top-3 z-30 shadow-xl">
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                <button onclick="switchTab('quests')" id="tabBtn-quests" class="tab-btn flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition rpg-btn-primary text-parchment">
+                    <i class="ph-fill ph-scroll text-lg"></i>
+                    <span>Nhiệm Vụ Hằng Ngày</span>
+                    <span id="pendingTaskBadge" class="px-2 py-0.5 text-xs rounded-full bg-thorn-dark/70 text-parchment">5</span>
+                </button>
+
+                <button onclick="switchTab('shop')" id="tabBtn-shop" class="tab-btn flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition text-parchment/75 hover:text-parchment hover:bg-bargain/40">
+                    <i class="ph-fill ph-storefront text-lg text-fae"></i>
+                    <span>Cửa Hàng Tự Thưởng</span>
+                </button>
+
+                <button onclick="switchTab('leaderboard')" id="tabBtn-leaderboard" class="tab-btn flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition text-parchment/75 hover:text-parchment hover:bg-bargain/40">
+                    <i class="ph-fill ph-crown text-lg text-opal-light"></i>
+                    <span>Bảng Xếp Hạng</span>
+                </button>
+
+                <button onclick="switchTab('inventory')" id="tabBtn-inventory" class="tab-btn flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition text-parchment/75 hover:text-parchment hover:bg-bargain/40">
+                    <i class="ph-fill ph-backpack text-lg text-fae-light"></i>
+                    <span>Kho Phần Thưởng</span>
+                    <span id="inventoryCountBadge" class="px-2 py-0.5 text-xs rounded-full bg-fae/20 border border-fae/40 text-fae-light">0</span>
+                </button>
+            </div>
+
+            <!-- Quick Motivation Pill -->
+            <div class="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-bargain/40 border border-fae/20 text-xs text-parchment/80">
+                <i class="ph-fill ph-fire text-fae text-base"></i>
+                <span id="motivationQuoteText">"Mỗi nhiệm vụ nhỏ hôm nay là một viên gạch xây đài Thách Đấu!"</span>
+            </div>
+        </nav>
+
+        <!-- ==================== TAB 1: NHIỆM VỤ HẰNG NGÀY (QUESTS) ==================== -->
+        <section id="tabContent-quests" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <!-- Left Column: Add New Task Form (4 cols) -->
+                <div class="lg:col-span-4 rpg-card rounded-3xl p-5 sm:p-6 space-y-5 lg:sticky lg:top-20">
+                    <div class="flex items-center justify-between border-b border-parchment/10 pb-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-fae/20 border border-fae/50 flex items-center justify-center text-fae">
+                                <i class="ph-fill ph-plus-circle text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-parchment">Thêm Nhiệm Vụ Mới</h3>
+                                <p class="text-xs text-parchment/60">Khởi tạo hoạt động & nhận điểm EXP</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="addTaskForm" onsubmit="handleAddTask(event)" class="space-y-4">
+                        <!-- Task Title -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment/80 mb-1.5">
+                                Tên Hoạt Động / Nhiệm Vụ *
+                            </label>
+                            <input type="text" id="taskTitleInput" required placeholder="VD: Đọc 20 trang sách, Chạy bộ 3km..."
+                                class="w-full px-4 py-3 rounded-xl bg-thorn-dark/90 border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment placeholder-parchment/35 transition">
+                        </div>
+
+                        <!-- Category Selection -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment/80 mb-1.5">
+                                Phân Loại Hoạt Động
+                            </label>
+                            <div class="grid grid-cols-2 gap-2" id="categoryRadioGroup">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="taskCategory" value="hoc-tap" class="peer sr-only" checked>
+                                    <div class="px-3 py-2.5 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain text-xs font-semibold flex items-center gap-2 transition">
+                                        <i class="ph-fill ph-book-open text-fae text-base"></i>
+                                        <span>Học tập</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="taskCategory" value="cong-viec" class="peer sr-only">
+                                    <div class="px-3 py-2.5 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain text-xs font-semibold flex items-center gap-2 transition">
+                                        <i class="ph-fill ph-briefcase text-opal-light text-base"></i>
+                                        <span>Công việc</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="taskCategory" value="the-luc" class="peer sr-only">
+                                    <div class="px-3 py-2.5 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain text-xs font-semibold flex items-center gap-2 transition">
+                                        <i class="ph-fill ph-barbell text-emerald-400 text-base"></i>
+                                        <span>Thể lực</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="taskCategory" value="ca-nhan" class="peer sr-only">
+                                    <div class="px-3 py-2.5 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain text-xs font-semibold flex items-center gap-2 transition">
+                                        <i class="ph-fill ph-heart text-pink-400 text-base"></i>
+                                        <span>Cá nhân</span>
+                                    </div>
+                                </label>
+                                <label class="cursor-pointer col-span-2">
+                                    <input type="radio" name="taskCategory" value="sang-tao" class="peer sr-only">
+                                    <div class="px-3 py-2.5 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain text-xs font-semibold flex items-center justify-center gap-2 transition">
+                                        <i class="ph-fill ph-paint-brush-broad text-amber-400 text-base"></i>
+                                        <span>Sáng tạo & Nghệ thuật</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Difficulty / EXP Tier Selection -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-parchment/80 mb-1.5">
+                                Độ Khó & Phần Thưởng EXP
+                            </label>
+                            <div class="space-y-2">
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="taskDifficulty" value="easy" class="peer sr-only">
+                                    <div class="p-3 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain/80 flex items-center justify-between transition">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                                            <div>
+                                                <p class="text-xs font-bold text-parchment">Khởi Động (Dễ)</p>
+                                                <p class="text-[11px] text-parchment/60">Việc nhỏ nhanh gọn dưới 15 phút</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs font-extrabold text-fae">+30 EXP</span>
+                                            <span class="block text-[10px] text-parchment/70">+2 Xu</span>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="taskDifficulty" value="medium" class="peer sr-only" checked>
+                                    <div class="p-3 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain/80 flex items-center justify-between transition">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-opal-light"></span>
+                                            <div>
+                                                <p class="text-xs font-bold text-parchment">Tiêu Chuẩn (Vừa)</p>
+                                                <p class="text-[11px] text-parchment/60">Hoạt động hằng ngày 30 - 60 phút</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs font-extrabold text-fae">+60 EXP</span>
+                                            <span class="block text-[10px] text-parchment/70">+5 Xu</span>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="taskDifficulty" value="hard" class="peer sr-only">
+                                    <div class="p-3 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain/80 flex items-center justify-between transition">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-fae"></span>
+                                            <div>
+                                                <p class="text-xs font-bold text-parchment">Thử Thách (Khó)</p>
+                                                <p class="text-[11px] text-parchment/60">Đòi hỏi sự tập trung cao độ</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs font-extrabold text-fae">+110 EXP</span>
+                                            <span class="block text-[10px] text-parchment/70">+10 Xu</span>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="cursor-pointer block">
+                                    <input type="radio" name="taskDifficulty" value="boss" class="peer sr-only">
+                                    <div class="p-3 rounded-xl bg-thorn-dark/70 border border-opal/30 peer-checked:border-fae peer-checked:bg-bargain/80 flex items-center justify-between transition">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                                            <div>
+                                                <p class="text-xs font-bold text-fae-light">Trùm Cuối Ngày (Sử Thi)</p>
+                                                <p class="text-[11px] text-parchment/60">Mục tiêu lớn đột phá trong ngày</p>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="text-xs font-extrabold text-fae">+200 EXP</span>
+                                            <span class="block text-[10px] text-parchment/70">+20 Xu</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3.5 rounded-xl rpg-btn-primary font-bold text-sm text-parchment flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-sword text-lg"></i>
+                            <span>Khắc Lên Bảng Nhiệm Vụ</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Task Filters & Quest List (8 cols) -->
+                <div class="lg:col-span-8 space-y-4">
+                    <!-- Filter Bar -->
+                    <div class="rpg-card rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <!-- Category Filter Pills -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" id="categoryFilterContainer">
+                            <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-fae text-thorn-dark transition whitespace-nowrap">
+                                Tất cả
+                            </button>
+                            <button onclick="setCategoryFilter('hoc-tap')" data-cat="hoc-tap" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-thorn-dark/70 text-parchment/75 hover:text-parchment transition whitespace-nowrap">
+                                📚 Học tập
+                            </button>
+                            <button onclick="setCategoryFilter('cong-viec')" data-cat="cong-viec" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-thorn-dark/70 text-parchment/75 hover:text-parchment transition whitespace-nowrap">
+                                💼 Công việc
+                            </button>
+                            <button onclick="setCategoryFilter('the-luc')" data-cat="the-luc" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-thorn-dark/70 text-parchment/75 hover:text-parchment transition whitespace-nowrap">
+                                💪 Thể lực
+                            </button>
+                            <button onclick="setCategoryFilter('ca-nhan')" data-cat="ca-nhan" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-thorn-dark/70 text-parchment/75 hover:text-parchment transition whitespace-nowrap">
+                                ❤️ Cá nhân
+                            </button>
+                            <button onclick="setCategoryFilter('sang-tao')" data-cat="sang-tao" class="cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-thorn-dark/70 text-parchment/75 hover:text-parchment transition whitespace-nowrap">
+                                🎨 Sáng tạo
+                            </button>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div class="flex items-center gap-1 bg-thorn-dark/90 p-1 rounded-xl border border-opal/30 self-start sm:self-auto">
+                            <button onclick="setStatusFilter('all')" data-status="all" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-opal text-parchment transition">
+                                Tất cả
+                            </button>
+                            <button onclick="setStatusFilter('pending')" data-status="pending" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-medium text-parchment/70 hover:text-parchment transition">
+                                Chưa xong
+                            </button>
+                            <button onclick="setStatusFilter('completed')" data-status="completed" class="status-filter-btn px-2.5 py-1 rounded-lg text-xs font-medium text-parchment/70 hover:text-parchment transition">
+                                Đã xong
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quest List Container -->
+                    <div id="questListContainer" class="space-y-3">
+                        <!-- Dynamically populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: CỬA HÀNG TỰ THƯỞNG (REWARD SHOP) ==================== -->
+        <section id="tabContent-shop" class="hidden space-y-6">
+            <!-- Shop Banner -->
+            <div class="rpg-card-opal rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fae/20 border border-fae/40 text-xs font-bold text-fae-light">
+                        <i class="ph-fill ph-sparkle"></i>
+                        <span>Thương Hội Fae Fruit</span>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-parchment">Cửa Hàng Tự Thưởng Bản Thân</h2>
+                    <p class="text-sm text-parchment/75 max-w-2xl">
+                        Mỗi khi hoàn thành nhiệm vụ và <strong class="text-fae-light">Thăng Cấp Rank</strong>, bạn sẽ nhận được lượng lớn <strong class="text-fae-light">Xu Thưởng</strong>. Hãy dùng Xu để đổi lấy những phần thưởng xứng đáng ngoài đời thực!
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end bg-thorn-dark/85 px-5 py-3.5 rounded-2xl border border-fae/40">
+                    <div class="flex items-center gap-2.5">
+                        <i class="ph-fill ph-coins text-3xl text-fae"></i>
+                        <div>
+                            <span class="text-xs text-parchment/60 block">Số dư hiện tại</span>
+                            <span id="shopCoinBalance" class="text-2xl font-extrabold text-fae">35 Xu</span>
+                        </div>
+                    </div>
+                    <button onclick="openAddShopItemModal()" class="ml-4 px-3.5 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment flex items-center gap-1.5">
+                        <i class="ph-bold ph-plus"></i>
+                        <span>Thêm Món Mới</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Shop Items Grid -->
+            <div id="shopGridContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Populated dynamically by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: BẢNG XẾP HẠNG (LEADERBOARD) ==================== -->
+        <section id="tabContent-leaderboard" class="hidden space-y-6">
+            <!-- Leaderboard Header -->
+            <div class="rpg-card rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-opal/30 border border-opal-light/50 text-xs font-bold text-parchment">
+                        <i class="ph-fill ph-sword text-fae"></i>
+                        <span>Đấu Trường Danh Vọng</span>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-parchment">Bảng Xếp Hạng Chiến Binh</h2>
+                    <p class="text-sm text-parchment/75 max-w-2xl">
+                        So tài cùng các đối thủ giả lập từ bậc <strong class="text-fae-light">Đồng</strong> đến <strong class="text-fae-light">Thách Đấu</strong>. Hoàn thành nhiệm vụ ngay hôm nay để vượt mặt đối thủ phía trước!
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <button onclick="simulateRivalActivity()" class="px-4 py-2.5 rounded-xl rpg-btn-opal text-xs font-bold text-parchment flex items-center gap-2">
+                        <i class="ph-fill ph-arrows-clockwise text-base text-fae-light"></i>
+                        <span>Cập Nhật Hoạt Động Đối Thủ</span>
+                    </button>
+                    <button onclick="openAddRivalModal()" class="px-4 py-2.5 rounded-xl bg-bargain hover:bg-bargain-light border border-fae/40 text-xs font-bold text-parchment flex items-center gap-2 transition">
+                        <i class="ph-bold ph-user-plus text-base text-fae"></i>
+                        <span>Thêm Đối Thủ Mới</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Next Target Callout Banner -->
+            <div id="rivalTargetBanner" class="rpg-card-opal rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Leaderboard List -->
+            <div class="rpg-card rounded-3xl overflow-hidden">
+                <div class="px-6 py-4 bg-thorn-dark/80 border-b border-parchment/10 grid grid-cols-12 text-xs font-bold uppercase tracking-wider text-parchment/60">
+                    <div class="col-span-2 sm:col-span-1">Hạng</div>
+                    <div class="col-span-6 sm:col-span-5">Chiến Binh</div>
+                    <div class="col-span-4 sm:col-span-3 text-center">Bậc Rank</div>
+                    <div class="hidden sm:block sm:col-span-3 text-right">Điểm EXP</div>
+                </div>
+                <div id="leaderboardListContainer" class="divide-y divide-parchment/10">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: KHO PHẦN THƯỞNG (INVENTORY / HISTORY) ==================== -->
+        <section id="tabContent-inventory" class="hidden space-y-6">
+            <div class="rpg-card rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-parchment flex items-center gap-2">
+                        <i class="ph-fill ph-backpack text-fae"></i>
+                        <span>Kho Vé Tự Thưởng Đã Mua</span>
+                    </h2>
+                    <p class="text-sm text-parchment/75 mt-1">
+                        Những phần thưởng bạn đã mua bằng Xu sẽ nằm tại đây. Hãy nhấn <strong>"Sử dụng ngay"</strong> khi bạn thực hiện phần thưởng đó ngoài đời nhé!
+                    </p>
+                </div>
+            </div>
+
+            <div id="inventoryListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL 1: RANK UP CELEBRATION ==================== -->
+    <div id="rankUpModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
+        <div class="rpg-card rounded-3xl max-w-md w-full p-7 text-center relative overflow-hidden border-2 border-fae shadow-2xl animate-[fadeIn_0.3s_ease]">
+            <!-- Glow rays -->
+            <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 bg-fae/30 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 space-y-4">
+                <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-fae text-thorn-dark font-extrabold text-xs uppercase tracking-widest">
+                    <i class="ph-fill ph-confetti"></i>
+                    <span>Thăng Cấp Thành Công!</span>
+                </div>
+
+                <h3 class="font-rpg text-3xl font-extrabold text-parchment">THĂNG HẠNG MỚI</h3>
+
+                <!-- New Rank SVG Emblem -->
+                <div class="w-36 h-36 mx-auto rounded-3xl bg-thorn-dark/90 border-2 border-fae flex items-center justify-center shadow-2xl emblem-animate">
+                    <div id="modalRankUpSvg" class="w-28 h-28"></div>
+                </div>
+
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-parchment/60">Bạn đã đạt đến cảnh giới</p>
+                    <p id="modalRankUpName" class="font-rpg text-3xl font-extrabold text-fae mt-1">BẬC BẠC</p>
+                    <p id="modalRankUpQuote" class="text-xs text-parchment/80 mt-2 px-4 italic">
+                        "Lưỡi kiếm đã bén, ý chí kiên cường vượt qua thử thách đầu tiên."
+                    </p>
+                </div>
+
+                <!-- Coin Bonus Box -->
+                <div class="bg-thorn-dark/90 rounded-2xl p-4 border border-fae/50 flex items-center justify-center gap-3">
+                    <i class="ph-fill ph-coins text-3xl text-fae"></i>
+                    <div class="text-left">
+                        <span class="text-xs text-parchment/70 block">Phần thưởng Thăng Cấp Rank</span>
+                        <span id="modalRankUpCoins" class="text-xl font-extrabold text-fae">+60 Xu Vàng</span>
+                    </div>
+                </div>
+
+                <button onclick="closeRankUpModal()" class="w-full py-3.5 rounded-xl rpg-btn-primary font-bold text-sm text-parchment">
+                    Tuyệt Vời! Tiếp Tục Chinh Phục
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: 7 RANK TIERS ROADMAP ==================== -->
+    <div id="rankRoadmapModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
+        <div class="rpg-card rounded-3xl max-w-3xl w-full max-h-[88vh] flex flex-col overflow-hidden border border-fae/50">
+            <div class="p-5 sm:p-6 border-b border-parchment/10 flex items-center justify-between bg-thorn-dark/60">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-trophy text-2xl text-fae"></i>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-bold text-parchment">Hệ Thống 7 Bậc Rank & Phần Thưởng</h3>
+                        <p class="text-xs text-parchment/65">Tích lũy EXP từ nhiệm vụ hằng ngày để mở khóa danh hiệu & nhận Xu</p>
+                    </div>
+                </div>
+                <button onclick="closeRankRoadmapModal()" class="p-2 rounded-xl bg-bargain/50 hover:bg-bargain text-parchment">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div id="rankRoadmapList" class="p-5 sm:p-6 overflow-y-auto space-y-3">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 3: ADD CUSTOM SHOP ITEM ==================== -->
+    <div id="addShopItemModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
+        <div class="rpg-card rounded-3xl max-w-md w-full p-6 space-y-4 border border-fae/50">
+            <div class="flex items-center justify-between border-b border-parchment/10 pb-3">
+                <h3 class="text-lg font-bold text-parchment flex items-center gap-2">
+                    <i class="ph-fill ph-gift text-fae"></i>
+                    <span>Tạo Phần Thưởng Tự Chọn</span>
+                </h3>
+                <button onclick="closeAddShopItemModal()" class="p-1.5 rounded-lg bg-bargain/50 text-parchment">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAddShopItem(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Tên Phần Thưởng *</label>
+                    <input type="text" id="customShopTitle" required placeholder="VD: Ăn lẩu nướng cuối tuần, Mua 1 cuốn sách..."
+                        class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Mô Tả Ngắn</label>
+                    <input type="text" id="customShopDesc" placeholder="VD: Tự thưởng sau khi hoàn thành mục tiêu tuần"
+                        class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Giá Đổi (Xu) *</label>
+                        <input type="number" id="customShopCost" required min="5" max="5000" value="20"
+                            class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-fae font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Biểu Tượng</label>
+                        <select id="customShopEmoji" class="w-full px-3 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment">
+                            <option value="🍜">🍜 Món ăn ngon</option>
+                            <option value="🧋">🧋 Trà sữa / Cafe</option>
+                            <option value="🎮">🎮 Chơi Game</option>
+                            <option value="🎬">🎬 Xem Phim</option>
+                            <option value="🛍️">🛍️ Mua Sắm</option>
+                            <option value="🏖️">🏖️ Nghỉ Ngơi / Du Lịch</option>
+                            <option value="🎧">🎧 Đồ Công Nghệ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAddShopItemModal()" class="px-4 py-2.5 rounded-xl bg-thorn-dark text-xs font-semibold text-parchment/70">Hủy</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl rpg-btn-primary text-xs font-bold text-parchment">Lưu Vào Cửa Hàng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: ADD CUSTOM RIVAL ==================== -->
+    <div id="addRivalModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
+        <div class="rpg-card rounded-3xl max-w-md w-full p-6 space-y-4 border border-opal-light/50">
+            <div class="flex items-center justify-between border-b border-parchment/10 pb-3">
+                <h3 class="text-lg font-bold text-parchment flex items-center gap-2">
+                    <i class="ph-fill ph-users-three text-opal-light"></i>
+                    <span>Thêm Đối Thủ Cạnh Tranh</span>
+                </h3>
+                <button onclick="closeAddRivalModal()" class="p-1.5 rounded-lg bg-bargain/50 text-parchment">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAddRival(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Tên Đối Thủ *</label>
+                    <input type="text" id="customRivalName" required placeholder="VD: Minh Tuấn, Kẻ Săn Đêm..."
+                        class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Danh Hiệu / Mô Tả</label>
+                    <input type="text" id="customRivalTitle" placeholder="VD: Chiến Thần Deadline"
+                        class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-parchment/80 mb-1">Điểm EXP Khởi Điểm *</label>
+                    <input type="number" id="customRivalExp" required min="50" max="10000" value="350"
+                        class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-fae font-bold">
+                    <p class="text-[11px] text-parchment/55 mt-1">Gợi ý: Đồng (0+), Bạc (200+), Vàng (500+), Lục Bảo (1000+), Cao Thủ (1800+), Đại Cao Thủ (2800+), Thách Đấu (4000+)</p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAddRivalModal()" class="px-4 py-2.5 rounded-xl bg-thorn-dark text-xs font-semibold text-parchment/70">Hủy</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl rpg-btn-opal text-xs font-bold text-parchment">Triệu Hồi Đối Thủ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 5: RENAME PLAYER & RESET CONFIRM ==================== -->
+    <div id="renameModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
+        <div class="rpg-card rounded-3xl max-w-sm w-full p-6 space-y-4 border border-fae/50">
+            <h3 class="text-lg font-bold text-parchment">Đổi Tên Nhân Vật</h3>
+            <input type="text" id="newPlayerNameInput" placeholder="Nhập biệt danh của bạn..."
+                class="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 focus:border-fae focus:outline-none text-sm text-parchment">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeRenameModal()" class="px-4 py-2 rounded-xl bg-thorn-dark text-xs font-semibold text-parchment/70">Hủy</button>
+                <button onclick="confirmRenamePlayer()" class="px-5 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment">Lưu Tên</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resetModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
+        <div class="rpg-card rounded-3xl max-w-sm w-full p-6 space-y-4 border border-fae/50 text-center">
+            <div class="w-12 h-12 rounded-2xl bg-bargain mx-auto flex items-center justify-center text-fae border border-fae/40">
+                <i class="ph-fill ph-warning-diamond text-2xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-parchment">Khởi Tạo Lại Hành Trình?</h3>
+            <p class="text-xs text-parchment/75">Toàn bộ điểm EXP, Rank, Xu và danh sách nhiệm vụ sẽ được đặt về trạng thái mặc định ban đầu.</p>
+            <div class="flex justify-center gap-2 pt-2">
+                <button onclick="closeResetModal()" class="px-4 py-2.5 rounded-xl bg-thorn-dark text-xs font-semibold text-parchment/70">Giữ lại</button>
+                <button onclick="confirmResetAll()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition">Đặt lại tất cả</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        /**************************************************************
+         * 1. HỆ THỐNG 7 BẬC RANK & BIỂU TƯỢNG SVG ĐỘC QUYỀN
+         **************************************************************/
+        const RANK_TIERS = [
+            {
+                id: 'dong',
+                name: 'Đồng',
+                minExp: 0,
+                maxExp: 199,
+                coinBonus: 0,
+                badgeBg: 'from-[#8C583A] to-[#4D2C19]',
+                accentColor: '#D97352',
+                quote: 'Khởi đầu hành trình rèn luyện kỷ luật bản thân.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <polygon points="50,8 86,26 76,74 50,92 24,74 14,26" fill="#5C3422" stroke="#D97352" stroke-width="4"/>
+                        <polygon points="50,18 76,32 68,68 50,82 32,68 24,32" fill="#8C4F32"/>
+                        <path d="M50,30 L56,44 L70,46 L59,56 L62,70 L50,62 L38,70 L41,56 L30,46 L44,44 Z" fill="#E69F7A"/>
+                      </svg>`
+            },
+            {
+                id: 'bac',
+                name: 'Bạc',
+                minExp: 200,
+                maxExp: 499,
+                coinBonus: 50,
+                badgeBg: 'from-[#8B9BB4] to-[#4A5568]',
+                accentColor: '#CBD5E1',
+                quote: 'Lưỡi kiếm đã bén, thói quen tốt bắt đầu hình thành.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <path d="M50,6 L88,24 L80,70 L50,94 L20,70 L12,24 Z" fill="#475569" stroke="#E2E8F0" stroke-width="4"/>
+                        <path d="M50,16 L78,30 L72,64 L50,82 L28,64 L22,30 Z" fill="#94A3B8"/>
+                        <polygon points="50,24 58,44 78,44 62,56 68,76 50,64 32,76 38,56 22,44 42,44" fill="#F8FAFC"/>
+                      </svg>`
+            },
+            {
+                id: 'vang',
+                name: 'Vàng',
+                minExp: 500,
+                maxExp: 999,
+                coinBonus: 100,
+                badgeBg: 'from-[#F59E0B] to-[#92400E]',
+                accentColor: '#FBBF24',
+                quote: 'Ánh hào quang rực rỡ của sự kiên trì mỗi ngày.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <polygon points="50,4 92,24 82,74 50,96 18,74 8,24" fill="#78350F" stroke="#FBBF24" stroke-width="4"/>
+                        <polygon points="50,14 82,30 74,68 50,86 26,68 18,30" fill="#D97706"/>
+                        <path d="M26,48 L38,32 L50,46 L62,32 L74,48 L68,68 L32,68 Z" fill="#FEF08A"/>
+                        <circle cx="50" cy="30" r="5" fill="#FFF"/>
+                      </svg>`
+            },
+            {
+                id: 'luc-bao',
+                name: 'Lục Bảo',
+                minExp: 1000,
+                maxExp: 1799,
+                coinBonus: 160,
+                badgeBg: 'from-[#10B981] to-[#064E3B]',
+                accentColor: '#34D399',
+                quote: 'Sức sống mãnh liệt, năng suất vượt trội hơn số đông.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <polygon points="50,4 88,22 94,54 74,88 50,96 26,88 6,54 12,22" fill="#064E3B" stroke="#34D399" stroke-width="4"/>
+                        <polygon points="50,14 78,30 78,66 50,86 22,66 22,30" fill="#059669"/>
+                        <polygon points="50,22 68,50 50,78 32,50" fill="#A7F3D0"/>
+                      </svg>`
+            },
+            {
+                id: 'cao-thu',
+                name: 'Cao Thủ',
+                minExp: 1800,
+                maxExp: 2799,
+                coinBonus: 250,
+                badgeBg: 'from-[#6850AD] to-[#2D1036]',
+                accentColor: '#A78BFA',
+                quote: 'Làm chủ thời gian, ngọn lửa Opal huyền bí thức tỉnh.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <path d="M50,4 L92,22 L86,68 L50,96 L14,68 L8,22 Z" fill="#2D1036" stroke="#A78BFA" stroke-width="4"/>
+                        <path d="M50,12 L82,28 L76,64 L50,86 L24,64 L18,28 Z" fill="#6850AD"/>
+                        <polygon points="50,18 64,42 84,36 70,64 30,64 16,36 36,42" fill="#D97352"/>
+                        <circle cx="50" cy="52" r="8" fill="#FFF5EE"/>
+                      </svg>`
+            },
+            {
+                id: 'dai-cao-thu',
+                name: 'Đại Cao Thủ',
+                minExp: 2800,
+                maxExp: 3999,
+                coinBonus: 400,
+                badgeBg: 'from-[#9D0B48] to-[#4A0420]',
+                accentColor: '#F43F5E',
+                quote: 'Huyết ước tối thượng! Không mục tiêu nào có thể cản bước.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <polygon points="50,2 95,22 88,72 50,98 12,72 5,22" fill="#4D0424" stroke="#F43F5E" stroke-width="4"/>
+                        <polygon points="50,12 85,28 78,68 50,88 22,68 15,28" fill="#6B0733"/>
+                        <path d="M20,34 L40,46 L50,20 L60,46 L80,34 L72,68 L28,68 Z" fill="#D97352"/>
+                        <polygon points="50,38 58,54 50,66 42,54" fill="#FFF5EE"/>
+                      </svg>`
+            },
+            {
+                id: 'thach-dau',
+                name: 'Thách Đấu',
+                minExp: 4000,
+                maxExp: 999999,
+                coinBonus: 700,
+                badgeBg: 'from-[#D97352] via-[#6850AD] to-[#6B0733]',
+                accentColor: '#FBBF24',
+                quote: 'Đỉnh cao huyền thoại! Bạn là chuẩn mực của sự kỷ luật tuyệt đối.',
+                svg: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
+                        <polygon points="50,2 96,20 92,70 50,98 8,70 4,20" fill="#2D1036" stroke="#D97352" stroke-width="5"/>
+                        <polygon points="50,10 88,26 82,66 50,90 18,66 12,26" fill="#6850AD"/>
+                        <path d="M14,30 L36,44 L50,14 L64,44 L86,30 L76,70 L24,70 Z" fill="#D97352"/>
+                        <polygon points="50,28 60,50 50,72 40,50" fill="#FFF5EE"/>
+                        <circle cx="50" cy="50" r="5" fill="#6B0733"/>
+                      </svg>`
+            }
+        ];
+
+        const DIFFICULTY_CONFIG = {
+            easy:   { label: 'Dễ',       exp: 30,  coins: 2,  badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40' },
+            medium: { label: 'Vừa',      exp: 60,  coins: 5,  badgeClass: 'bg-opal/30 text-opal-light border-opal-light/50' },
+            hard:   { label: 'Khó',      exp: 110, coins: 10, badgeClass: 'bg-fae/25 text-fae-light border-fae/50' },
+            boss:   { label: 'Trùm Cuối', exp: 200, coins: 20, badgeClass: 'bg-bargain text-rose-300 border-rose-400/60' }
+        };
+
+        const CATEGORY_CONFIG = {
+            'hoc-tap':   { label: 'Học tập',   icon: 'ph-book-open',         color: 'text-fae-light' },
+            'cong-viec': { label: 'Công việc', icon: 'ph-briefcase',         color: 'text-opal-light' },
+            'the-luc':   { label: 'Thể lực',   icon: 'ph-barbell',           color: 'text-emerald-400' },
+            'ca-nhan':   { label: 'Cá nhân',   icon: 'ph-heart',             color: 'text-pink-400' },
+            'sang-tao':  { label: 'Sáng tạo',  icon: 'ph-paint-brush-broad', color: 'text-amber-300' }
+        };
+
+        /**************************************************************
+         * 2. DỮ LIỆU MẶC ĐỊNH (DEFAULT STATE)
+         **************************************************************/
+        const DEFAULT_STATE = {
+            playerName: 'Thợ Săn Fae',
+            exp: 110,
+            coins: 25,
+            completedTotal: 2,
+            soundEnabled: true,
+            tasks: [
+                {
+                    id: 't1',
+                    title: 'Hoàn thành bài tập / dự án quan trọng nhất trong ngày',
+                    category: 'cong-viec',
+                    difficulty: 'hard',
+                    completed: false,
+                    createdAt: Date.now() - 3600000 * 4
+                },
+                {
+                    id: 't2',
+                    title: 'Đọc 20 trang sách chuyên ngành hoặc ngoại ngữ',
+                    category: 'hoc-tap',
+                    difficulty: 'medium',
+                    completed: false,
+                    createdAt: Date.now() - 3600000 * 3
+                },
+                {
+                    id: 't3',
+                    title: 'Tập thể dục / chạy bộ 30 phút rèn thể lực',
+                    category: 'the-luc',
+                    difficulty: 'medium',
+                    completed: false,
+                    createdAt: Date.now() - 3600000 * 2
+                },
+                {
+                    id: 't4',
+                    title: 'Uống đủ 2 lít nước & dọn gọn góc làm việc',
+                    category: 'ca-nhan',
+                    difficulty: 'easy',
+                    completed: true,
+                    createdAt: Date.now() - 3600000 * 5
+                },
+                {
+                    id: 't5',
+                    title: 'Chiến dịch Trùm Cuối: Tập trung Deep Work 2 tiếng không lướt điện thoại',
+                    category: 'sang-tao',
+                    difficulty: 'boss',
+                    completed: false,
+                    createdAt: Date.now() - 3600000 * 1
+                }
+            ],
+            shopItems: [
+                { id: 's1', title: 'Ăn một món yêu thích', desc: 'Tự thưởng món ngon ấm bụng sau giờ làm việc chăm chỉ', cost: 10, emoji: '🍜' },
+                { id: 's2', title: 'Thưởng thức Trà sữa / Cà phê ngon', desc: 'Một ly đồ uống nạp lại năng lượng tích cực', cost: 15, emoji: '🧋' },
+                { id: 's3', title: 'Chơi Game giải trí 1 tiếng', desc: 'Thoải mái chiến game yêu thích không lo nghĩ', cost: 25, emoji: '🎮' },
+                { id: 's4', title: 'Xem 1 bộ phim chiếu rạp / Anime', desc: 'Thư giãn tâm trí với bộ phim đang mong đợi', cost: 50, emoji: '🎬' },
+                { id: 's5', title: 'Mua 1 món đồ yêu thích trong giỏ hàng', desc: 'Chốt đơn món phụ kiện hoặc cuốn sách bạn thích', cost: 120, emoji: '🛍️' },
+                { id: 's6', title: 'Ngày Nghỉ Xả Hơi (Cheat Day)', desc: 'Một ngày nghỉ ngơi trọn vẹn sau chuỗi ngày cày Rank', cost: 250, emoji: '🏖️' }
+            ],
+            inventory: [
+                { id: 'inv1', title: 'Ăn một món yêu thích', emoji: '🍜', cost: 10, redeemedAt: 'Hôm qua', used: false }
+            ],
+            rivals: [
+                { id: 'r1', name: 'Linh Nhi', title: 'Tân Binh Chăm Chỉ', exp: 160, avatar: '🦊' },
+                { id: 'r2', name: 'Hoàng Phúc', title: 'Kỵ Sĩ Bạc', exp: 310, avatar: '🐺' },
+                { id: 'r3', name: 'Minh Khôi', title: 'Chiến Thần Deadline', exp: 640, avatar: '🦁' },
+                { id: 'r4', name: 'Bảo Ngọc', title: 'Pháp Sư Lục Bảo', exp: 1250, avatar: '🦄' },
+                { id: 'r5', name: 'Tuấn Kiệt', title: 'Cao Thủ Kỷ Luật', exp: 2150, avatar: '🐉' },
+                { id: 'r6', name: 'Huyền Trang', title: 'Đại Cao Thủ Gai Đỏ', exp: 3100, avatar: '🦅' },
+                { id: 'r7', name: 'Ares Vũ', title: 'Độc Cô Thách Đấu', exp: 4350, avatar: '👑' }
+            ]
+        };
+
+        let appState = loadState();
+        let activeTab = 'quests';
+        let activeCategoryFilter = 'all';
+        let activeStatusFilter = 'all';
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem('faequest_rpg_state_v1');
+                if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
+                const parsed = JSON.parse(raw);
+                return { ...JSON.parse(JSON.stringify(DEFAULT_STATE)), ...parsed };
+            } catch (e) {
+                return JSON.parse(JSON.stringify(DEFAULT_STATE));
+            }
+        }
+
+        function saveState() {
+            try {
+                localStorage.setItem('faequest_rpg_state_v1', JSON.stringify(appState));
+            } catch (e) {
+                console.warn('Không thể lưu trạng thái vào localStorage:', e);
+            }
+        }
+
+        /**************************************************************
+         * 3. WEB AUDIO SYNTHESIZER (HIỆU ỨNG ÂM THANH RPG)
+         **************************************************************/
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) audioCtx = new AudioContextClass();
+            }
+            return audioCtx;
+        }
+
+        function playSoundEffect(type) {
+            if (!appState.soundEnabled) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                if (ctx.state === 'suspended') ctx.resume();
+
+                const now = ctx.currentTime;
+                if (type === 'complete') {
+                    // Bright mystical chord
+                    const notes = [523.25, 659.25, 783.99, 1046.5];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.06);
+                        osc.stop(now + idx * 0.06 + 0.36);
+                    });
+                } else if (type === 'rankup') {
+                    // Fanfare arpeggio
+                    const notes = [440, 554.37, 659.25, 880, 1108.73, 1318.51];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.10, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.55);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.56);
+                    });
+                } else if (type === 'coin') {
+                    const notes = [987.77, 1318.51];
+                    notes.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                        gain.gain.setValueAtTime(0.14, now + idx * 0.07);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.3);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.07);
+                        osc.stop(now + idx * 0.07 + 0.32);
+                    });
+                }
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            appState.soundEnabled = !appState.soundEnabled;
+            saveState();
+            updateSoundUI();
+            showToast(appState.soundEnabled ? 'Đã bật hiệu ứng âm thanh RPG' : 'Đã tắt âm thanh', 'info');
+        }
+
+        function updateSoundUI() {
+            const icon = document.getElementById('soundIcon');
+            const label = document.getElementById('soundLabel');
+            if (appState.soundEnabled) {
+                icon.className = 'ph-fill ph-speaker-high text-fae text-base';
+                label.textContent = 'Âm thanh: Bật';
+            } else {
+                icon.className = 'ph-fill ph-speaker-slash text-parchment/50 text-base';
+                label.textContent = 'Âm thanh: Tắt';
+            }
+        }
+
+        /**************************************************************
+         * 4. HÀM TÍNH TOÁN RANK & TIẾN ĐỘ EXP
+         **************************************************************/
+        function getRankIndexByExp(exp) {
+            for (let i = RANK_TIERS.length - 1; i >= 0; i--) {
+                if (exp >= RANK_TIERS[i].minExp) return i;
+            }
+            return 0;
+        }
+
+        function getPlayerRankInfo() {
+            const currentIdx = getRankIndexByExp(appState.exp);
+            const currentTier = RANK_TIERS[currentIdx];
+            const nextTier = currentIdx < RANK_TIERS.length - 1 ? RANK_TIERS[currentIdx + 1] : null;
+
+            let progressPercent = 100;
+            let expNeeded = 0;
+
+            if (nextTier) {
+                const span = nextTier.minExp - currentTier.minExp;
+                const gainedInTier = appState.exp - currentTier.minExp;
+                progressPercent = Math.min(100, Math.max(2, Math.round((gainedInTier / span) * 100)));
+                expNeeded = nextTier.minExp - appState.exp;
+            }
+
+            return { currentIdx, currentTier, nextTier, progressPercent, expNeeded };
+        }
+
+        function addExpAndCoins(expDelta, coinDelta, clickEvent = null) {
+            const oldRankIdx = getRankIndexByExp(appState.exp);
+            appState.exp = Math.max(0, appState.exp + expDelta);
+            appState.coins = Math.max(0, appState.coins + coinDelta);
+
+            const newRankIdx = getRankIndexByExp(appState.exp);
+
+            if (clickEvent) {
+                spawnFloatingReward(clickEvent.clientX, clickEvent.clientY, `+${expDelta} EXP  •  +${coinDelta} Xu`);
+            }
+
+            // Kiểm tra nếu người chơi Thăng Hạng (Rank Up)
+            if (newRankIdx > oldRankIdx) {
+                let totalBonusCoins = 0;
+                for (let idx = oldRankIdx + 1; idx <= newRankIdx; idx++) {
+                    totalBonusCoins += RANK_TIERS[idx].coinBonus;
+                }
+                appState.coins += totalBonusCoins;
+                const achievedTier = RANK_TIERS[newRankIdx];
+                playSoundEffect('rankup');
+                openRankUpModal(achievedTier, totalBonusCoins);
+            } else {
+                playSoundEffect('complete');
+            }
+
+            saveState();
+            renderAll();
+        }
+
+        /**************************************************************
+         * 5. HIỂN THỊ GIAO DIỆN CHÍNH (RENDER ALL)
+         **************************************************************/
+        function renderAll() {
+            updateSoundUI();
+            renderHeroStatus();
+            renderRankStrip();
+            renderQuestList();
+            renderShop();
+            renderLeaderboard();
+            renderInventory();
+        }
+
+        function renderHeroStatus() {
+            const { currentIdx, currentTier, nextTier, progressPercent, expNeeded } = getPlayerRankInfo();
+
+            document.getElementById('playerNameDisplay').textContent = appState.playerName;
+            document.getElementById('heroRankSvgContainer').innerHTML = currentTier.svg;
+            document.getElementById('currentRankBadgeText').textContent = currentTier.name.toUpperCase();
+            document.getElementById('coinBalanceText').textContent = appState.coins;
+            document.getElementById('shopCoinBalance').textContent = `${appState.coins} Xu`;
+            document.getElementById('completedCountStat').textContent = appState.completedTotal;
+
+            // EXP Fraction & Progress Bar
+            const expProgressBar = document.getElementById('expProgressBar');
+            expProgressBar.style.width = `${progressPercent}%`;
+
+            if (nextTier) {
+                document.getElementById('expFractionText').textContent = `${appState.exp} / ${nextTier.minExp} EXP`;
+                document.getElementById('nextRankHintText').innerHTML = `Cần thêm <strong class="text-fae">${expNeeded} EXP</strong> lên <strong class="text-parchment">${nextTier.name.toUpperCase()}</strong>`;
+                document.getElementById('nextRankRewardText').textContent = `Thưởng lên bậc: +${nextTier.coinBonus} Xu`;
+            } else {
+                document.getElementById('expFractionText').textContent = `${appState.exp} EXP (TỐI ĐA)`;
+                document.getElementById('nextRankHintText').innerHTML = `<strong class="text-fae">Đỉnh Cao Thách Đấu!</strong> Bạn đã chinh phục mọi giới hạn.`;
+                document.getElementById('nextRankRewardText').textContent = `Bậc Huyền Thoại`;
+            }
+
+            // Update Leaderboard Position Badge
+            const allCombatants = getSortedLeaderboard();
+            const playerPos = allCombatants.findIndex(c => c.isPlayer) + 1;
+            document.getElementById('leaderboardPositionBadge').textContent = `Hạng #${playerPos} BXH`;
+
+            // Update Pending Task Badge
+            const pendingCount = appState.tasks.filter(t => !t.completed).length;
+            document.getElementById('pendingTaskBadge').textContent = pendingCount;
+
+            // Update Unused Inventory Badge
+            const unusedInv = appState.inventory.filter(i => !i.used).length;
+            document.getElementById('inventoryCountBadge').textContent = unusedInv;
+        }
+
+        function renderRankStrip() {
+            const { currentIdx } = getPlayerRankInfo();
+            const container = document.getElementById('rankStripContainer');
+            container.innerHTML = RANK_TIERS.map((tier, idx) => {
+                const isCurrent = idx === currentIdx;
+                const isUnlocked = idx <= currentIdx;
+                return `
+                    <div onclick="openRankRoadmapModal()" class="cursor-pointer rounded-2xl p-2.5 border transition flex items-center gap-2.5 ${
+                        isCurrent
+                            ? 'bg-gradient-to-r from-bargain to-opal/60 border-fae shadow-lg ring-1 ring-fae/50'
+                            : isUnlocked
+                            ? 'bg-thorn-dark/80 border-opal/40 opacity-90 hover:border-fae/50'
+                            : 'bg-thorn-dark/40 border-parchment/10 opacity-45 hover:opacity-75'
+                    }">
+                        <div class="w-9 h-9 shrink-0">${tier.svg}</div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1">
+                                <p class="text-xs font-bold text-parchment truncate">${tier.name}</p>
+                                ${isCurrent ? '<span class="w-2 h-2 rounded-full bg-fae animate-ping"></span>' : ''}
+                            </div>
+                            <p class="text-[10px] text-parchment/65">${tier.minExp}+ EXP</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**************************************************************
+         * 6. QUẢN LÝ NHIỆM VỤ HẰNG NGÀY (TASKS)
+         **************************************************************/
+        function renderQuestList() {
+            const container = document.getElementById('questListContainer');
+
+            const filtered = appState.tasks.filter(task => {
+                const matchCat = activeCategoryFilter === 'all' || task.category === activeCategoryFilter;
+                const matchStatus =
+                    activeStatusFilter === 'all' ||
+                    (activeStatusFilter === 'pending' && !task.completed) ||
+                    (activeStatusFilter === 'completed' && task.completed);
+                return matchCat && matchStatus;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="rpg-card rounded-3xl p-10 text-center space-y-3">
+                        <div class="w-16 h-16 rounded-2xl bg-thorn-dark/80 border border-opal/40 mx-auto flex items-center justify-center text-fae">
+                            <i class="ph-fill ph-scroll text-3xl"></i>
+                        </div>
+                        <h4 class="text-base font-bold text-parchment">Chưa có nhiệm vụ nào trong mục này</h4>
+                        <p class="text-xs text-parchment/65 max-w-md mx-auto">
+                            Hãy thêm nhiệm vụ mới ở khung bên trái để bắt đầu tích lũy EXP và thăng hạng ngay hôm nay!
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort pending first, then newest
+            const sorted = [...filtered].sort((a, b) => {
+                if (a.completed !== b.completed) return a.completed ? 1 : -1;
+                return b.createdAt - a.createdAt;
+            });
+
+            container.innerHTML = sorted.map(task => {
+                const diff = DIFFICULTY_CONFIG[task.difficulty] || DIFFICULTY_CONFIG.medium;
+                const cat = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG['ca-nhan'];
+
+                return `
+                    <div class="rpg-card rounded-2xl p-4 sm:p-5 transition-all duration-200 hover:border-fae/60 ${
+                        task.completed ? 'opacity-65 bg-thorn-dark/50' : ''
+                    }">
+                        <div class="flex items-start sm:items-center justify-between gap-3.5">
+                            <!-- Custom RPG Checkbox + Task Info -->
+                            <div class="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                                <button onclick="toggleTaskComplete('${task.id}', event)"
+                                    class="mt-0.5 sm:mt-0 w-7 h-7 rounded-xl border-2 flex items-center justify-center shrink-0 transition-all ${
+                                        task.completed
+                                            ? 'bg-fae border-fae text-thorn-dark shadow-md'
+                                            : 'bg-thorn-dark/90 border-fae/60 hover:border-fae hover:scale-110 text-transparent'
+                                    }"
+                                    title="${task.completed ? 'Nhấn để hoàn tác' : 'Nhấn để hoàn thành & nhận EXP'}">
+                                    <i class="ph-bold ph-check text-base"></i>
+                                </button>
+
+                                <div class="space-y-1.5 flex-1 min-w-0">
+                                    <p class="text-sm sm:text-base font-bold leading-snug break-words ${
+                                        task.completed ? 'line-through text-parchment/50' : 'text-parchment'
+                                    }">
+                                        ${escapeHtml(task.title)}
+                                    </p>
+
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <!-- Category Pill -->
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-thorn-dark/80 border border-parchment/10 text-xs font-medium ${cat.color}">
+                                            <i class="ph-fill ${cat.icon}"></i>
+                                            <span>${cat.label}</span>
+                                        </span>
+
+                                        <!-- Difficulty Pill -->
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-xs font-bold ${diff.badgeClass}">
+                                            <span>Độ khó: ${diff.label}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: EXP/Coin Reward & Delete -->
+                            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                                <div class="text-right px-3 py-1.5 rounded-xl bg-thorn-dark/85 border border-fae/30">
+                                    <span class="block text-xs sm:text-sm font-extrabold text-fae">+${diff.exp} EXP</span>
+                                    <span class="block text-[11px] font-semibold text-parchment/75">+${diff.coins} Xu</span>
+                                </div>
+
+                                <button onclick="deleteTask('${task.id}')" class="p-2 rounded-xl bg-thorn-dark/60 hover:bg-rose-900/60 text-parchment/45 hover:text-rose-300 transition" title="Xóa nhiệm vụ">
+                                    <i class="ph ph-trash text-base"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function handleAddTask(e) {
+            e.preventDefault();
+            const titleInput = document.getElementById('taskTitleInput');
+            const title = titleInput.value.trim();
+            if (!title) return;
+
+            const category = document.querySelector('input[name="taskCategory"]:checked')?.value || 'hoc-tap';
+            const difficulty = document.querySelector('input[name="taskDifficulty"]:checked')?.value || 'medium';
+
+            const newTask = {
+                id: 'task_' + Date.now(),
+                title,
+                category,
+                difficulty,
+                completed: false,
+                createdAt: Date.now()
+            };
+
+            appState.tasks.unshift(newTask);
+            titleInput.value = '';
+            saveState();
+            renderAll();
+            showToast('Đã khắc nhiệm vụ mới lên bảng!', 'success');
+        }
+
+        function toggleTaskComplete(taskId, event) {
+            const task = appState.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const diff = DIFFICULTY_CONFIG[task.difficulty] || DIFFICULTY_CONFIG.medium;
+
+            if (!task.completed) {
+                task.completed = true;
+                appState.completedTotal += 1;
+                addExpAndCoins(diff.exp, diff.coins, event);
+                showToast(`Hoàn thành! Nhận +${diff.exp} EXP và +${diff.coins} Xu`, 'success');
+            } else {
+                task.completed = false;
+                appState.completedTotal = Math.max(0, appState.completedTotal - 1);
+                appState.exp = Math.max(0, appState.exp - diff.exp);
+                appState.coins = Math.max(0, appState.coins - diff.coins);
+                saveState();
+                renderAll();
+                showToast(`Đã hoàn tác nhiệm vụ (-${diff.exp} EXP)`, 'info');
+            }
+        }
+
+        function deleteTask(taskId) {
+            appState.tasks = appState.tasks.filter(t => t.id !== taskId);
+            saveState();
+            renderAll();
+            showToast('Đã xóa nhiệm vụ khỏi danh sách', 'info');
+        }
+
+        function setCategoryFilter(cat) {
+            activeCategoryFilter = cat;
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = 'cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-fae text-thorn-dark transition whitespace-nowrap';
+                } else {
+                    btn.className = 'cat-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold bg-thorn-dark/70 text-parchment/75 hover:text-parchment transition whitespace-nowrap';
+                }
+            });
+            renderQuestList();
+        }
+
+        function setStatusFilter(status) {
+            activeStatusFilter = status;
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                if (btn.dataset.status === status) {
+                    btn.className = 'status-filter-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-opal text-parchment transition';
+                } else {
+                    btn.className = 'status-filter-btn px-2.5 py-1 rounded-lg text-xs font-medium text-parchment/70 hover:text-parchment transition';
+                }
+            });
+            renderQuestList();
+        }
+
+        /**************************************************************
+         * 7. CỬA HÀNG PHẦN THƯỞNG (SHOP) & KHO ĐỒ (INVENTORY)
+         **************************************************************/
+        function renderShop() {
+            const container = document.getElementById('shopGridContainer');
+            container.innerHTML = appState.shopItems.map(item => {
+                const canAfford = appState.coins >= item.cost;
+                return `
+                    <div class="rpg-card rounded-3xl p-5 flex flex-col justify-between gap-4 hover:border-fae/60 transition group">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="w-14 h-14 rounded-2xl bg-thorn-dark/90 border border-fae/40 flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition">
+                                ${item.emoji}
+                            </div>
+                            <span class="px-3 py-1 rounded-full bg-fae/20 border border-fae/50 text-sm font-extrabold text-fae flex items-center gap-1">
+                                <i class="ph-fill ph-coins"></i>
+                                <span>${item.cost} Xu</span>
+                            </span>
+                        </div>
+
+                        <div>
+                            <h4 class="text-base font-bold text-parchment">${escapeHtml(item.title)}</h4>
+                            <p class="text-xs text-parchment/65 mt-1 leading-relaxed">${escapeHtml(item.desc || 'Phần thưởng xứng đáng cho nỗ lực của bạn.')}</p>
+                        </div>
+
+                        <div class="pt-2 border-t border-parchment/10 flex items-center gap-2">
+                            <button onclick="buyShopItem('${item.id}', event)"
+                                class="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition ${
+                                    canAfford
+                                        ? 'rpg-btn-primary text-parchment'
+                                        : 'bg-thorn-dark/80 border border-parchment/15 text-parchment/40 cursor-not-allowed'
+                                }">
+                                <i class="ph-bold ph-shopping-bag-open text-sm"></i>
+                                <span>${canAfford ? 'Đổi Phần Thưởng' : `Thiếu ${item.cost - appState.coins} Xu`}</span>
+                            </button>
+                            <button onclick="deleteShopItem('${item.id}')" class="p-2.5 rounded-xl bg-thorn-dark/60 hover:bg-rose-950 text-parchment/40 hover:text-rose-300 transition" title="Xóa vật phẩm">
+                                <i class="ph ph-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function buyShopItem(itemId, event) {
+            const item = appState.shopItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (appState.coins < item.cost) {
+                showToast(`Bạn cần thêm ${item.cost - appState.coins} Xu nữa để mua "${item.title}"!`, 'error');
+                return;
+            }
+
+            appState.coins -= item.cost;
+            appState.inventory.unshift({
+                id: 'inv_' + Date.now(),
+                title: item.title,
+                emoji: item.emoji,
+                cost: item.cost,
+                redeemedAt: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' hôm nay',
+                used: false
+            });
+
+            playSoundEffect('coin');
+            if (event) {
+                spawnFloatingReward(event.clientX, event.clientY, `Đã đổi ${item.emoji} -${item.cost} Xu`);
+            }
+
+            saveState();
+            renderAll();
+            showToast(`Đã đổi "${item.title}"! Kiểm tra trong Kho Phần Thưởng nhé.`, 'success');
+        }
+
+        function deleteShopItem(itemId) {
+            appState.shopItems = appState.shopItems.filter(i => i.id !== itemId);
+            saveState();
+            renderShop();
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventoryListContainer');
+            if (appState.inventory.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full rpg-card rounded-3xl p-10 text-center space-y-3">
+                        <i class="ph-fill ph-backpack text-4xl text-fae"></i>
+                        <h4 class="text-base font-bold text-parchment">Kho phần thưởng đang trống</h4>
+                        <p class="text-xs text-parchment/65">Hãy ghé Cửa Hàng Tự Thưởng để đổi Xu lấy những món quà yêu thích nhé!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = appState.inventory.map(ticket => `
+                <div class="rpg-card rounded-2xl p-4 flex items-center justify-between gap-4 ${ticket.used ? 'opacity-55' : 'border-fae/50'}">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-thorn-dark flex items-center justify-center text-2xl border border-fae/30">
+                            ${ticket.emoji}
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-parchment ${ticket.used ? 'line-through' : ''}">${escapeHtml(ticket.title)}</h4>
+                            <p class="text-xs text-parchment/60">Đổi lúc: ${ticket.redeemedAt} • Giá: ${ticket.cost} Xu</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        ${
+                            ticket.used
+                                ? `<span class="px-3 py-1.5 rounded-xl bg-thorn-dark text-xs font-semibold text-parchment/50">Đã sử dụng</span>`
+                                : `<button onclick="useInventoryTicket('${ticket.id}')" class="px-3.5 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment">
+                                    Sử Dụng Ngay
+                                   </button>`
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function useInventoryTicket(ticketId) {
+            const ticket = appState.inventory.find(t => t.id === ticketId);
+            if (!ticket) return;
+            ticket.used = true;
+            playSoundEffect('complete');
+            saveState();
+            renderAll();
+            showToast(`Chúc bạn tận hưởng phần thưởng "${ticket.title}" thật vui vẻ!`, 'success');
+        }
+
+        /**************************************************************
+         * 8. BẢNG XẾP HẠNG ĐỐI THỦ GIẢ LẬP (LEADERBOARD)
+         **************************************************************/
+        function getSortedLeaderboard() {
+            const playerEntry = {
+                id: 'player',
+                name: appState.playerName,
+                title: 'Bạn • Chiến Binh FaeQuest',
+                exp: appState.exp,
+                avatar: '⚔️',
+                isPlayer: true
+            };
+            const list = [...appState.rivals.map(r => ({ ...r, isPlayer: false })), playerEntry];
+            return list.sort((a, b) => b.exp - a.exp);
+        }
+
+        function renderLeaderboard() {
+            const list = getSortedLeaderboard();
+            const playerIdx = list.findIndex(item => item.isPlayer);
+            const nextRival = playerIdx > 0 ? list[playerIdx - 1] : null;
+
+            // Render Target Banner
+            const banner = document.getElementById('rivalTargetBanner');
+            if (nextRival) {
+                const diffExp = nextRival.exp - appState.exp + 1;
+                const rivalRank = RANK_TIERS[getRankIndexByExp(nextRival.exp)];
+                banner.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-fae/20 border border-fae flex items-center justify-center text-2xl">
+                            🎯
+                        </div>
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-fae-light font-bold">Mục Tiêu Bứt Phá Tiếp Theo</p>
+                            <p class="text-sm text-parchment">
+                                Bạn chỉ cần thêm <strong class="text-fae font-extrabold">${diffExp} EXP</strong> nữa để vượt qua <strong>${escapeHtml(nextRival.name)}</strong> (${rivalRank.name}) và chiếm vị trí <strong>Hạng #${playerIdx}</strong>!
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('quests')" class="px-4 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment shrink-0">
+                        Làm Nhiệm Vụ Ngay
+                    </button>
+                `;
+            } else {
+                banner.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-fae/20 border border-fae flex items-center justify-center text-2xl">👑</div>
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-fae-light font-bold">Độc Cô Cầu Bại</p>
+                            <p class="text-sm text-parchment">Chúc mừng! Bạn đang đứng <strong>Top #1 Bảng Xếp Hạng</strong>, vượt qua toàn bộ các đối thủ!</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Render Table Rows
+            const container = document.getElementById('leaderboardListContainer');
+            container.innerHTML = list.map((entry, idx) => {
+                const rankPos = idx + 1;
+                const tier = RANK_TIERS[getRankIndexByExp(entry.exp)];
+
+                let posBadge = `<span class="w-7 h-7 rounded-lg bg-thorn-dark inline-flex items-center justify-center text-xs font-bold text-parchment/70">#${rankPos}</span>`;
+                if (rankPos === 1) posBadge = `<span class="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400 text-amber-300 inline-flex items-center justify-center font-extrabold text-sm">🥇</span>`;
+                if (rankPos === 2) posBadge = `<span class="w-8 h-8 rounded-xl bg-slate-300/20 border border-slate-300 text-slate-200 inline-flex items-center justify-center font-extrabold text-sm">🥈</span>`;
+                if (rankPos === 3) posBadge = `<span class="w-8 h-8 rounded-xl bg-amber-700/30 border border-fae text-fae-light inline-flex items-center justify-center font-extrabold text-sm">🥉</span>`;
+
+                return `
+                    <div class="px-4 sm:px-6 py-4 grid grid-cols-12 items-center gap-2 transition ${
+                        entry.isPlayer
+                            ? 'bg-gradient-to-r from-bargain via-opal/35 to-bargain/80 border-l-4 border-l-fae'
+                            : 'hover:bg-thorn-dark/40'
+                    }">
+                        <div class="col-span-2 sm:col-span-1">
+                            ${posBadge}
+                        </div>
+
+                        <div class="col-span-6 sm:col-span-5 flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-xl bg-thorn-dark border ${entry.isPlayer ? 'border-fae' : 'border-opal/40'} flex items-center justify-center text-lg shrink-0">
+                                ${entry.avatar}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <p class="text-sm font-bold text-parchment truncate">${escapeHtml(entry.name)}</p>
+                                    ${entry.isPlayer ? '<span class="px-2 py-0.5 rounded-md bg-fae text-thorn-dark text-[10px] font-extrabold uppercase">Bạn</span>' : ''}
+                                </div>
+                                <p class="text-xs text-parchment/60 truncate">${escapeHtml(entry.title)}</p>
+                            </div>
+                        </div>
+
+                        <div class="col-span-4 sm:col-span-3 flex items-center justify-center gap-2">
+                            <div class="w-7 h-7 shrink-0">${tier.svg}</div>
+                            <span class="text-xs font-bold text-parchment">${tier.name}</span>
+                        </div>
+
+                        <div class="col-span-12 sm:col-span-3 flex sm:block justify-between items-center pt-2 sm:pt-0 border-t sm:border-0 border-parchment/10 text-right">
+                            <span class="text-xs text-parchment/50 sm:hidden">Điểm kinh nghiệm:</span>
+                            <span class="text-sm font-extrabold text-fae">${entry.exp.toLocaleString('vi-VN')} EXP</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function simulateRivalActivity() {
+            appState.rivals.forEach(rival => {
+                // Random gain between 10 and 60 EXP
+                const gain = Math.floor(Math.random() * 50) + 10;
+                rival.exp += gain;
+            });
+            saveState();
+            renderAll();
+            showToast('Các đối thủ vừa hoàn thành thêm nhiệm vụ và tăng điểm EXP!', 'info');
+        }
+
+        /**************************************************************
+         * 9. MODALS, TABS & TIỆN ÍCH HỖ TRỢ
+         **************************************************************/
+        function switchTab(tabName) {
+            activeTab = tabName;
+            ['quests', 'shop', 'leaderboard', 'inventory'].forEach(t => {
+                const sec = document.getElementById(`tabContent-${t}`);
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (t === tabName) {
+                    sec.classList.remove('hidden');
+                    btn.className = 'tab-btn flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition rpg-btn-primary text-parchment';
+                } else {
+                    sec.classList.add('hidden');
+                    btn.className = 'tab-btn flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition text-parchment/75 hover:text-parchment hover:bg-bargain/40';
+                }
+            });
+        }
+
+        function openRankUpModal(tier, bonusCoins) {
+            document.getElementById('modalRankUpSvg').innerHTML = tier.svg;
+            document.getElementById('modalRankUpName').textContent = `BẬC ${tier.name.toUpperCase()}`;
+            document.getElementById('modalRankUpQuote').textContent = `"${tier.quote}"`;
+            document.getElementById('modalRankUpCoins').textContent = `+${bonusCoins} Xu Vàng`;
+            const modal = document.getElementById('rankUpModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRankUpModal() {
+            const modal = document.getElementById('rankUpModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openRankRoadmapModal() {
+            const { currentIdx } = getPlayerRankInfo();
+            const listEl = document.getElementById('rankRoadmapList');
+            listEl.innerHTML = RANK_TIERS.map((tier, idx) => {
+                const isCurrent = idx === currentIdx;
+                const isUnlocked = idx <= currentIdx;
+                return `
+                    <div class="p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                        isCurrent
+                            ? 'bg-gradient-to-r from-bargain to-opal/50 border-fae'
+                            : isUnlocked
+                            ? 'bg-thorn-dark/80 border-opal/40'
+                            : 'bg-thorn-dark/40 border-parchment/10 opacity-65'
+                    }">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 shrink-0">${tier.svg}</div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-rpg font-bold text-base text-parchment">Bậc ${tier.name}</h4>
+                                    ${isCurrent ? '<span class="px-2 py-0.5 rounded-full bg-fae text-thorn-dark text-[10px] font-extrabold uppercase">Rank Hiện Tại</span>' : ''}
+                                </div>
+                                <p class="text-xs text-parchment/75 mt-0.5">${tier.quote}</p>
+                                <p class="text-xs font-semibold text-fae mt-1">Yêu cầu: ${tier.minExp} EXP trở lên</p>
+                            </div>
+                        </div>
+                        <div class="px-3.5 py-2 rounded-xl bg-thorn-dark/90 border border-fae/30 text-right self-end sm:self-center shrink-0">
+                            <span class="text-[10px] uppercase text-parchment/60 block">Thưởng Thăng Cấp</span>
+                            <span class="text-sm font-extrabold text-fae">${tier.coinBonus > 0 ? `+${tier.coinBonus} Xu` : 'Khởi điểm'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const modal = document.getElementById('rankRoadmapModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRankRoadmapModal() {
+            const modal = document.getElementById('rankRoadmapModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openAddShopItemModal() {
+            const modal = document.getElementById('addShopItemModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeAddShopItemModal() {
+            const modal = document.getElementById('addShopItemModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleAddShopItem(e) {
+            e.preventDefault();
+            const title = document.getElementById('customShopTitle').value.trim();
+            const desc = document.getElementById('customShopDesc').value.trim();
+            const cost = parseInt(document.getElementById('customShopCost').value, 10) || 20;
+            const emoji = document.getElementById('customShopEmoji').value;
+
+            if (!title) return;
+
+            appState.shopItems.push({
+                id: 'shop_' + Date.now(),
+                title,
+                desc: desc || 'Phần thưởng cá nhân tự thiết lập',
+                cost,
+                emoji
+            });
+
+            document.getElementById('customShopTitle').value = '';
+            document.getElementById('customShopDesc').value = '';
+            closeAddShopItemModal();
+            saveState();
+            renderShop();
+            showToast('Đã thêm món mới vào Cửa Hàng Tự Thưởng!', 'success');
+        }
+
+        function openAddRivalModal() {
+            const modal = document.getElementById('addRivalModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeAddRivalModal() {
+            const modal = document.getElementById('addRivalModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleAddRival(e) {
+            e.preventDefault();
+            const name = document.getElementById('customRivalName').value.trim();
+            const title = document.getElementById('customRivalTitle').value.trim() || 'Đối Thủ Bí Ẩn';
+            const exp = parseInt(document.getElementById('customRivalExp').value, 10) || 300;
+            if (!name) return;
+
+            const avatars = ['🦊', '🐺', '🦁', '🐯', '🐉', '🦅', '🦇', '🔮'];
+            const randomAvatar = avatars[Math.floor(Math.random() * avatars.length)];
+
+            appState.rivals.push({
+                id: 'rival_' + Date.now(),
+                name,
+                title,
+                exp,
+                avatar: randomAvatar
+            });
+
+            document.getElementById('customRivalName').value = '';
+            document.getElementById('customRivalTitle').value = '';
+            closeAddRivalModal();
+            saveState();
+            renderAll();
+            showToast(`Đã thêm đối thủ "${name}" vào Bảng Xếp Hạng!`, 'success');
+        }
+
+        function promptRenamePlayer() {
+            document.getElementById('newPlayerNameInput').value = appState.playerName;
+            const modal = document.getElementById('renameModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeRenameModal() {
+            const modal = document.getElementById('renameModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function confirmRenamePlayer() {
+            const val = document.getElementById('newPlayerNameInput').value.trim();
+            if (val) {
+                appState.playerName = val;
+                saveState();
+                renderAll();
+                showToast('Đã cập nhật tên nhân vật!', 'success');
+            }
+            closeRenameModal();
+        }
+
+        function openResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeResetModal() {
+            const modal = document.getElementById('resetModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function confirmResetAll() {
+            appState = JSON.parse(JSON.stringify(DEFAULT_STATE));
+            saveState();
+            closeResetModal();
+            renderAll();
+            showToast('Đã đặt lại dữ liệu về trạng thái khởi đầu!', 'info');
+        }
+
+        function grantDemoBoost() {
+            addExpAndCoins(150, 15);
+            showToast('Đã cộng thử +150 EXP & +15 Xu để bạn trải nghiệm lên Rank!', 'success');
+        }
+
+        function spawnFloatingReward(x, y, text) {
+            const el = document.createElement('div');
+            el.className = 'floating-reward px-3.5 py-1.5 rounded-full bg-gradient-to-r from-fae to-bargain text-parchment font-extrabold text-xs shadow-xl border border-parchment/40';
+            el.style.left = `${Math.max(20, Math.min(window.innerWidth - 160, x - 50))}px`;
+            el.style.top = `${Math.max(20, y - 20)}px`;
+            el.textContent = text;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1400);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const borderClass = type === 'success' ? 'border-fae' : type === 'error' ? 'border-rose-500' : 'border-opal-light';
+            const iconClass = type === 'success' ? 'ph-check-circle text-fae' : type === 'error' ? 'ph-warning-circle text-rose-400' : 'ph-sparkle text-opal-light';
+
+            toast.className = `rpg-card px-4 py-3 rounded-2xl border-l-4 ${borderClass} shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-semibold text-parchment pointer-events-auto transition-all duration-300`;
+            toast.innerHTML = `
+                <i class="ph-fill ${iconClass} text-xl shrink-0"></i>
+                <span>${escapeHtml(message)}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Khởi chạy ứng dụng khi tải trang
+        window.onload = function () {
+            renderAll();
+        };
+    </script>
+</body>
+</html>
