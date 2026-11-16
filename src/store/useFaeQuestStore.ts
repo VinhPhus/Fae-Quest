@@ -30,7 +30,14 @@ import {
   INITIAL_INVENTORY,
   INITIAL_RIVALS,
 } from '../constants/initialData';
-import { INITIAL_SYSTEM_QUESTS, SYSTEM_TITLES } from '../constants/systemQuests';
+import {
+  INITIAL_SYSTEM_QUESTS,
+  SYSTEM_TITLES,
+  syncSystemTitlesWithAchievements,
+  isDefaultSystemTitle,
+  isTitleUnlocked,
+  resolveTitleObject,
+} from '../constants/systemQuests';
 import { playSoundEffect } from '../utils/soundEffects';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import {
@@ -121,6 +128,7 @@ interface FaeQuestState {
   updateSystemShopItem: (id: string, item: Partial<SystemShopItem>) => Promise<boolean>;
   deleteSystemShopItem: (id: string) => Promise<boolean>;
   fetchSystemAchievements: () => Promise<void>;
+  checkAndUnlockAchievements: () => void;
   addSystemAchievement: (achievement: Omit<SystemAchievement, 'id' | 'created_at'>) => Promise<boolean>;
   updateSystemAchievement: (id: string, achievement: Partial<SystemAchievement>) => Promise<boolean>;
   deleteSystemAchievement: (id: string) => Promise<boolean>;
@@ -495,21 +503,56 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             const achievements = data as SystemAchievement[];
             set({ systemAchievements: achievements });
 
-            // Đồng bộ thành tựu động vào danh sách systemQuests để người dùng thực thi
+            // Đồng bộ dynamic titles vào SYSTEM_TITLES
+            syncSystemTitlesWithAchievements(achievements);
+
+            const validAchIds = new Set(achievements.map((a) => a.id));
             const currentQuests = get().systemQuests;
-            const updatedQuests = [...currentQuests];
+
+            // Map lưu giữ tiến độ cá nhân của người dùng cho từng quest
+            const progressMap = new Map<string, Partial<SystemQuest>>();
+            for (const q of currentQuests) {
+              progressMap.set(q.id, {
+                currentStreak: q.currentStreak,
+                lastCheckInDate: q.lastCheckInDate,
+                lastResetDate: q.lastResetDate,
+                isCompleted: q.isCompleted,
+                isRewardClaimed: q.isRewardClaimed,
+              });
+            }
+
+            // 1. Quests mặc định cố định từ INITIAL_SYSTEM_QUESTS
+            const newQuests: SystemQuest[] = INITIAL_SYSTEM_QUESTS.map((base) => {
+              const prev = progressMap.get(base.id);
+              if (prev) {
+                return {
+                  ...base,
+                  currentStreak: prev.currentStreak ?? base.currentStreak,
+                  lastCheckInDate: prev.lastCheckInDate ?? base.lastCheckInDate,
+                  lastResetDate: prev.lastResetDate ?? base.lastResetDate,
+                  isCompleted: prev.isCompleted ?? base.isCompleted,
+                  isRewardClaimed: prev.isRewardClaimed ?? base.isRewardClaimed,
+                };
+              }
+              return base;
+            });
+
+            // 2. Thành tựu động hiện hữu từ Supabase (SINGLE SOURCE OF TRUTH)
+            let unlockedTitlesUpdated = [...get().unlockedTitleIds];
+            let unlockedChanged = false;
 
             for (const ach of achievements) {
-              const existingIdx = updatedQuests.findIndex(
-                (q) => q.id === `sys_${ach.id}` || q.id === ach.id
-              );
+              const questId = `sys_${ach.id}`;
+              const prev = progressMap.get(questId) || progressMap.get(ach.id);
               const isStreak = ach.achievement_type === 'streak_counter';
               let milestoneKey: 'completedTasks' | 'focusSessions' | undefined;
               if (ach.achievement_type === 'milestone_tasks') milestoneKey = 'completedTasks';
               if (ach.achievement_type === 'milestone_focus') milestoneKey = 'focusSessions';
 
               let autoCompleted = false;
-              if (ach.achievement_type === 'milestone_tasks') {
+              if (isStreak) {
+                autoCompleted = (prev?.currentStreak || 0) >= ach.target_value;
+              } else if (ach.achievement_type === 'milestone_tasks') {
                 autoCompleted = get().completedTotal >= ach.target_value;
               } else if (ach.achievement_type === 'milestone_focus') {
                 autoCompleted = get().focusSessionsCompleted >= ach.target_value;
@@ -517,44 +560,120 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 autoCompleted = get().exp >= ach.target_value;
               }
 
-              if (existingIdx >= 0) {
-                const existing = updatedQuests[existingIdx];
-                updatedQuests[existingIdx] = {
-                  ...existing,
-                  title: ach.title,
-                  description: ach.description,
-                  targetDays: isStreak ? ach.target_value : undefined,
-                  targetMilestone: !isStreak ? ach.target_value : undefined,
-                  milestoneKey,
-                  expReward: ach.reward_exp,
-                  coinReward: ach.reward_coins,
-                  rewardTitleName: ach.granted_title_name || 'Vinh Quang Fae',
-                  isCompleted: existing.isCompleted || autoCompleted,
-                };
-              } else {
-                updatedQuests.push({
-                  id: `sys_${ach.id}`,
-                  type: isStreak ? 'streak_counter' : 'milestone',
-                  title: ach.title,
-                  description: ach.description,
-                  targetDays: isStreak ? ach.target_value : undefined,
-                  currentStreak: 0,
-                  targetMilestone: !isStreak ? ach.target_value : undefined,
-                  milestoneKey,
-                  expReward: ach.reward_exp,
-                  coinReward: ach.reward_coins,
-                  rewardTitleId: `title_${ach.id}`,
-                  rewardTitleName: ach.granted_title_name || 'Vinh Quang Fae',
-                  isCompleted: autoCompleted,
-                  isRewardClaimed: false,
-                });
+              const isCompleted = prev?.isCompleted || autoCompleted;
+              const rewardTitleId = `sys_title_${ach.id}`;
+
+              // Mở khóa danh hiệu tự động khi hoàn thành
+              if (isCompleted && ach.granted_title_name && ach.granted_title_name.trim()) {
+                if (!unlockedTitlesUpdated.includes(rewardTitleId)) {
+                  unlockedTitlesUpdated.push(rewardTitleId);
+                  unlockedChanged = true;
+                }
+              }
+
+              newQuests.push({
+                id: questId,
+                type: isStreak ? 'streak_counter' : 'milestone',
+                title: ach.title,
+                description: ach.description,
+                targetDays: isStreak ? ach.target_value : undefined,
+                currentStreak: isStreak ? (prev?.currentStreak || 0) : undefined,
+                lastCheckInDate: prev?.lastCheckInDate || '',
+                lastResetDate: prev?.lastResetDate || '',
+                targetMilestone: !isStreak ? ach.target_value : undefined,
+                milestoneKey,
+                expReward: ach.reward_exp,
+                coinReward: ach.reward_coins,
+                rewardTitleId,
+                rewardTitleName: ach.granted_title_name || 'Vinh Quang Fae',
+                isCompleted,
+                isRewardClaimed: prev?.isRewardClaimed || false,
+              });
+            }
+
+            // 3. Tự động dọn dẹp nếu danh hiệu đang trang bị bị Admin xóa
+            let currentEquipped = get().equippedTitleId;
+            let equippedChanged = false;
+            if (currentEquipped.startsWith('sys_title_') || (currentEquipped.startsWith('title_') && !isDefaultSystemTitle(currentEquipped))) {
+              const achId = currentEquipped.replace('sys_title_', '').replace('title_', '');
+              if (!validAchIds.has(achId)) {
+                currentEquipped = 'title_tan_binh_gai_do';
+                equippedChanged = true;
               }
             }
 
-            set({ systemQuests: updatedQuests });
+            // 4. Dọn dẹp unlockedTitleIds khỏi các thành tựu đã bị xóa
+            unlockedTitlesUpdated = unlockedTitlesUpdated.filter((tid) => {
+              if (tid.startsWith('sys_title_') || tid.startsWith('title_')) {
+                if (isDefaultSystemTitle(tid)) return true;
+                const achId = tid.replace('sys_title_', '').replace('title_', '');
+                return validAchIds.has(achId);
+              }
+              return true;
+            });
+
+            set({
+              systemQuests: newQuests,
+              unlockedTitleIds: unlockedTitlesUpdated,
+              equippedTitleId: currentEquipped,
+            });
+
+            if (equippedChanged && get().currentUser) {
+              supabase
+                .from('profiles')
+                .update({ equipped_title: currentEquipped })
+                .eq('id', get().currentUser!.id);
+            }
           }
         } catch (e) {
           console.error('Error fetching system achievements:', e);
+        }
+      },
+
+      checkAndUnlockAchievements: () => {
+        const state = get();
+        const achievements = state.systemAchievements;
+        if (!achievements || achievements.length === 0) return;
+
+        let unlockedTitles = [...state.unlockedTitleIds];
+        let hasNew = false;
+
+        const updatedQuests = state.systemQuests.map((q) => {
+          if (!q.id.startsWith('sys_')) return q;
+          const achId = q.id.replace('sys_', '');
+          const ach = achievements.find((a) => a.id === achId);
+          if (!ach) return q;
+
+          let autoCompleted = false;
+          if (ach.achievement_type === 'milestone_tasks') {
+            autoCompleted = state.completedTotal >= ach.target_value;
+          } else if (ach.achievement_type === 'milestone_focus') {
+            autoCompleted = state.focusSessionsCompleted >= ach.target_value;
+          } else if (ach.achievement_type === 'milestone_exp') {
+            autoCompleted = state.exp >= ach.target_value;
+          } else if (ach.achievement_type === 'streak_counter') {
+            autoCompleted = (q.currentStreak || 0) >= ach.target_value;
+          }
+
+          if (autoCompleted) {
+            if (ach.granted_title_name && ach.granted_title_name.trim()) {
+              const titleId = `sys_title_${ach.id}`;
+              if (!unlockedTitles.includes(titleId)) {
+                unlockedTitles.push(titleId);
+                hasNew = true;
+              }
+            }
+            if (!q.isCompleted) {
+              hasNew = true;
+              return { ...q, isCompleted: true };
+            }
+          }
+          return q;
+        });
+
+        if (hasNew) {
+          set({ unlockedTitleIds: unlockedTitles, systemQuests: updatedQuests });
+          debouncedAutoSync(get());
         }
       },
 
@@ -594,6 +713,31 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .delete()
             .eq('id', id);
           if (error) throw error;
+
+          // Xóa dọn danh hiệu đang trang bị nếu trùng
+          const state = get();
+          let newEquipped = state.equippedTitleId;
+          if (
+            state.equippedTitleId === `sys_title_${id}` ||
+            state.equippedTitleId === `title_${id}`
+          ) {
+            newEquipped = 'title_tan_binh_gai_do';
+            set({ equippedTitleId: newEquipped });
+            if (state.currentUser) {
+              await supabase
+                .from('profiles')
+                .update({ equipped_title: newEquipped })
+                .eq('id', state.currentUser.id);
+            }
+          }
+
+          // Dọn dẹp unlockedTitleIds
+          set({
+            unlockedTitleIds: state.unlockedTitleIds.filter(
+              (t) => t !== `sys_title_${id}` && t !== `title_${id}`
+            ),
+          });
+
           await get().fetchSystemAchievements();
           get().addToast('Đã xóa thành tựu khỏi hệ thống', 'info');
           return true;
@@ -1534,7 +1678,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return q;
         });
 
-        set({ systemQuests: updatedQuests });
+        let unlockedTitles = state.unlockedTitleIds;
+        if (isCompleted && quest.rewardTitleId && !unlockedTitles.includes(quest.rewardTitleId)) {
+          unlockedTitles = [...unlockedTitles, quest.rewardTitleId];
+        }
+
+        set({ systemQuests: updatedQuests, unlockedTitleIds: unlockedTitles });
         playSoundEffect('complete', state.soundEnabled);
         triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 6);
 
@@ -1620,12 +1769,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       equipTitle: (titleId: string) => {
         const state = get();
-        if (!state.unlockedTitleIds.includes(titleId)) {
+        if (!isTitleUnlocked(titleId, state.unlockedTitleIds)) {
           get().addToast('Danh hiệu này chưa được mở khóa!', 'error');
           return;
         }
-        const titleInfo = SYSTEM_TITLES[titleId];
+        const titleInfo = resolveTitleObject(titleId);
         set({ equippedTitleId: titleId });
+        if (state.currentUser) {
+          supabase
+            .from('profiles')
+            .update({ equipped_title: titleId })
+            .eq('id', state.currentUser.id)
+            .then(() => {});
+        }
         playSoundEffect('click', state.soundEnabled);
         get().addToast(`Đã trang bị danh hiệu "${titleInfo?.name || titleId}"!`, 'success');
         debouncedAutoSync(get());
@@ -1636,6 +1792,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const currentRankIdx = getRankIndexByExp(state.exp);
 
         let hasNewCompleted = false;
+        let unlockedTitles = [...state.unlockedTitleIds];
+        let titleChanged = false;
+
         const updatedQuests = state.systemQuests.map((q) => {
           if (q.type !== 'milestone') return q;
 
@@ -1650,18 +1809,30 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             isAchieved = state.exp >= (q.targetMilestone || 0);
           }
 
-          if (isAchieved && !q.isCompleted) {
-            hasNewCompleted = true;
-            return { ...q, isCompleted: true };
+          if (isAchieved) {
+            if (q.rewardTitleId && !unlockedTitles.includes(q.rewardTitleId)) {
+              unlockedTitles.push(q.rewardTitleId);
+              titleChanged = true;
+            }
+            if (!q.isCompleted) {
+              hasNewCompleted = true;
+              return { ...q, isCompleted: true };
+            }
           }
           return q;
         });
 
-        if (hasNewCompleted) {
-          set({ systemQuests: updatedQuests });
-          playSoundEffect('complete', state.soundEnabled);
-          get().addToast('🎖️ Bạn vừa hoàn thành một Cột Mốc Thành Tựu! Hãy vào nhận thưởng!', 'success');
+        if (hasNewCompleted || titleChanged) {
+          set({ systemQuests: updatedQuests, unlockedTitleIds: unlockedTitles });
+          if (hasNewCompleted) {
+            playSoundEffect('complete', state.soundEnabled);
+            get().addToast('🎖️ Bạn vừa hoàn thành một Cột Mốc Thành Tựu! Hãy vào nhận thưởng!', 'success');
+          }
+          debouncedAutoSync(get());
         }
+
+        // Tự động kiểm tra và mở khóa thành tựu của Admin
+        get().checkAndUnlockAchievements();
       },
 
       addToast: (text, type = 'info') => {

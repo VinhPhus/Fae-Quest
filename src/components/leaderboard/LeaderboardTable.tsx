@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
-import { SYSTEM_TITLES } from '../../constants/systemQuests';
+import { SYSTEM_TITLES, resolveTitleObject } from '../../constants/systemQuests';
 import { RivalTargetBanner } from './RivalTargetBanner';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
 import { Trophy, RefreshCw, UserPlus, Swords, Globe, Bot, ShieldCheck } from 'lucide-react';
@@ -24,7 +24,7 @@ export const LeaderboardTable: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
 
-  const playerTitle = (SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).name;
+  const playerTitle = resolveTitleObject(equippedTitleId).name;
 
   const loadLeaderboard = async () => {
     setIsLoading(true);
@@ -55,11 +55,11 @@ export const LeaderboardTable: React.FC = () => {
   const otherCommunityCombatants = communityProfiles
     .filter((p) => p.id !== hunterId)
     .map((p) => {
-      const matchingTitle = SYSTEM_TITLES[p.equipped_title];
+      const matchingTitle = resolveTitleObject(p.equipped_title);
       return {
         id: p.id,
         name: p.username,
-        title: matchingTitle ? matchingTitle.name : 'Tân Binh Gai Đỏ',
+        title: matchingTitle.name,
         exp: p.exp,
         avatar: p.avatar_url || '⚔️',
         isPlayer: false,

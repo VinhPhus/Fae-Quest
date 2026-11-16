@@ -1,13 +1,13 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { SYSTEM_TITLES } from '../../constants/systemQuests';
+import { resolveTitleObject } from '../../constants/systemQuests';
 import { CoinIcon } from '../ui/CoinIcon';
 import { Flame, Shield, Award, ChevronRight, Star } from 'lucide-react';
 
 export const HunterStatisticsWidget: React.FC = () => {
   const { coins, streakDays, completedTotal, equippedTitleId, setActiveTab, stars } = useFaeQuestStore();
 
-  const titleObj = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
+  const titleObj = resolveTitleObject(equippedTitleId);
 
   const getRarityBadge = (rarity: string) => {
     switch (rarity) {

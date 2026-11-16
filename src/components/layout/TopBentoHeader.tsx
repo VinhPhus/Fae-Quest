@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { SYSTEM_TITLES } from '../../constants/systemQuests';
+import { resolveTitleObject } from '../../constants/systemQuests';
 import { Search, X, Scroll, Settings, Plus, Mail, ShieldAlert } from 'lucide-react';
 
 export const TopBentoHeader: React.FC = () => {
@@ -18,7 +18,7 @@ export const TopBentoHeader: React.FC = () => {
     userRole,
   } = useFaeQuestStore();
 
-  const titleObj = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
+  const titleObj = resolveTitleObject(equippedTitleId);
 
   // Determine time of day greeting
   const getGreeting = () => {

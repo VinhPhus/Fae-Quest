@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { SYSTEM_TITLES } from '../../constants/systemQuests';
+import {
+  getAllUnifiedTitles,
+  isTitleUnlocked,
+  isTitleEquipped,
+  resolveTitleObject,
+} from '../../constants/systemQuests';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
@@ -15,11 +20,14 @@ import {
   Calendar,
   AlertTriangle,
   Gift,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 export const SystemQuestsView: React.FC = () => {
   const {
     systemQuests,
+    systemAchievements,
     unlockedTitleIds,
     equippedTitleId,
     completedTotal,
@@ -31,6 +39,7 @@ export const SystemQuestsView: React.FC = () => {
     equipTitle,
   } = useFaeQuestStore();
 
+  const titleCarouselRef = useRef<HTMLDivElement | null>(null);
   const [confirmResetQuestId, setConfirmResetQuestId] = useState<string | null>(null);
   const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'streak' | 'milestone'>('all');
 
@@ -54,13 +63,23 @@ export const SystemQuestsView: React.FC = () => {
     const interval = setInterval(updateCountdown, 10000);
     return () => clearInterval(interval);
   }, []);
+
   const currentRankIdx = getRankIndexByExp(exp);
   const currentTier = RANK_TIERS[currentRankIdx];
 
-  const equippedTitle = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
-  const distinctTitles = Object.values(SYSTEM_TITLES).filter(
-    (t, i, arr) => arr.findIndex((x) => x.id === t.id) === i
-  );
+  const allTitles = getAllUnifiedTitles(systemAchievements);
+  const unlockedCount = allTitles.filter((t) => isTitleUnlocked(t.id, unlockedTitleIds)).length;
+  const equippedTitle = resolveTitleObject(equippedTitleId);
+
+  const scrollTitleCarousel = (direction: 'left' | 'right') => {
+    if (titleCarouselRef.current) {
+      const scrollAmount = titleCarouselRef.current.clientWidth * 0.75;
+      titleCarouselRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const streakQuests = systemQuests.filter((q) => q.type === 'streak_counter');
   const milestoneQuests = systemQuests.filter((q) => q.type === 'milestone');
@@ -90,56 +109,90 @@ export const SystemQuestsView: React.FC = () => {
         </div>
 
         {/* Current Equipped Title Highlight Card */}
-        <div className="shrink-0 z-10 w-full md:w-auto bg-thorn-dark/90 p-4 rounded-2xl border border-fae/50 shadow-xl flex items-center gap-3.5">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-fae/20 border border-fae/40 flex items-center justify-center p-1 shadow-inner shrink-0 relative overflow-hidden group">
+        <div className="shrink-0 z-10 w-full md:w-auto bg-[#11212D]/90 p-4 rounded-2xl border border-[#253745] shadow-xl flex items-center gap-3.5">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[#06141B] border border-[#4A5C6A] flex items-center justify-center p-1 shadow-inner shrink-0 relative overflow-hidden group">
             <img
               src={equippedTitle.iconUrl}
               alt={equippedTitle.name}
-              className="w-full h-full object-contain drop-shadow-[0_0_16px_rgba(217,119,82,0.7)] animate-pulse"
+              className="w-full h-full object-contain drop-shadow-[0_0_16px_rgba(204,208,207,0.5)] animate-pulse"
             />
           </div>
           <div>
-            <span className="text-[10px] text-parchment/60 uppercase tracking-widest block font-semibold">
+            <span className="text-[10px] text-[#9BA8AB] uppercase tracking-widest block font-semibold">
               Danh Hiệu Đang Trang Bị
             </span>
             <span className={`text-base font-extrabold ${equippedTitle.color} flex items-center gap-1.5`}>
               <span>{equippedTitle.name}</span>
             </span>
-            <span className="text-[10px] text-parchment/50">
-              Đã mở: {unlockedTitleIds.length}/{distinctTitles.length} danh hiệu
+            <span className="text-[10px] text-[#9BA8AB]">
+              Đã mở: {unlockedCount}/{allTitles.length} danh hiệu
             </span>
           </div>
         </div>
       </div>
 
-      {/* 2. Kho Danh Hiệu (Title Manager) */}
-      <div className="rpg-card rounded-3xl p-5 sm:p-6 space-y-4 border border-opal/30 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-parchment/10">
-          <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-fae" />
-            <h3 className="font-rpg font-bold text-lg text-parchment">
-              Bộ Sưu Tập Danh Hiệu Cá Nhân
-            </h3>
+      {/* 2. Kho Danh Hiệu (Horizontal Carousel Slider) */}
+      <div className="bg-[#11212D] rounded-3xl p-5 sm:p-6 space-y-4 border border-[#253745] shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#253745]">
+          <div className="flex items-center gap-2.5">
+            <Award className="w-5 h-5 text-amber-400 shrink-0" />
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-rpg font-bold text-lg text-white">
+                Bộ Sưu Tập Danh Hiệu Cá Nhân
+              </h3>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#06141B] border border-[#253745] text-cyan-400">
+                Đã mở khóa: {unlockedCount} / {allTitles.length}
+              </span>
+            </div>
           </div>
-          <span className="text-xs text-parchment/60 font-medium">
-            Chọn 1 danh hiệu yêu thích để hiển thị trên Hồ sơ và Bảng Xếp Hạng
-          </span>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3">
+            <span className="text-xs text-[#9BA8AB] hidden lg:inline">
+              Chọn 1 danh hiệu yêu thích để hiển thị trên Hồ sơ và Bảng Xếp Hạng
+            </span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => scrollTitleCarousel('left')}
+                className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white flex items-center justify-center transition active:scale-95 shadow cursor-pointer"
+                title="Cuộn sang trái"
+                aria-label="Cuộn sang trái"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollTitleCarousel('right')}
+                className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white flex items-center justify-center transition active:scale-95 shadow cursor-pointer"
+                title="Cuộn sang phải"
+                aria-label="Cuộn sang phải"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {distinctTitles.map((title) => {
-            const isUnlocked = unlockedTitleIds.includes(title.id);
-            const isEquipped = equippedTitleId === title.id;
+        {/* Carousel Track: 4 cards on desktop, 2 on tablet, 1 on mobile */}
+        <div
+          ref={titleCarouselRef}
+          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 no-scrollbar"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {allTitles.map((title) => {
+            const isUnlocked = isTitleUnlocked(title.id, unlockedTitleIds);
+            const isEquipped = isTitleEquipped(title.id, equippedTitleId);
 
             return (
               <div
                 key={title.id}
-                className={`rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between gap-3 relative group ${isEquipped
-                  ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-[#CCD0CF] ring-2 ring-[#CCD0CF]/40 shadow-lg scale-[1.02]'
-                  : isUnlocked
-                    ? 'bg-thorn-dark/80 hover:bg-thorn border-opal/40 hover:border-fae/50 hover:scale-105 shadow-md'
-                    : 'bg-thorn-dark/40 border-parchment/10 opacity-60'
-                  }`}
+                className={`w-full sm:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] shrink-0 snap-start rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between gap-3 relative group ${
+                  isEquipped
+                    ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-[#CCD0CF] ring-2 ring-[#CCD0CF]/40 shadow-[0_0_20px_rgba(204,208,207,0.2)] scale-[1.01]'
+                    : isUnlocked
+                      ? 'bg-[#06141B] hover:bg-[#253745]/50 border-[#253745] hover:border-[#4A5C6A] shadow-md'
+                      : 'bg-[#06141B]/50 border-[#253745]/60 opacity-60'
+                }`}
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
@@ -147,63 +200,73 @@ export const SystemQuestsView: React.FC = () => {
                       <img
                         src={title.iconUrl}
                         alt={title.name}
-                        className={`w-full h-full object-contain transition-all duration-300 drop-shadow-md ${isUnlocked
-                          ? 'group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(217,119,82,0.85)]'
-                          : 'grayscale opacity-40 contrast-75'
-                          }`}
+                        className={`w-full h-full object-contain transition-all duration-300 drop-shadow-md ${
+                          isUnlocked
+                            ? 'group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(204,208,207,0.6)]'
+                            : 'grayscale opacity-40 contrast-75'
+                        }`}
                         loading="lazy"
                       />
                       {!isUnlocked && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-xl backdrop-blur-[1px] border border-parchment/10">
-                          <Lock className="w-5 h-5 text-parchment/80 drop-shadow" />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl backdrop-blur-[1px] border border-[#253745]">
+                          <Lock className="w-5 h-5 text-[#CCD0CF]/80 drop-shadow" />
                         </div>
                       )}
                     </div>
 
-                    <span
-                      className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border ${title.rarity === 'legendary'
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-400/50'
-                        : title.rarity === 'epic'
-                          ? 'bg-purple-500/20 text-purple-300 border-purple-400/50'
-                          : title.rarity === 'rare'
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50'
-                            : 'bg-rose-500/20 text-rose-300 border-rose-400/50'
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border ${
+                          title.rarity === 'LEGENDARY'
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-400/50'
+                            : title.rarity === 'EPIC'
+                              ? 'bg-purple-500/20 text-purple-300 border-purple-400/50'
+                              : title.rarity === 'RARE'
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50'
+                                : 'bg-[#253745] text-[#CCD0CF] border-[#4A5C6A]'
                         }`}
-                    >
-                      {title.rarity.toUpperCase()}
-                    </span>
+                      >
+                        {title.rarity}
+                      </span>
+                      {title.isCustom && (
+                        <span className="text-[8px] font-bold text-amber-300/80 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                          ✨ Admin
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div>
-                    <h4 className={`text-sm font-extrabold ${title.color}`}>
+                    <h4 className={`text-sm font-extrabold ${title.color || 'text-white'}`}>
                       {title.name}
                     </h4>
-                    <p className="text-[11px] text-parchment/70 mt-1 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] text-[#9BA8AB] mt-1 leading-relaxed line-clamp-2">
                       {title.description}
                     </p>
                   </div>
 
-                  <p className="text-[10px] text-parchment/50 italic border-t border-parchment/10 pt-1.5">
-                    Nguồn: {title.sourceQuestTitle}
+                  <p className="text-[10px] text-[#9BA8AB]/70 italic border-t border-[#253745] pt-1.5 line-clamp-1">
+                    {title.sourceText}
                   </p>
                 </div>
 
                 {/* Actions */}
                 <div className="pt-1">
                   {isEquipped ? (
-                    <span className="w-full py-1.5 rounded-xl bg-fae/20 border border-fae text-xs font-bold text-fae flex items-center justify-center gap-1.5 shadow">
+                    <span className="w-full py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-xs font-bold text-cyan-300 flex items-center justify-center gap-1.5 shadow">
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Đang Trang Bị</span>
                     </span>
                   ) : isUnlocked ? (
                     <button
+                      type="button"
                       onClick={() => equipTitle(title.id)}
-                      className="w-full py-1.5 rounded-xl rpg-btn-primary font-bold text-xs text-parchment hover:scale-[1.02] transition shadow"
+                      className="w-full py-1.5 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs transition shadow active:scale-95 cursor-pointer"
                     >
                       Trang Bị Ngay
                     </button>
                   ) : (
-                    <span className="w-full py-1.5 rounded-xl bg-thorn-dark border border-parchment/10 text-xs font-semibold text-parchment/40 flex items-center justify-center gap-1.5">
+                    <span className="w-full py-1.5 rounded-xl bg-[#06141B] border border-[#253745] text-xs font-semibold text-[#9BA8AB]/50 flex items-center justify-center gap-1.5">
                       <Lock className="w-3.5 h-3.5" />
                       <span>Chưa Mở Khóa</span>
                     </span>

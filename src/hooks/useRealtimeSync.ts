@@ -1,0 +1,136 @@
+import { useEffect } from 'react';
+import { supabase } from '../utils/supabaseClient';
+import { useFaeQuestStore } from '../store/useFaeQuestStore';
+import { playSoundEffect } from '../utils/soundEffects';
+
+/**
+ * Hook lắng nghe thời gian thực (Supabase Real-Time Sync) giữa Admin và Người Dùng
+ * Đăng ký postgres_changes trên 4 bảng chính:
+ * 1. system_achievements (Thêm, Sửa, Xóa Thành tựu & Danh hiệu)
+ * 2. system_shop_items (Thêm, Sửa, Xóa Vật phẩm Hệ thống)
+ * 3. user_messages (Thư mới, Quà tặng, Cảnh báo trực tiếp cho user)
+ * 4. profiles (Khóa tài khoản, Thay đổi Role, Cập nhật EXP/Xu/Sao từ Admin)
+ */
+export const useRealtimeSync = (): void => {
+  const currentUser = useFaeQuestStore((s) => s.currentUser);
+  const soundEnabled = useFaeQuestStore((s) => s.soundEnabled);
+  const addToast = useFaeQuestStore((s) => s.addToast);
+
+  useEffect(() => {
+    if (!currentUser || !currentUser.id) return;
+
+    const channelName = `faequest-realtime-${currentUser.id}`;
+    const channel = supabase.channel(channelName);
+
+    // 1. Lắng nghe thay đổi Thành Tựu Hệ Thống (system_achievements)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'system_achievements',
+      },
+      () => {
+        // Tự động tải lại danh sách thành tựu & danh hiệu đồng bộ ngay lập tức
+        useFaeQuestStore.getState().fetchSystemAchievements();
+      }
+    );
+
+    // 2. Lắng nghe thay đổi Cửa Hàng Hệ Thống (system_shop_items)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'system_shop_items',
+      },
+      () => {
+        // Tự động tải lại vật phẩm Cửa Hàng Hệ Thống
+        useFaeQuestStore.getState().fetchSystemShopItems();
+      }
+    );
+
+    // 3. Lắng nghe Thư / Cảnh báo / Quà gửi riêng cho user hiện tại (user_messages)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'user_messages',
+        filter: `receiver_id=eq.${currentUser.id}`,
+      },
+      (payload) => {
+        // Cập nhật lại danh sách thư & số thư chưa đọc
+        useFaeQuestStore.getState().fetchUserMessages();
+
+        if (payload.eventType === 'INSERT') {
+          const newMsg = payload.new as any;
+          if (newMsg) {
+            if (newMsg.message_type === 'warning') {
+              playSoundEffect('warning', soundEnabled);
+              useFaeQuestStore.setState({ activeWarningMessage: newMsg });
+              addToast('⚠️ Bạn nhận được một Cảnh Báo khẩn cấp từ Quản Trị Viên!', 'error');
+            } else if (newMsg.message_type === 'gift') {
+              playSoundEffect('rankup', soundEnabled);
+              addToast('🎁 Bạn vừa nhận được Thư Kèm Quà Tặng từ Quản Trị Viên! Hãy mở Hộp Thư để nhận!', 'success');
+            } else {
+              playSoundEffect('complete', soundEnabled);
+              addToast('📬 Bạn có thư thông báo mới từ Quản Trị Viên.', 'info');
+            }
+          }
+        }
+      }
+    );
+
+    // 4. Lắng nghe thay đổi trên Profile của chính user (profiles)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${currentUser.id}`,
+      },
+      (payload) => {
+        if (payload.new) {
+          const p = payload.new as any;
+          const patch: any = {};
+
+          // Khóa tài khoản Realtime
+          if (p.banned_until !== undefined) {
+            patch.bannedUntil = p.banned_until;
+          }
+          if (p.ban_reason !== undefined) {
+            patch.banReason = p.ban_reason;
+          }
+
+          // Phân quyền Realtime
+          if (p.role !== undefined) {
+            patch.userRole = p.role;
+          }
+
+          // Chỉ số EXP / Coins / Stars cập nhật từ máy chủ
+          if (typeof p.exp === 'number' && p.exp !== useFaeQuestStore.getState().exp) {
+            patch.exp = p.exp;
+          }
+          if (typeof p.coins === 'number' && p.coins !== useFaeQuestStore.getState().coins) {
+            patch.coins = p.coins;
+          }
+          if (typeof p.stars === 'number' && p.stars !== useFaeQuestStore.getState().stars) {
+            patch.stars = p.stars;
+          }
+
+          if (Object.keys(patch).length > 0) {
+            useFaeQuestStore.setState(patch);
+          }
+        }
+      }
+    );
+
+    channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, soundEnabled, addToast]);
+};

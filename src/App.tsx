@@ -35,9 +35,12 @@ import { BannedScreen } from './components/auth/BannedScreen';
 import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
+import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { Sword } from 'lucide-react';
 
 export const App: React.FC = () => {
+  useRealtimeSync();
+
   const {
     currentUser,
     authLoading,

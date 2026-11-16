@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
-import { SYSTEM_TITLES } from '../../constants/systemQuests';
+import { resolveTitleObject } from '../../constants/systemQuests';
 import {
   CLOUDINARY_UPLOAD_PRESET,
   CLOUDINARY_UPLOAD_URL,
@@ -224,17 +224,17 @@ export const PlayerStatusCard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('system-quests')}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold shadow transition hover:scale-105 ${(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).badgeBg
-                  } ${(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).borderColor}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold shadow transition hover:scale-105 ${resolveTitleObject(equippedTitleId).badgeBg
+                  } ${resolveTitleObject(equippedTitleId).borderColor}`}
                 title="Bấm để mở Kho Danh Hiệu & Đổi Danh Hiệu"
               >
                 <img
-                  src={(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).iconUrl}
-                  alt={(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).name}
+                  src={resolveTitleObject(equippedTitleId).iconUrl}
+                  alt={resolveTitleObject(equippedTitleId).name}
                   className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain drop-shadow"
                 />
-                <span className={(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).color}>
-                  {(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).name}
+                <span className={resolveTitleObject(equippedTitleId).color}>
+                  {resolveTitleObject(equippedTitleId).name}
                 </span>
                 <span className="text-[9px] text-parchment/50 font-normal">| Đổi</span>
               </button>
