@@ -136,7 +136,7 @@ export const AdminAchievementsTab: React.FC = () => {
         target_value: targetValue,
         reward_exp: rewardExp,
         reward_coins: rewardCoins,
-        granted_title_name: grantedTitleName.trim() || undefined,
+        granted_title_name: grantedTitleName.trim() || title.trim(),
       });
 
       if (success) {
@@ -154,7 +154,7 @@ export const AdminAchievementsTab: React.FC = () => {
         target_value: targetValue,
         reward_exp: rewardExp,
         reward_coins: rewardCoins,
-        granted_title_name: grantedTitleName.trim() || undefined,
+        granted_title_name: grantedTitleName.trim() || title.trim(),
       });
 
       if (success) {
@@ -408,13 +408,13 @@ export const AdminAchievementsTab: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#9BA8AB] block">
-                  Tên Danh Hiệu Kèm Theo (Tùy chọn)
+                  Tên Danh Hiệu Kèm Theo (Để trống sẽ tự động lấy theo Tên Thành Tựu)
                 </label>
                 <input
                   type="text"
                   value={grantedTitleName}
                   onChange={(e) => setGrantedTitleName(e.target.value)}
-                  placeholder="Ví dụ: Kỷ Luật Chi Thần (Người dùng có thể trang bị danh hiệu này)..."
+                  placeholder="Ví dụ: Kỷ Luật Chi Thần (người dùng mở khóa để trang bị)..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#06141B] border border-[#253745] text-xs text-[#CCD0CF] focus:outline-none focus:border-[#4A5C6A]"
                 />
               </div>

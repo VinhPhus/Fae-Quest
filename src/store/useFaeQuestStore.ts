@@ -561,10 +561,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               }
 
               const isCompleted = prev?.isCompleted || autoCompleted;
+              const titleName = (ach.granted_title_name && ach.granted_title_name.trim())
+                ? ach.granted_title_name.trim()
+                : (ach.title || 'Vinh Quang Fae');
               const rewardTitleId = `sys_title_${ach.id}`;
 
               // Mở khóa danh hiệu tự động khi hoàn thành
-              if (isCompleted && ach.granted_title_name && ach.granted_title_name.trim()) {
+              if (isCompleted) {
                 if (!unlockedTitlesUpdated.includes(rewardTitleId)) {
                   unlockedTitlesUpdated.push(rewardTitleId);
                   unlockedChanged = true;
@@ -585,7 +588,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 expReward: ach.reward_exp,
                 coinReward: ach.reward_coins,
                 rewardTitleId,
-                rewardTitleName: ach.granted_title_name || 'Vinh Quang Fae',
+                rewardTitleName: titleName,
                 isCompleted,
                 isRewardClaimed: prev?.isRewardClaimed || false,
               });
@@ -656,12 +659,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
 
           if (autoCompleted) {
-            if (ach.granted_title_name && ach.granted_title_name.trim()) {
-              const titleId = `sys_title_${ach.id}`;
-              if (!unlockedTitles.includes(titleId)) {
-                unlockedTitles.push(titleId);
-                hasNew = true;
-              }
+            const titleId = `sys_title_${ach.id}`;
+            if (!unlockedTitles.includes(titleId)) {
+              unlockedTitles.push(titleId);
+              hasNew = true;
             }
             if (!q.isCompleted) {
               hasNew = true;

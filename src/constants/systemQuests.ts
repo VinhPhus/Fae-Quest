@@ -266,23 +266,25 @@ export function syncSystemTitlesWithAchievements(achievements: any[] = []) {
 
   // 2. Đăng ký các danh hiệu động mới hoặc cập nhật từ system_achievements
   achievements.forEach((ach) => {
-    if (ach.granted_title_name && ach.granted_title_name.trim()) {
-      const style = getRarityStyle(ach.rarity);
-      const userTitle: UserTitle = {
-        id: `sys_title_${ach.id}`,
-        name: ach.granted_title_name.trim(),
-        description: ach.description || `Thành tựu hệ thống: ${ach.title}`,
-        sourceQuestTitle: `Nguồn: ${ach.title} (${ach.target_value})`,
-        color: style.color,
-        badgeBg: style.badgeBg,
-        borderColor: style.borderColor,
-        icon: '👑',
-        iconUrl: ach.icon_url || '/assets/titles/title-tan-binh.png',
-        rarity: style.rarity,
-      };
-      SYSTEM_TITLES[`sys_title_${ach.id}`] = userTitle;
-      SYSTEM_TITLES[`title_${ach.id}`] = userTitle;
-    }
+    const titleName = (ach.granted_title_name && ach.granted_title_name.trim())
+      ? ach.granted_title_name.trim()
+      : (ach.title || 'Vinh Quang Fae');
+
+    const style = getRarityStyle(ach.rarity);
+    const userTitle: UserTitle = {
+      id: `sys_title_${ach.id}`,
+      name: titleName,
+      description: ach.description || `Thành tựu hệ thống: ${ach.title}`,
+      sourceQuestTitle: `Nguồn: ${ach.title} (${ach.target_value})`,
+      color: style.color,
+      badgeBg: style.badgeBg,
+      borderColor: style.borderColor,
+      icon: '👑',
+      iconUrl: ach.icon_url || '/assets/titles/title-tan-binh.png',
+      rarity: style.rarity,
+    };
+    SYSTEM_TITLES[`sys_title_${ach.id}`] = userTitle;
+    SYSTEM_TITLES[`title_${ach.id}`] = userTitle;
   });
 }
 
@@ -307,23 +309,25 @@ export function getAllUnifiedTitles(achievements: any[] = []): UnifiedTitle[] {
     });
   });
 
-  // 2. Danh hiệu từ system_achievements của Admin
+  // 2. Danh hiệu từ system_achievements của Admin (Mỗi thành tựu luôn đi kèm 1 danh hiệu)
   achievements.forEach((ach) => {
-    if (ach.granted_title_name && ach.granted_title_name.trim()) {
-      const style = getRarityStyle(ach.rarity);
-      list.push({
-        id: `sys_title_${ach.id}`,
-        name: ach.granted_title_name.trim(),
-        description: ach.description || `Thử thách: ${ach.title}`,
-        iconUrl: ach.icon_url || '/assets/titles/title-tan-binh.png',
-        rarity: ach.rarity,
-        sourceText: `Nguồn: ${ach.title} (${ach.target_value})`,
-        color: style.color,
-        badgeBg: style.badgeBg,
-        borderColor: style.borderColor,
-        isCustom: true,
-      });
-    }
+    const titleName = (ach.granted_title_name && ach.granted_title_name.trim())
+      ? ach.granted_title_name.trim()
+      : (ach.title || 'Vinh Quang Fae');
+
+    const style = getRarityStyle(ach.rarity);
+    list.push({
+      id: `sys_title_${ach.id}`,
+      name: titleName,
+      description: ach.description || `Thử thách: ${ach.title}`,
+      iconUrl: ach.icon_url || '/assets/titles/title-tan-binh.png',
+      rarity: ach.rarity,
+      sourceText: `Nguồn: ${ach.title} (${ach.target_value})`,
+      color: style.color,
+      badgeBg: style.badgeBg,
+      borderColor: style.borderColor,
+      isCustom: true,
+    });
   });
 
   return list;
