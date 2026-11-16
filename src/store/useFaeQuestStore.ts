@@ -573,11 +573,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           if (error) {
-            const { error: directErr } = await supabase
-              .from('profiles')
-              .update({ role: newRole, updated_at: new Date().toISOString() })
-              .eq('id', targetUserId);
-            if (directErr) throw directErr;
+            if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
+              get().addToast('⚠️ Bạn chưa chạy SQL tạo hàm rpc_admin_set_user_role trên Supabase SQL Editor', 'error');
+              return false;
+            }
+            throw error;
           }
           return true;
         } catch (e: any) {
