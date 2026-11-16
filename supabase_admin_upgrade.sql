@@ -661,6 +661,52 @@ BEGIN
 END;
 $$;
 
+-- 10.5. Bổ nhiệm / Hạ quyền Quản Trị Viên (Admin / User Role Switcher)
+CREATE OR REPLACE FUNCTION public.rpc_admin_set_user_role(
+  p_target_user_id TEXT,
+  p_new_role TEXT
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.fn_is_admin() THEN
+    RAISE EXCEPTION 'Forbidden: Chỉ Quản Trị Viên mới có quyền thay đổi role.';
+  END IF;
+
+  IF p_new_role NOT IN ('user', 'admin') THEN
+    RAISE EXCEPTION 'InvalidRole: Role chỉ có thể là user hoặc admin.';
+  END IF;
+
+  UPDATE public.profiles
+  SET role = p_new_role,
+      updated_at = NOW()
+  WHERE id = p_target_user_id;
+
+  INSERT INTO public.user_messages (
+    receiver_id, subject, content, message_type, is_read, created_at
+  ) VALUES (
+    p_target_user_id,
+    CASE WHEN p_new_role = 'admin' THEN '👑 ĐẶC QUYỀN: Bạn đã được cấp quyền QUẢN TRỊ VIÊN' ELSE '🛡️ THÔNG BÁO: Cập nhật quyền hạn tài khoản' END,
+    CASE WHEN p_new_role = 'admin' 
+      THEN 'Chúc mừng bạn đã được bổ nhiệm quyền Quản Trị Viên (Admin Portal) của FaeQuest. Hãy sử dụng đặc quyền có trách nhiệm!' 
+      ELSE 'Quyền hạn Quản Trị Viên của bạn đã được chuyển về cấp bậc Thợ Săn thông thường.' 
+    END,
+    'notice',
+    false,
+    NOW()
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'target_user_id', p_target_user_id,
+    'new_role', p_new_role
+  );
+END;
+$$;
+
 -- 12. Cấp quyền thực thi RPC Functions
 GRANT EXECUTE ON FUNCTION public.fn_is_admin() TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.fn_record_activity_log(TEXT, TEXT, TEXT, TEXT, TEXT, INT, INT) TO authenticated;
@@ -669,6 +715,7 @@ GRANT EXECUTE ON FUNCTION public.rpc_admin_send_mail(TEXT, TEXT, TEXT, TEXT) TO 
 GRANT EXECUTE ON FUNCTION public.rpc_admin_ban_user(TEXT, INT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_delete_user(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_get_users_overview() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_admin_set_user_role(TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_complete_task(TEXT, INT, BOOLEAN, TEXT) TO authenticated;
 
 -- 13. Khởi tạo một số vật phẩm mẫu cho Cửa Hàng Hệ Thống (Nếu chưa có)
@@ -696,5 +743,14 @@ WHERE NOT EXISTS (SELECT 1 FROM public.system_achievements WHERE title = 'Đại
 INSERT INTO public.system_achievements (title, description, icon_url, category, rarity, achievement_type, target_value, reward_exp, reward_coins, granted_title_name)
 SELECT 'Bậc Thầy Tĩnh Lặng 50 Phiên', 'Hoàn thành 50 phiên tập trung Fae Focus không xao nhãng.', '/assets/titles/title-hien-nhan.png', 'Tập Trung', 'EPIC', 'milestone_focus', 50, 300, 120, 'Hiền Nhân Tĩnh Lặng'
 WHERE NOT EXISTS (SELECT 1 FROM public.system_achievements WHERE title = 'Bậc Thầy Tĩnh Lặng 50 Phiên');
+
+-- 15. Cập nhật Role Admin chuẩn xác (sử dụng id::text để tránh lỗi Type Mismatch text = uuid)
+UPDATE public.profiles
+SET role = 'admin'
+WHERE id IN (
+  SELECT id::text FROM auth.users WHERE email ILIKE '%admin%' OR email = 'admin@faequest.com'
+)
+OR username ILIKE '%quản trị%'
+OR username ILIKE '%admin%';
 
 -- Hoàn tất nâng cấp FaeQuest Admin Portal & Live-Ops Database

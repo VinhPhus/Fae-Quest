@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getRankIndexByExp, RANK_TIERS } from '../constants/ranks';
-import { Task, ShopItem, InventoryTicket, Rival, SystemQuest } from '../types';
+import { Task, ShopItem, InventoryTicket, Rival, SystemQuest, UserRole } from '../types';
 
 export interface HunterProfileCloud {
   id: string;
@@ -64,7 +64,8 @@ export const setStoredHunterId = (newId: string): void => {
  */
 export const syncProfileAndStateToCloud = async (
   hunterId: string,
-  state: UserStateCloud
+  state: UserStateCloud,
+  initialRole?: UserRole
 ): Promise<{ success: boolean; error?: string }> => {
   if (!isSupabaseConfigured) {
     return { success: false, error: 'Chưa cấu hình Supabase URL hoặc Anon Key' };
@@ -77,11 +78,17 @@ export const syncProfileAndStateToCloud = async (
     // 1. Cập nhật hoặc khởi tạo thông tin trên public.profiles
     const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, role')
       .eq('id', hunterId)
       .maybeSingle();
 
     if (!existingProfile) {
+      // Tự động nhận diện role admin nếu email hoặc tên chứa từ khóa quản trị
+      const lowerName = (state.playerName || '').toLowerCase();
+      const detectedRole: UserRole = initialRole || (
+        lowerName.includes('quản trị') || lowerName.includes('admin') ? 'admin' : 'user'
+      );
+
       await supabase.from('profiles').insert({
         id: hunterId,
         username: state.playerName || 'Thợ Săn Fae',
@@ -92,7 +99,7 @@ export const syncProfileAndStateToCloud = async (
         equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
         streak: state.streakDays || 0,
         completed_tasks_count: state.completedTotal || 0,
-        role: 'user',
+        role: detectedRole,
         updated_at: new Date().toISOString(),
       });
     } else {

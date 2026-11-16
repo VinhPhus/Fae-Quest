@@ -7,10 +7,12 @@ import { AdminUserLogsModal } from './AdminUserLogsModal';
 import { AdminSendMailModal } from './AdminSendMailModal';
 import { AdminBanUserModal } from './AdminBanUserModal';
 import { AdminConfirmDeleteModal } from './AdminConfirmDeleteModal';
+import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import {
   Users,
   Search,
   ShieldAlert,
+  ShieldCheck,
   AlertTriangle,
   Mail,
   Lock,
@@ -22,18 +24,23 @@ import {
   CheckCircle2,
   Clock,
   Zap,
+  X,
 } from 'lucide-react';
 
 export const AdminUsersTab: React.FC = () => {
+  const { adminSetUserRole, addToast } = useFaeQuestStore();
   const [users, setUsers] = useState<AdminUserOverview[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
 
   // Selected User for Modals
   const [selectedUserForLogs, setSelectedUserForLogs] = useState<AdminUserOverview | null>(null);
   const [selectedUserForMail, setSelectedUserForMail] = useState<AdminUserOverview | null>(null);
   const [selectedUserForBan, setSelectedUserForBan] = useState<AdminUserOverview | null>(null);
   const [selectedUserForDelete, setSelectedUserForDelete] = useState<AdminUserOverview | null>(null);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<AdminUserOverview | null>(null);
+  const [isUpdatingRole, setIsUpdatingRole] = useState<boolean>(false);
   const [mailDefaultReason, setMailDefaultReason] = useState<string>('');
 
   const fetchUsers = async () => {
@@ -102,7 +109,12 @@ export const AdminUsersTab: React.FC = () => {
     return (u.flagged_count_24h && u.flagged_count_24h > 0) || (u.exp_gained_24h && u.exp_gained_24h > 1000) || isBanned;
   });
 
+  const adminCount = users.filter((u) => u.role === 'admin').length;
+  const userCount = users.filter((u) => u.role !== 'admin').length;
+
   const filteredUsers = users.filter((u) => {
+    if (roleFilter === 'admin' && u.role !== 'admin') return false;
+    if (roleFilter === 'user' && u.role === 'admin') return false;
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
@@ -269,16 +281,57 @@ export const AdminUsersTab: React.FC = () => {
             </div>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-[#9BA8AB] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm kiếm theo tên / ID..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] transition"
-            />
+          {/* Role Filter & Search Box */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-[#06141B] border border-[#253745]">
+              <button
+                type="button"
+                onClick={() => setRoleFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  roleFilter === 'all'
+                    ? 'bg-[#253745] text-white shadow-sm'
+                    : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
+              >
+                Tất cả ({users.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('admin')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  roleFilter === 'admin'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-[#9BA8AB] hover:text-amber-300'
+                }`}
+              >
+                <ShieldAlert className="w-3 h-3 text-amber-400" />
+                <span>Admin ({adminCount})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleFilter('user')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                  roleFilter === 'user'
+                    ? 'bg-[#253745] text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'text-[#9BA8AB] hover:text-cyan-300'
+                }`}
+              >
+                <span>User ({userCount})</span>
+              </button>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative w-full sm:w-56">
+              <Search className="w-3.5 h-3.5 text-[#9BA8AB] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm kiếm tên / ID..."
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#06141B] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] transition"
+              />
+            </div>
           </div>
         </div>
 
@@ -421,7 +474,21 @@ export const AdminUsersTab: React.FC = () => {
                             {isBanned ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                           </button>
 
-                          {/* 4. Xóa Tài Khoản */}
+                          {/* 4. Phân Quyền Admin / User */}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedUserForRole(u)}
+                            className={`p-1.5 rounded-lg border transition cursor-pointer ${
+                              u.role === 'admin'
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                                : 'bg-[#06141B] hover:bg-[#253745] text-[#9BA8AB] hover:text-white border-[#253745]'
+                            }`}
+                            title={u.role === 'admin' ? '👑 Đang là Quản Trị Viên (Bấm để đổi)' : '👤 Đang là Thợ Săn (Bấm để cấp Admin)'}
+                          >
+                            <ShieldCheck className="w-4 h-4" />
+                          </button>
+
+                          {/* 5. Xóa Tài Khoản */}
                           <button
                             type="button"
                             onClick={() => setSelectedUserForDelete(u)}
@@ -442,6 +509,116 @@ export const AdminUsersTab: React.FC = () => {
       </div>
 
       {/* Modals */}
+      {/* 👑 MODAL PHÂN QUYỀN (ROLE MODAL) */}
+      {selectedUserForRole && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[#11212D] border border-amber-500/40 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 relative">
+            <div className="flex items-center justify-between pb-3 border-b border-[#253745]">
+              <div className="flex items-center gap-2 text-amber-300 font-rpg font-bold text-base">
+                <ShieldAlert className="w-5 h-5 text-amber-400" />
+                <span>Phân Quyền Hệ Thống</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedUserForRole(null)}
+                className="text-[#9BA8AB] hover:text-white transition p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
+              <div className="w-12 h-12 rounded-xl bg-[#11212D] border border-[#253745] flex items-center justify-center font-bold text-white text-base overflow-hidden shrink-0">
+                {selectedUserForRole.avatar_url ? (
+                  <img src={selectedUserForRole.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  selectedUserForRole.username.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-white truncate">{selectedUserForRole.username}</h4>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                    selectedUserForRole.role === 'admin'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                      : 'bg-[#253745] text-[#9BA8AB] border-[#4A5C6A]'
+                  }`}>
+                    {selectedUserForRole.role === 'admin' ? '👑 ADMIN' : '👤 USER'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#9BA8AB] font-mono truncate">{selectedUserForRole.id}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3 text-xs text-[#CCD0CF]">
+              {selectedUserForRole.role === 'admin' ? (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 space-y-1">
+                  <p className="font-bold">⚠️ Bạn có muốn hạ quyền tài khoản này?</p>
+                  <p className="text-[11px] text-amber-300/80">
+                    Tài khoản sẽ bị hủy quyền truy cập vào Admin Live-Ops Portal và trở về cấp Thợ Săn thông thường.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-200 space-y-1">
+                  <p className="font-bold">👑 Bạn có muốn bổ nhiệm tài khoản này làm Quản Trị Viên?</p>
+                  <p className="text-[11px] text-cyan-300/80">
+                    Tài khoản sẽ được mở khóa tab "🛡️ Quản Trị Hệ Thống", truy cập Radar phát hiện bất thường, quản lý Cửa Hàng & Thành Tựu, gửi thư và khóa tài khoản vi phạm.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedUserForRole(null)}
+                className="flex-1 py-2.5 rounded-xl bg-[#06141B] hover:bg-[#253745] text-[#CCD0CF] text-xs font-bold border border-[#253745] transition cursor-pointer"
+              >
+                Hủy Bỏ
+              </button>
+
+              <button
+                type="button"
+                disabled={isUpdatingRole}
+                onClick={async () => {
+                  setIsUpdatingRole(true);
+                  const targetRole = selectedUserForRole.role === 'admin' ? 'user' : 'admin';
+                  const ok = await adminSetUserRole(selectedUserForRole.id, targetRole);
+                  setIsUpdatingRole(false);
+                  if (ok) {
+                    setUsers((prev) =>
+                      prev.map((item) =>
+                        item.id === selectedUserForRole.id ? { ...item, role: targetRole } : item
+                      )
+                    );
+                    addToast(
+                      targetRole === 'admin'
+                        ? `👑 Đã bổ nhiệm "${selectedUserForRole.username}" làm Quản Trị Viên!`
+                        : `🛡️ Đã chuyển "${selectedUserForRole.username}" về Thợ Săn thường!`,
+                      'success'
+                    );
+                    setSelectedUserForRole(null);
+                  }
+                }}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  selectedUserForRole.role === 'admin'
+                    ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                    : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold shadow-lg shadow-amber-500/20'
+                }`}
+              >
+                {isUpdatingRole ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : selectedUserForRole.role === 'admin' ? (
+                  'Hạ Quyền User'
+                ) : (
+                  'Cấp Quyền Admin'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AdminUserLogsModal
         user={selectedUserForLogs}
         onClose={() => setSelectedUserForLogs(null)}

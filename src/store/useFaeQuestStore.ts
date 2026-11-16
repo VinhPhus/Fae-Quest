@@ -122,6 +122,7 @@ interface FaeQuestState {
   adminSendMail: (receiverId: string, subject: string, content: string, type: 'warning' | 'notice' | 'gift') => Promise<boolean>;
   adminBanUser: (targetUserId: string, hours: number, reason: string) => Promise<boolean>;
   adminDeleteUser: (targetUserId: string) => Promise<boolean>;
+  adminSetUserRole: (targetUserId: string, newRole: UserRole) => Promise<boolean>;
   setLanguage: (lang: string) => void;
   setPlayerName: (name: string) => void;
   setAvatarUrl: (url: string) => void;
@@ -560,6 +561,27 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return true;
         } catch (e: any) {
           get().addToast(e.message || 'Lỗi khi xóa tài khoản', 'error');
+          return false;
+        }
+      },
+
+      adminSetUserRole: async (targetUserId, newRole) => {
+        try {
+          const { error } = await supabase.rpc('rpc_admin_set_user_role', {
+            p_target_user_id: targetUserId,
+            p_new_role: newRole,
+          });
+
+          if (error) {
+            const { error: directErr } = await supabase
+              .from('profiles')
+              .update({ role: newRole, updated_at: new Date().toISOString() })
+              .eq('id', targetUserId);
+            if (directErr) throw directErr;
+          }
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi cập nhật phân quyền', 'error');
           return false;
         }
       },
@@ -1576,8 +1598,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               user.email?.split('@')[0] ||
               'Thợ Săn Fae';
 
+            const userEmail = user.email || '';
+            const isAdminCandidate =
+              userEmail.toLowerCase().includes('admin') ||
+              hunterName.toLowerCase().includes('quản trị') ||
+              hunterName.toLowerCase().includes('admin');
+
             // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
             if (!profile) {
+              const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
               const { data: createdProfile } = await supabase
                 .from('profiles')
                 .insert({
@@ -1588,7 +1617,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                   coins: 25,
                   rank_id: 'dong',
                   equipped_title: 'title_tan_binh_gai_do',
-                  role: 'user',
+                  role: defaultRole,
                   streak: 0,
                   completed_tasks_count: 0,
                   updated_at: new Date().toISOString(),
@@ -1600,13 +1629,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               }
             }
 
+            let userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
+            // Tự động đồng bộ quyền Admin nếu tài khoản thuộc diện Quản Trị nhưng chưa được gán role
+            if (userRole !== 'admin' && isAdminCandidate) {
+              userRole = 'admin';
+              await supabase.from('profiles').update({ role: 'admin' }).eq('id', hunterId);
+            }
+
             const { data: stateRow } = await supabase
               .from('user_states')
               .select('*')
               .eq('user_id', hunterId)
               .maybeSingle();
 
-            const userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
             const bannedUntil = profile?.banned_until || null;
             const banReason = profile?.ban_reason || null;
 
@@ -1770,6 +1805,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             localStorage.setItem('faequest_oath_accepted', 'false');
           }
 
+          const isAdminCandidate =
+            cleanEmail.toLowerCase().includes('admin') ||
+            cleanName.toLowerCase().includes('quản trị') ||
+            cleanName.toLowerCase().includes('admin');
+          const assignedRole: UserRole = isAdminCandidate ? 'admin' : 'user';
+
           const freshState: UserStateCloud = {
             playerName: cleanName,
             avatarUrl: '',
@@ -1790,12 +1831,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           };
 
           // Save immediately to public.profiles and public.user_states
-          await syncProfileAndStateToCloud(newUserId, freshState);
+          await syncProfileAndStateToCloud(newUserId, freshState, assignedRole);
 
           if (data.session) {
             set({
               currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
               hunterId: newUserId,
+              userRole: assignedRole,
               playerName: cleanName,
               avatarUrl: '',
               exp: 0,
@@ -1819,6 +1861,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 minute: '2-digit',
               }),
             });
+            get().fetchUserMessages();
+            get().fetchSystemShopItems();
+            get().fetchSystemAchievements();
             playSoundEffect('rankup', get().soundEnabled);
             get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
             return { success: true };
@@ -1833,6 +1878,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               set({
                 currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
                 hunterId: newUserId,
+                userRole: assignedRole,
                 playerName: cleanName,
                 avatarUrl: '',
                 exp: 0,
@@ -1852,6 +1898,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isOathOpen: true,
                 cloudSyncStatus: 'synced',
               });
+              get().fetchUserMessages();
+              get().fetchSystemShopItems();
+              get().fetchSystemAchievements();
               playSoundEffect('rankup', get().soundEnabled);
               get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
               return { success: true };
@@ -1907,8 +1956,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             cleanEmail.split('@')[0] ||
             'Thợ Săn Fae';
 
+          const isAdminCandidate =
+            cleanEmail.toLowerCase().includes('admin') ||
+            hunterName.toLowerCase().includes('quản trị') ||
+            hunterName.toLowerCase().includes('admin');
+
           // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
           if (!profile) {
+            const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
             const { data: createdProfile } = await supabase
               .from('profiles')
               .insert({
@@ -1919,7 +1974,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 coins: 25,
                 rank_id: 'dong',
                 equipped_title: 'title_tan_binh_gai_do',
-                role: 'user',
+                role: defaultRole,
                 streak: 0,
                 completed_tasks_count: 0,
                 updated_at: new Date().toISOString(),
@@ -1931,13 +1986,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             }
           }
 
+          let userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
+          // Tự động đồng bộ quyền Admin nếu tài khoản thuộc diện Quản Trị nhưng chưa được gán role
+          if (userRole !== 'admin' && isAdminCandidate) {
+            userRole = 'admin';
+            await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId);
+          }
+
           const { data: stateRow } = await supabase
             .from('user_states')
             .select('*')
             .eq('user_id', userId)
             .maybeSingle();
 
-          const userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
           const bannedUntil = profile?.banned_until || null;
           const banReason = profile?.ban_reason || null;
 

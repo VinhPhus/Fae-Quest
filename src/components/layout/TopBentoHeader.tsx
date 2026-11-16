@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SYSTEM_TITLES } from '../../constants/systemQuests';
-import { Search, X, Scroll, Settings, Plus, Mail } from 'lucide-react';
+import { Search, X, Scroll, Settings, Plus, Mail, ShieldAlert } from 'lucide-react';
 
 export const TopBentoHeader: React.FC = () => {
   const {
@@ -15,6 +15,7 @@ export const TopBentoHeader: React.FC = () => {
     setSearchQuery,
     unreadMessagesCount,
     setUserInboxOpen,
+    userRole,
   } = useFaeQuestStore();
 
   const titleObj = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
@@ -57,6 +58,19 @@ export const TopBentoHeader: React.FC = () => {
           <span className="text-[#CCD0CF] font-bold">{titleObj.name}</span>
           <span className="text-[9px] text-[#9BA8AB] font-normal">| Đổi</span>
         </button>
+
+        {/* Prestigious Admin Badge for Admin Accounts */}
+        {userRole === 'admin' && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('admin')}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-amber-600/10 border border-amber-500/40 hover:border-amber-400 text-[11px] font-extrabold text-amber-300 shadow-sm transition hover:scale-105 cursor-pointer"
+            title="Đặc quyền Quản Trị Viên (Admin). Bấm để truy cập Admin Live-Ops Portal"
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>BAN QUẢN TRỊ</span>
+          </button>
+        )}
       </div>
 
       {/* Right: Search Input + Quick Actions + New Task CTA */}
