@@ -36,6 +36,8 @@ import {
   UserStateCloud,
 } from '../utils/syncManager';
 
+export const MAX_INVENTORY_SLOTS = 50;
+
 interface FaeQuestState {
   playerName: string;
   avatarUrl: string;
@@ -286,8 +288,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const oldRankIdx = getRankIndexByExp(state.exp);
         const now = Date.now();
 
-        if (!task.completed) {
-          // Anti-Cheat 1: 3-second Cooldown between completions
+        if (task.completed) {
+          // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành vĩnh viễn
+          return;
+        }
+
+        // Anti-Cheat 1: 3-second Cooldown between completions
           if (now - state.lastCompletedTimestamp < 3000) {
             playSoundEffect('warning', state.soundEnabled);
             get().addToast('⏳ Chậm lại nào Thợ Săn! Hãy nghỉ 3 giây trước khi nghiệm thu nhiệm vụ tiếp theo.', 'info');
@@ -404,48 +410,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
           }
           debouncedAutoSync(get());
-        } else {
-          // Anti-Cheat: Uncheck Task - Check if coins are sufficient to revoke
-          const streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
-          const defaultExp = Math.round(diff.exp * streakBonusMultiplier);
-          const deductedExp = task.lastAwardedExp ?? defaultExp;
-          const deductedCoins = (task.lastAwardedCoins ?? diff.coins) + (task.lastRankUpBonus ?? 0);
+        },
 
-          if (state.coins < deductedCoins) {
-            playSoundEffect('warning', state.soundEnabled);
-            get().addToast(`⚠️ Không thể hoàn tác! Bạn đã tiêu hết số Xu thưởng của nhiệm vụ này (cần ${deductedCoins} Xu để thu hồi).`, 'error');
-            return;
-          }
-
-          set((prev) => ({
-            exp: Math.max(0, prev.exp - deductedExp),
-            coins: Math.max(0, prev.coins - deductedCoins),
-            completedTotal: Math.max(0, prev.completedTotal - 1),
-            dailyCompletedCount: Math.max(0, prev.dailyCompletedCount - 1),
-            dailyBossCompletedCount: task.difficulty === 'boss'
-              ? Math.max(0, prev.dailyBossCompletedCount - 1)
-              : prev.dailyBossCompletedCount,
-            tasks: prev.tasks.map((t) =>
-              t.id === id
-                ? {
-                  ...t,
-                  completed: false,
-                  rewardClaimed: false,
-                  completedAt: undefined,
-                  lastAwardedExp: undefined,
-                  lastAwardedCoins: undefined,
-                  lastRankUpBonus: undefined,
-                }
-                : t
-            ),
-          }));
-
-          get().addToast(`Đã hoàn tác nhiệm vụ (-${deductedExp} EXP, -${deductedCoins} Xu)`, 'info');
-          debouncedAutoSync(get());
-        }
-      },
-
-      deleteTask: (id: string) => {
+        deleteTask: (id: string) => {
         set((prev) => ({
           tasks: prev.tasks.filter((t) => t.id !== id),
         }));
@@ -569,6 +536,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const item = state.shopItems.find((i) => i.id === itemId);
         if (!item) return;
 
+        // Giới hạn sức chứa tối đa 50 vật phẩm
+        if (state.inventory.length >= MAX_INVENTORY_SLOTS) {
+          playSoundEffect('warning', state.soundEnabled);
+          get().addToast('🎒 Túi Đồ đã đầy (50/50)! Hãy sử dụng bớt vật phẩm trước khi đổi thêm.', 'error');
+          return;
+        }
+
         if (state.coins < item.cost) {
           get().addToast(`Bạn cần thêm ${item.cost - state.coins} Xu nữa để mua "${item.title}"!`, 'error');
           return;
@@ -635,47 +609,41 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       useInventoryTicket: (ticketId: string) => {
-        const now = Date.now();
         const state = get();
         const target = state.inventory.find((t) => t.id === ticketId);
+        if (!target) return;
+
+        // 1. Kích hoạt hiệu ứng âm thanh sử dụng vật phẩm / potion phép thuật
+        playSoundEffect('potion', state.soundEnabled);
+
+        // 2. Xóa vật phẩm khỏi mảng inventory ngay lập tức
         set((prev) => ({
-          inventory: prev.inventory.map((t) =>
-            t.id === ticketId ? { ...t, used: true, usedAt: now } : t
-          ),
+          inventory: prev.inventory.filter((t) => t.id !== ticketId),
         }));
-        playSoundEffect('complete', get().soundEnabled);
+
+        // 3. Thông báo Toast chúc mừng
         get().addToast(
-          target ? `✨ Đã kích hoạt "${target.title}"!` : '✨ Đã kích hoạt sử dụng vật phẩm!',
+          `✨ Đã kích hoạt phần thưởng "${target.title}"! Chúc Thợ Săn tận hưởng xứng đáng.`,
           'success'
         );
+
+        // Đồng bộ ngay lên Supabase
         debouncedAutoSync(get());
       },
 
       cleanupExpiredInventory: () => {
         const state = get();
         const now = Date.now();
-        const THIRTY_MINUTES_MS = 30 * 60 * 1000;
         const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
         let hasChanged = false;
         const cleaned = state.inventory.filter((item) => {
-          // Quy tắc 1 (Sau khi sử dụng 30 phút tự xóa)
-          if (item.used) {
-            const usedTime = item.usedAt || item.purchasedAt;
-            if (usedTime && now - usedTime >= THIRTY_MINUTES_MS) {
-              hasChanged = true;
-              return false;
-            }
-            return true;
-          }
-
-          // Quy tắc 2 (Hiệu lực 7 ngày sau khi đổi)
+          // Quy tắc: Hiệu lực 7 ngày sau khi đổi đối với vật phẩm chưa sử dụng
           const expireTime = item.expiresAt || ((item.purchasedAt || 0) + SEVEN_DAYS_MS);
           if (now >= expireTime) {
             hasChanged = true;
             return false;
           }
-
           return true;
         });
 

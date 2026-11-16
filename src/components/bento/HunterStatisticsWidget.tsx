@@ -1,103 +1,89 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
+import { SYSTEM_TITLES } from '../../constants/systemQuests';
 import { CoinIcon } from '../ui/CoinIcon';
-import { Trophy, Flame, Shield } from 'lucide-react';
+import { Flame, Shield, Award, ChevronRight } from 'lucide-react';
 
 export const HunterStatisticsWidget: React.FC = () => {
-  const { exp, coins, streakDays, completedTotal } = useFaeQuestStore();
+  const { coins, streakDays, completedTotal, equippedTitleId, setActiveTab } = useFaeQuestStore();
 
-  const currentIdx = getRankIndexByExp(exp);
-  const currentTier = RANK_TIERS[currentIdx];
-  const nextTier = currentIdx < RANK_TIERS.length - 1 ? RANK_TIERS[currentIdx + 1] : null;
+  const titleObj = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
 
-  // Calculate progress %
-  let progressPercent = 100;
-  if (nextTier) {
-    const span = nextTier.minExp - currentTier.minExp;
-    const gainedInTier = exp - currentTier.minExp;
-    progressPercent = Math.min(100, Math.max(0, Math.round((gainedInTier / span) * 100)));
-  }
+  const getRarityBadge = (rarity: string) => {
+    switch (rarity) {
+      case 'legendary':
+        return { label: 'LEGENDARY', border: 'border-amber-400/50', text: 'text-amber-300' };
+      case 'epic':
+        return { label: 'EPIC', border: 'border-purple-400/50', text: 'text-purple-300' };
+      case 'rare':
+        return { label: 'RARE', border: 'border-sky-400/50', text: 'text-sky-300' };
+      default:
+        return { label: 'COMMON', border: 'border-[#4A5C6A]', text: 'text-[#9BA8AB]' };
+    }
+  };
 
-  // SVG Ring Constants
-  const radius = 54;
-  const strokeWidth = 8;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+  const rarityInfo = getRarityBadge(titleObj.rarity);
 
   return (
-    <div className="rounded-[28px] p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] space-y-6 relative overflow-hidden text-center">
+    <div className="rounded-[28px] p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] space-y-5 relative overflow-hidden text-center flex flex-col justify-between">
       {/* Background ambient lighting */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(204,208,207,0.08)_0%,transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(204,208,207,0.06)_0%,transparent_65%)] pointer-events-none" />
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-1 border-b border-[#253745] relative z-10">
+      <div className="flex items-center justify-between pb-2 border-b border-[#253745] relative z-10">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF]">
-            <Trophy className="w-4 h-4" />
+            <Award className="w-4 h-4" />
           </div>
           <h4 className="font-rpg font-extrabold text-sm text-[#CCD0CF] tracking-wide">
             Thống Kê Thợ Săn
           </h4>
         </div>
 
-        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[#CCD0CF]">
-          {currentTier.name}
-        </span>
+        <button
+          type="button"
+          onClick={() => setActiveTab('system-quests')}
+          className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[#CCD0CF] hover:bg-[#4A5C6A] hover:text-white transition cursor-pointer flex items-center gap-1"
+        >
+          <span>Kho Danh Hiệu</span>
+          <ChevronRight className="w-3 h-3" />
+        </button>
       </div>
 
-      {/* Center: Layered Glowing Progress Ring - Obsidian & Steel */}
-      <div className="relative flex items-center justify-center my-2">
-        <svg className="w-36 h-36 transform -rotate-90">
-          <defs>
-            <linearGradient id="monochromeRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#4A5C6A" />
-              <stop offset="50%" stopColor="#9BA8AB" />
-              <stop offset="100%" stopColor="#CCD0CF" />
-            </linearGradient>
-            <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
+      {/* Center: Equipped Title Showcase (replaces EXP circle) */}
+      <div
+        onClick={() => setActiveTab('system-quests')}
+        className="my-1 py-4 px-3 rounded-2xl bg-[#06141B]/70 border border-[#253745] hover:border-[#4A5C6A] transition-all duration-300 flex flex-col items-center justify-center cursor-pointer group shadow-inner relative overflow-hidden"
+        title="Nhấn để mở Kho Danh Hiệu & Đổi Danh Hiệu"
+      >
+        {/* Soft Ambient Silver Halo */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(204,208,207,0.12)_0%,transparent_70%)] pointer-events-none group-hover:scale-125 transition-transform duration-500" />
 
-          {/* Background Track */}
-          <circle
-            cx="72"
-            cy="72"
-            r={radius}
-            stroke="#06141B"
-            strokeWidth={strokeWidth}
-            fill="transparent"
+        {/* Large Medal Frame with silver drop shadow */}
+        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#06141B] border-2 border-[#4A5C6A] group-hover:border-[#CCD0CF] flex items-center justify-center shadow-[0_0_20px_rgba(204,208,207,0.2)] group-hover:shadow-[0_0_28px_rgba(204,208,207,0.4)] transition-all duration-300 p-2.5">
+          <img
+            src={titleObj.iconUrl}
+            alt={titleObj.name}
+            className="w-full h-full object-contain drop-shadow-[0_0_16px_rgba(204,208,207,0.25)] group-hover:scale-110 transition-transform duration-300"
           />
+        </div>
 
-          {/* Glowing Progress Arc */}
-          <circle
-            cx="72"
-            cy="72"
-            r={radius}
-            stroke="url(#monochromeRingGrad)"
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            fill="transparent"
-            filter="url(#ringGlow)"
-            className="transition-all duration-700 ease-out"
-          />
-        </svg>
+        {/* Title Name & Details */}
+        <div className="mt-3 flex flex-col items-center gap-1 relative z-10 w-full px-2">
+          <h5 className="font-rpg font-bold text-base text-[#CCD0CF] group-hover:text-white transition tracking-wide text-center truncate max-w-full">
+            {titleObj.name}
+          </h5>
 
-        {/* Center Ring Content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
-          <span className="font-rpg font-black text-2xl text-[#CCD0CF] tracking-tight leading-none drop-shadow">
-            {exp}
-          </span>
-          <span className="text-[9px] font-black uppercase tracking-widest text-[#9BA8AB] mt-0.5">
-            EXP TÍCH LŨY
-          </span>
-          <span className="text-[10px] font-extrabold text-[#CCD0CF] mt-0.5 bg-[#06141B] px-2 py-0.2 rounded-full border border-[#253745]">
-            {progressPercent}% tới Rank kế
-          </span>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span
+              className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full bg-[#11212D] border ${rarityInfo.border} ${rarityInfo.text}`}
+            >
+              {rarityInfo.label}
+            </span>
+            <span className="text-[10px] text-[#9BA8AB] group-hover:text-[#CCD0CF] transition flex items-center gap-0.5 underline underline-offset-2">
+              <span>Đổi danh hiệu</span>
+            </span>
+          </div>
         </div>
       </div>
 

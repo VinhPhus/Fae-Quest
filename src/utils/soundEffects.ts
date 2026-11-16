@@ -11,7 +11,7 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
-export type SoundType = 'complete' | 'rankup' | 'coin' | 'timer' | 'click' | 'warning' | 'unseal' | 'stamp';
+export type SoundType = 'complete' | 'rankup' | 'coin' | 'timer' | 'click' | 'warning' | 'unseal' | 'stamp' | 'potion';
 
 export function playSoundEffect(type: SoundType, enabled = true) {
   if (!enabled || typeof window === 'undefined') return;
@@ -166,6 +166,21 @@ export function playSoundEffect(type: SoundType, enabled = true) {
       clackGain.connect(ctx.destination);
       clackOsc.start(now);
       clackOsc.stop(now + 0.07);
+    } else if (type === 'potion') {
+      // Shimmering potion / magical item consume: gentle sparkling arpeggio
+      const notes = [587.33, 739.99, 880.0, 1174.66, 1479.98]; // D5, F#5, A5, D6, F#6
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+        gain.gain.setValueAtTime(0.12, now + idx * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.06);
+        osc.stop(now + idx * 0.06 + 0.46);
+      });
     }
   } catch (err) {
     console.debug('Audio playback error (ignorable):', err);

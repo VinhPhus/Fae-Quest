@@ -235,16 +235,23 @@ export const QuestBentoGrid: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Reward Pill */}
-                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#06141B] border border-[#253745] text-right shrink-0">
-                    <span className="text-xs font-black text-[#CCD0CF]">
-                      +{diff.exp} EXP
+                  {/* Status / Reward Pill */}
+                  {task.completed ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[#CCD0CF] flex items-center gap-1 shrink-0">
+                      <Check className="w-3 h-3 stroke-[3] text-emerald-400" />
+                      <span>Đã chinh phục</span>
                     </span>
-                    <span className="text-[11px] font-bold text-[#9BA8AB] flex items-center gap-0.5">
-                      <span>• +{diff.coins}</span>
-                      <CoinIcon size="xs" />
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#06141B] border border-[#253745] text-right shrink-0">
+                      <span className="text-xs font-black text-[#CCD0CF]">
+                        +{diff.exp} EXP
+                      </span>
+                      <span className="text-[11px] font-bold text-[#9BA8AB] flex items-center gap-0.5">
+                        <span>• +{diff.coins}</span>
+                        <CoinIcon size="xs" />
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Center: Large Task Title */}
@@ -260,28 +267,29 @@ export const QuestBentoGrid: React.FC = () => {
                   </h4>
                 </div>
 
-                {/* Bottom Row: Action Cluster (Check, Play Focus, Delete) */}
+                {/* Bottom Row: Action Cluster */}
                 <div className="flex items-center justify-between pt-2 border-t border-[#253745] gap-2">
-                  {/* Complete Checkbox Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      toggleTask(task.id, { x: rect.right + 10, y: rect.top });
-                    }}
-                    className={`h-8 px-3 rounded-full font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
-                      task.completed
-                        ? 'bg-[#CCD0CF] text-[#06141B] shadow-sm'
-                        : 'bg-[#06141B] border border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF]'
-                    }`}
-                    title={task.completed ? 'Nhấn để hoàn tác' : 'Nhấn để hoàn thành & nhận EXP'}
-                  >
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>{task.completed ? 'Đã Xong' : 'Hoàn thành'}</span>
-                  </button>
+                  {task.completed ? (
+                    <span className="text-[11px] text-[#9BA8AB] italic select-none">
+                      Nhiệm vụ đã hoàn tất
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        toggleTask(task.id, { x: rect.right + 10, y: rect.top });
+                      }}
+                      className="h-8 px-3 rounded-full bg-[#06141B] border border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Nhấn để hoàn thành & nhận EXP"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Hoàn thành</span>
+                    </button>
+                  )}
 
-                  <div className="flex items-center gap-2">
-                    {/* Play Focus Circular / Pill Button */}
+                  <div className="flex items-center gap-2 ml-auto">
+                    {/* Play Focus Circular / Pill Button - only when !task.completed */}
                     {!task.completed && Boolean(task.focusDuration) && (
                       <button
                         type="button"
@@ -324,20 +332,23 @@ export const QuestBentoGrid: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      toggleTask(task.id, { x: rect.right + 10, y: rect.top });
-                    }}
-                    className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all cursor-pointer ${
-                      task.completed
-                        ? 'bg-[#CCD0CF] border-[#CCD0CF] text-[#06141B] shadow-sm'
-                        : 'bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] text-transparent'
-                    }`}
-                  >
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  </button>
+                  {task.completed ? (
+                    <div className="w-6 h-6 rounded-lg bg-[#253745] border border-[#4A5C6A] flex items-center justify-center shrink-0 text-emerald-400">
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        toggleTask(task.id, { x: rect.right + 10, y: rect.top });
+                      }}
+                      className="w-6 h-6 rounded-lg border-2 bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] flex items-center justify-center shrink-0 transition-all cursor-pointer text-transparent"
+                      title="Nhấn để hoàn thành & nhận EXP"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    </button>
+                  )}
 
                   <div className="space-y-0.5 flex-1 min-w-0">
                     <p
@@ -356,9 +367,16 @@ export const QuestBentoGrid: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <div className="text-right px-2.5 py-1 rounded-xl bg-[#06141B] border border-[#253745]">
-                    <span className="text-xs font-black text-[#CCD0CF]">+{diff.exp} EXP</span>
-                  </div>
+                  {task.completed ? (
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[#CCD0CF] flex items-center gap-1">
+                      <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-400" />
+                      <span>Đã chinh phục</span>
+                    </span>
+                  ) : (
+                    <div className="text-right px-2.5 py-1 rounded-xl bg-[#06141B] border border-[#253745]">
+                      <span className="text-xs font-black text-[#CCD0CF]">+{diff.exp} EXP</span>
+                    </div>
+                  )}
 
                   {!task.completed && Boolean(task.focusDuration) && (
                     <button

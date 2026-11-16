@@ -14,6 +14,7 @@ import {
   Flame,
   Trophy,
   Sparkles,
+  Scroll,
 } from 'lucide-react';
 
 export const HeroBentoBanner: React.FC = () => {
@@ -25,6 +26,7 @@ export const HeroBentoBanner: React.FC = () => {
     streakDays,
     rivals,
     setRoadmapOpen,
+    setOathOpen,
     addToast,
   } = useFaeQuestStore();
 
@@ -137,6 +139,15 @@ export const HeroBentoBanner: React.FC = () => {
               <Trophy className="w-3 h-3 text-amber-300" />
               <span>#{playerRankPos} BXH Đấu Trường</span>
             </span>
+            <button
+              type="button"
+              onClick={() => setOathOpen(true)}
+              className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] flex items-center gap-1 transition cursor-pointer"
+              title="Xem lại Bản Khế Ước Thợ Săn FaeQuest"
+            >
+              <Scroll className="w-3 h-3 text-[#CCD0CF]" />
+              <span>Khế Ước</span>
+            </button>
             {streakDays >= 3 && (
               <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40 flex items-center gap-1">
                 <Flame className="w-3 h-3 text-amber-400 fill-amber-400" />

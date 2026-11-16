@@ -40,11 +40,11 @@ export const TopBentoHeader: React.FC = () => {
           </h1>
         </div>
 
-        {/* Clickable Title Badge */}
+        {/* Clickable Title Badge - Obsidian & Steel */}
         <button
           type="button"
           onClick={() => setActiveTab('system-quests')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-bold shadow-sm transition hover:scale-105 cursor-pointer ${titleObj.badgeBg} ${titleObj.borderColor}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] text-[11px] font-bold text-[#CCD0CF] shadow-sm transition hover:scale-105 cursor-pointer"
           title="Bấm để mở Kho Danh Hiệu & Đổi Danh Hiệu"
         >
           <img
@@ -52,7 +52,7 @@ export const TopBentoHeader: React.FC = () => {
             alt={titleObj.name}
             className="w-3.5 h-3.5 object-contain drop-shadow"
           />
-          <span className={titleObj.color}>{titleObj.name}</span>
+          <span className="text-[#CCD0CF] font-bold">{titleObj.name}</span>
           <span className="text-[9px] text-[#9BA8AB] font-normal">| Đổi</span>
         </button>
       </div>

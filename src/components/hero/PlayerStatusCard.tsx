@@ -242,11 +242,11 @@ export const PlayerStatusCard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setOathOpen(true)}
-                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-fae/15 hover:bg-fae/25 border border-fae/40 text-[10px] sm:text-[11px] text-fae-light font-bold transition shadow-sm hover:scale-105"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[10px] sm:text-[11px] text-[#CCD0CF] font-bold transition shadow-sm hover:scale-105"
                 title="Xem lại Bản Khế Ước Thợ Săn FaeQuest"
               >
-                <Scroll className="w-3 h-3 text-fae" />
-                <span>📜 Khế Ước</span>
+                <Scroll className="w-3.5 h-3.5 text-[#CCD0CF]" />
+                <span>Khế Ước</span>
               </button>
             </div>
 

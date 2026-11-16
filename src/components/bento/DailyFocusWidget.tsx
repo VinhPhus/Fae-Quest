@@ -85,22 +85,25 @@ export const DailyFocusWidget: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Right: Quick Check Button */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    toggleTask(task.id, { x: rect.right, y: rect.top });
-                  }}
-                  className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 transition cursor-pointer ${
-                    task.completed
-                      ? 'bg-[#CCD0CF] border-[#CCD0CF] text-[#06141B] shadow-sm'
-                      : 'bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] text-transparent hover:scale-105'
-                  }`}
-                  title={task.completed ? 'Hoàn tác' : 'Hoàn thành ngay'}
-                >
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                </button>
+                {/* Right: Quick Check Button / Done Status */}
+                {task.completed ? (
+                  <span className="text-[10px] font-black text-emerald-400 bg-[#253745] px-2 py-0.5 rounded-full border border-[#4A5C6A] flex items-center gap-1 shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    <span>Xong</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      toggleTask(task.id, { x: rect.right, y: rect.top });
+                    }}
+                    className="w-6 h-6 rounded-lg border bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] text-transparent hover:scale-105 flex items-center justify-center shrink-0 transition cursor-pointer"
+                    title="Hoàn thành ngay"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  </button>
+                )}
               </div>
             );
           })}

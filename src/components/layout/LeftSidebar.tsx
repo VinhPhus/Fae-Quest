@@ -223,27 +223,8 @@ export const LeftSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* 4. Footer of Sidebar: Settings, Oath, Collapse Toggle pushed to bottom */}
+        {/* 4. Footer of Sidebar: Settings & Collapse Toggle pushed to bottom */}
         <div className="mt-auto p-3.5 border-t border-[#253745] space-y-2 bg-[#06141B]/95 shrink-0 overflow-hidden">
-          {/* Hunter's Oath Button */}
-          <button
-            onClick={() => setOathOpen(true)}
-            title={isSidebarCollapsed ? 'Khế Ước Thợ Săn' : undefined}
-            className="w-full flex items-center px-3.5 py-2.5 rounded-xl text-xs font-semibold transition text-[#CCD0CF] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A]"
-          >
-            <div className="w-6 h-6 shrink-0 flex items-center justify-center">
-              <Scroll className="w-4 h-4 text-[#CCD0CF]" />
-            </div>
-            <span
-              className={`whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
-                ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
-                : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
-                }`}
-            >
-              Khế Ước Thợ Săn
-            </span>
-          </button>
-
           {/* Settings Button */}
           <button
             onClick={() => setSettingsOpen(true)}

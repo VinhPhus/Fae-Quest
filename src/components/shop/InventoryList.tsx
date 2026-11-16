@@ -2,23 +2,13 @@ import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CoinIcon } from '../ui/CoinIcon';
 import { InventoryTicket } from '../../types';
-import { Backpack, CheckCircle2, Ticket, Sparkles } from 'lucide-react';
+import { Backpack, Ticket } from 'lucide-react';
 
 export const InventoryList: React.FC = () => {
   const { inventory, useInventoryTicket, setActiveTab } = useFaeQuestStore();
 
   const formatItemTimeStatus = (item: InventoryTicket) => {
     const now = Date.now();
-
-    // If item was already used
-    if (item.used) {
-      return (
-        <span className="text-emerald-400 font-medium inline-flex items-center gap-1 text-xs">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-300 shrink-0" />
-          <span>✨ Đang tận hưởng phần thưởng</span>
-        </span>
-      );
-    }
 
     // Purchase time string (HH:mm)
     let purchaseTime = '';
@@ -50,36 +40,36 @@ export const InventoryList: React.FC = () => {
 
     if (timeLeftMs < 24 * 60 * 60 * 1000) {
       return (
-        <span className="text-xs text-parchment/70 inline-flex items-center gap-1">
+        <span className="text-xs text-[#9BA8AB] inline-flex items-center gap-1">
           <span>🕒 Đổi lúc: {purchaseTime} •</span>
-          <span className="text-[#CCD0CF] font-bold">Hạn dùng: còn {hoursLeft} giờ</span>
+          <span className="text-amber-300 font-bold">Hạn dùng: còn {hoursLeft} giờ</span>
         </span>
       );
     }
 
     return (
-      <span className="text-xs text-parchment/70 inline-flex items-center gap-1">
+      <span className="text-xs text-[#9BA8AB] inline-flex items-center gap-1">
         <span>🕒 Đổi lúc: {purchaseTime} •</span>
-        <span>Hạn dùng: còn {daysLeft} ngày</span>
+        <span className="text-[#CCD0CF]">Hạn dùng: còn {daysLeft} ngày</span>
       </span>
     );
   };
 
   if (inventory.length === 0) {
     return (
-      <div className="rpg-card rounded-3xl p-10 text-center space-y-4 border border-fae/30 shadow-xl">
-        <div className="w-16 h-16 rounded-2xl bg-thorn-dark/80 border border-opal/40 mx-auto flex items-center justify-center text-fae shadow-inner">
+      <div className="rounded-[28px] p-10 text-center space-y-4 bg-[#11212D] border border-[#253745] shadow-xl">
+        <div className="w-16 h-16 rounded-2xl bg-[#06141B] border border-[#4A5C6A] mx-auto flex items-center justify-center text-[#CCD0CF] shadow-inner">
           <Backpack className="w-8 h-8" />
         </div>
-        <h4 className="text-base font-bold text-parchment">Túi Đồ Đang Trống</h4>
-        <p className="text-xs text-parchment/65 max-w-md mx-auto leading-relaxed">
+        <h4 className="text-base font-bold text-[#CCD0CF]">Túi Đồ Đang Trống</h4>
+        <p className="text-xs text-[#9BA8AB] max-w-md mx-auto leading-relaxed">
           Bạn chưa đổi phần thưởng nào. Hãy tích lũy Xu Vàng từ việc hoàn thành nhiệm vụ và ghé thăm Cửa Hàng để tự thưởng cho mình nhé!
         </p>
         <button
           onClick={() => setActiveTab('shop')}
-          className="px-5 py-2.5 rounded-xl rpg-btn-primary font-bold text-xs text-parchment inline-flex items-center gap-2 shadow hover:scale-105 transition"
+          className="px-5 py-2.5 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs inline-flex items-center gap-2 shadow-[0_4px_18px_rgba(204,208,207,0.2)] hover:scale-105 active:scale-95 transition cursor-pointer"
         >
-          <Ticket className="w-4 h-4" />
+          <Ticket className="w-4 h-4 text-[#06141B]" />
           <span>Ghé Thăm Cửa Hàng Ngay</span>
         </button>
       </div>
@@ -89,15 +79,31 @@ export const InventoryList: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Title Banner */}
-      <div className="rpg-card rounded-3xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-fae/40 shadow-xl">
+      <div className="rounded-[28px] p-6 bg-[#11212D] border border-[#253745] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
         <div>
-          <h2 className="text-2xl font-extrabold text-parchment flex items-center gap-2 font-rpg tracking-wide">
-            <Backpack className="w-6 h-6 text-fae" />
+          <h2 className="text-2xl font-extrabold text-[#CCD0CF] flex items-center gap-2 font-rpg tracking-wide">
+            <Backpack className="w-6 h-6 text-[#CCD0CF]" />
             <span>Túi Đồ Thợ Săn</span>
           </h2>
-          <p className="text-xs sm:text-sm text-parchment/75 mt-1 leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#9BA8AB] mt-1 leading-relaxed">
             Nơi cất giữ các vật phẩm tự thưởng bạn đã quy đổi bằng Xu Vàng. Hãy kích hoạt sử dụng trước khi vật phẩm hết hiệu lực!
           </p>
+        </div>
+
+        {/* Capacity Pill Badge */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#06141B] border border-[#253745] text-xs font-bold shrink-0 shadow-inner">
+          <span className="text-[#9BA8AB]">Sức chứa:</span>
+          <span
+            className={
+              inventory.length >= 50
+                ? 'text-rose-400 font-black'
+                : inventory.length >= 40
+                ? 'text-amber-400 font-black'
+                : 'text-[#CCD0CF] font-black'
+            }
+          >
+            {inventory.length} / 50 ô
+          </span>
         </div>
       </div>
 
@@ -106,25 +112,19 @@ export const InventoryList: React.FC = () => {
         {inventory.map((ticket) => (
           <div
             key={ticket.id}
-            className={`rpg-card rounded-2xl p-5 flex items-center justify-between gap-4 border transition duration-200 ${ticket.used
-              ? 'opacity-70 bg-thorn-dark/60 border-opal/30'
-              : 'border-fae/40 shadow-lg hover:border-fae'
-              }`}
+            className="rounded-[24px] p-5 bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] flex items-center justify-between gap-4 transition-all duration-200 shadow-md group"
           >
             {/* Left: Emoji & Information */}
             <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-14 h-14 rounded-2xl bg-thorn-dark/90 border border-fae/40 flex items-center justify-center text-3xl shrink-0 shadow-inner">
+              <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] group-hover:border-[#4A5C6A] flex items-center justify-center text-3xl shrink-0 shadow-inner group-hover:scale-105 transition">
                 {ticket.emoji}
               </div>
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4
-                    className={`text-sm sm:text-base font-bold truncate ${ticket.used ? 'text-parchment/60' : 'text-parchment'
-                      }`}
-                  >
+                  <h4 className="text-sm sm:text-base font-bold text-[#CCD0CF] truncate">
                     {ticket.title}
                   </h4>
-                  <span className="text-[11px] text-fae font-bold inline-flex items-center gap-0.5 shrink-0">
+                  <span className="text-[11px] text-amber-300 font-bold inline-flex items-center gap-0.5 shrink-0">
                     <span>({ticket.cost}</span>
                     <CoinIcon size="xs" />
                     <span>)</span>
@@ -135,23 +135,17 @@ export const InventoryList: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Action Button */}
+            {/* Right Action Button: Use Immediately */}
             <div className="shrink-0">
-              {ticket.used ? (
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-thorn-dark/80 border border-parchment/15 text-xs font-semibold text-emerald-400 select-none">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>✔ Đã Dùng</span>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => useInventoryTicket(ticket.id)}
-                  className="px-4 py-2 rounded-xl rpg-btn-primary font-bold text-xs text-parchment shadow-md flex items-center gap-1.5 hover:scale-105 active:scale-95 transition"
-                >
-                  <Ticket className="w-4 h-4" />
-                  <span>🎫 Sử Dụng Ngay</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => useInventoryTicket(ticket.id)}
+                className="px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs shadow-[0_4px_16px_rgba(204,208,207,0.2)] flex items-center gap-1.5 hover:scale-105 active:scale-95 transition cursor-pointer"
+                title="Kích hoạt và sử dụng phần thưởng ngay"
+              >
+                <Ticket className="w-4 h-4 text-[#06141B]" />
+                <span>Sử Dụng Ngay</span>
+              </button>
             </div>
           </div>
         ))}
