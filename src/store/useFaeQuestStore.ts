@@ -1644,6 +1644,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             const bannedUntil = profile?.banned_until || null;
             const banReason = profile?.ban_reason || null;
+            const isAdmin = userRole === 'admin';
+
+            if (isAdmin && typeof window !== 'undefined') {
+              localStorage.setItem('faequest_oath_accepted', 'true');
+            }
 
             if (stateRow?.state_json) {
               const s = stateRow.state_json;
@@ -1653,6 +1658,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 userRole,
                 bannedUntil,
                 banReason,
+                activeTab: isAdmin ? 'admin' : 'quests',
+                isOathOpen: false,
                 playerName: s.playerName || hunterName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
                 exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
@@ -1706,6 +1713,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 userRole,
                 bannedUntil,
                 banReason,
+                activeTab: isAdmin ? 'admin' : 'quests',
+                isOathOpen: isAdmin ? false : true,
                 playerName: hunterName,
                 avatarUrl: profile?.avatar_url || '',
                 exp: profile?.exp || 0,
@@ -1722,7 +1731,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 unlockedTitleIds: ['title_tan_binh_gai_do'],
                 equippedTitleId: 'title_tan_binh_gai_do',
                 focusSessionsCompleted: 0,
-                isOathOpen: true,
                 cloudSyncStatus: 'synced',
                 authLoading: false,
               });
@@ -1833,11 +1841,17 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           // Save immediately to public.profiles and public.user_states
           await syncProfileAndStateToCloud(newUserId, freshState, assignedRole);
 
+          const isAdmin = assignedRole === 'admin';
+          if (isAdmin && typeof window !== 'undefined') {
+            localStorage.setItem('faequest_oath_accepted', 'true');
+          }
+
           if (data.session) {
             set({
               currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
               hunterId: newUserId,
               userRole: assignedRole,
+              activeTab: isAdmin ? 'admin' : 'quests',
               playerName: cleanName,
               avatarUrl: '',
               exp: 0,
@@ -1854,7 +1868,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               unlockedTitleIds: ['title_tan_binh_gai_do'],
               equippedTitleId: 'title_tan_binh_gai_do',
               focusSessionsCompleted: 0,
-              isOathOpen: true,
+              isOathOpen: isAdmin ? false : true,
               cloudSyncStatus: 'synced',
               lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
@@ -1879,6 +1893,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
                 hunterId: newUserId,
                 userRole: assignedRole,
+                activeTab: isAdmin ? 'admin' : 'quests',
                 playerName: cleanName,
                 avatarUrl: '',
                 exp: 0,
@@ -1895,7 +1910,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 unlockedTitleIds: ['title_tan_binh_gai_do'],
                 equippedTitleId: 'title_tan_binh_gai_do',
                 focusSessionsCompleted: 0,
-                isOathOpen: true,
+                isOathOpen: isAdmin ? false : true,
                 cloudSyncStatus: 'synced',
               });
               get().fetchUserMessages();
@@ -2001,6 +2016,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           const bannedUntil = profile?.banned_until || null;
           const banReason = profile?.ban_reason || null;
+          const isAdmin = userRole === 'admin';
+
+          if (isAdmin && typeof window !== 'undefined') {
+            localStorage.setItem('faequest_oath_accepted', 'true');
+          }
 
           if (stateRow?.state_json) {
             const s = stateRow.state_json;
@@ -2010,6 +2030,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               userRole,
               bannedUntil,
               banReason,
+              activeTab: isAdmin ? 'admin' : 'quests',
+              isOathOpen: false,
               playerName: s.playerName || hunterName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
               exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
@@ -2062,6 +2084,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               userRole,
               bannedUntil,
               banReason,
+              activeTab: isAdmin ? 'admin' : 'quests',
+              isOathOpen: isAdmin ? false : true,
               playerName: hunterName,
               avatarUrl: profile?.avatar_url || '',
               exp: profile?.exp || 0,
@@ -2078,7 +2102,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               unlockedTitleIds: ['title_tan_binh_gai_do'],
               equippedTitleId: 'title_tan_binh_gai_do',
               focusSessionsCompleted: 0,
-              isOathOpen: true,
               cloudSyncStatus: 'synced',
             });
             await get().syncToCloud(true);

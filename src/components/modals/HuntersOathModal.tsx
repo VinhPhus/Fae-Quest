@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export const HuntersOathModal: React.FC = () => {
-  const { isOathOpen, setOathOpen, acceptOath, soundEnabled } = useFaeQuestStore();
+  const { isOathOpen, setOathOpen, acceptOath, soundEnabled, userRole } = useFaeQuestStore();
 
   const [isScrollOpen, setIsScrollOpen] = useState(false);
   const [isBreakingSeal, setIsBreakingSeal] = useState(false);
@@ -42,7 +42,8 @@ export const HuntersOathModal: React.FC = () => {
     }
   }, [isOathOpen]);
 
-  if (!isOathOpen) return null;
+  // Tài khoản Admin được bỏ qua hoàn toàn bước tuyên thệ Cuộn Khế Ước 3D
+  if (!isOathOpen || userRole === 'admin') return null;
 
   // Handle 3D Mouse Tilt over the closed scroll
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

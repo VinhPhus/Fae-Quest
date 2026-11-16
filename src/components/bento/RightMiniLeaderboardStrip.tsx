@@ -5,7 +5,7 @@ import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncM
 import { Trophy, ChevronRight } from 'lucide-react';
 
 export const RightMiniLeaderboardStrip: React.FC = () => {
-  const { playerName, avatarUrl, exp, rivals, hunterId, setActiveTab } = useFaeQuestStore();
+  const { playerName, avatarUrl, exp, rivals, hunterId, setActiveTab, userRole } = useFaeQuestStore();
   const [communityProfiles, setCommunityProfiles] = useState<HunterProfileCloud[]>([]);
 
   // Tải dữ liệu BXH thật từ Supabase
@@ -60,8 +60,8 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
     isPlayer: false,
   }));
 
-  // Hợp nhất và sắp xếp giảm dần theo EXP
-  let combined = [myCombatant, ...otherCommunity];
+  // Hợp nhất và sắp xếp giảm dần theo EXP (Tài khoản Admin không tham gia đua top)
+  let combined = userRole === 'admin' ? [...otherCommunity] : [myCombatant, ...otherCommunity];
   if (combined.length < 5) {
     const needed = 5 - combined.length;
     combined = [...combined, ...aiCombatants.slice(0, needed)];
@@ -116,25 +116,42 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       <div className="relative group/user flex flex-col items-center">
         {/* Tooltip for User */}
         <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-3 py-1.5 rounded-xl bg-[#06141B] border border-[#4A5C6A] shadow-[0_8px_24px_rgba(0,0,0,0.85)] opacity-0 group-hover/user:opacity-100 scale-95 group-hover/user:scale-100 pointer-events-none transition-all duration-200 z-50 whitespace-nowrap flex items-center gap-2">
-          <span className="font-extrabold text-xs text-amber-400">#{myRank}</span>
-          <span className="text-xs font-bold text-[#CCD0CF]">{playerName} (Bạn)</span>
-          <span className="text-[10px] text-[#9BA8AB]">•</span>
-          <span className="text-[11px] font-semibold text-[#CCD0CF]">{myRankTier.name}</span>
-          <span className="text-[10px] text-[#9BA8AB]">•</span>
-          <span className="text-[11px] font-mono text-[#CCD0CF]">{exp.toLocaleString()} EXP</span>
+          {userRole === 'admin' ? (
+            <>
+              <span className="font-extrabold text-xs text-amber-300">🛡️ QUẢN TRỊ</span>
+              <span className="text-xs font-bold text-[#CCD0CF]">{playerName}</span>
+              <span className="text-[10px] text-[#9BA8AB]">•</span>
+              <span className="text-[11px] text-amber-400 font-semibold">(Ẩn khỏi BXH Đua Top)</span>
+            </>
+          ) : (
+            <>
+              <span className="font-extrabold text-xs text-amber-400">#{myRank}</span>
+              <span className="text-xs font-bold text-[#CCD0CF]">{playerName} (Bạn)</span>
+              <span className="text-[10px] text-[#9BA8AB]">•</span>
+              <span className="text-[11px] font-semibold text-[#CCD0CF]">{myRankTier.name}</span>
+              <span className="text-[10px] text-[#9BA8AB]">•</span>
+              <span className="text-[11px] font-mono text-[#CCD0CF]">{exp.toLocaleString()} EXP</span>
+            </>
+          )}
           <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-[#06141B] border-t border-r border-[#4A5C6A] rotate-45" />
         </div>
 
         <div className="w-11 h-11 rounded-full p-0.5 bg-gradient-to-tr from-[#CCD0CF] via-[#4A5C6A] to-[#253745] shadow-lg shadow-black/40 group-hover:scale-105 transition relative">
           {renderAvatar(playerName, avatarUrl)}
-          {/* Live Rank Badge on Avatar */}
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[9px] font-black text-[#CCD0CF] flex items-center justify-center shadow">
-            #{myRank}
-          </span>
+          {/* Live Rank Badge on Avatar or Admin Badge */}
+          {userRole === 'admin' ? (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500/30 border border-amber-400 text-[9px] font-black text-amber-300 flex items-center justify-center shadow">
+              🛡️
+            </span>
+          ) : (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[9px] font-black text-[#CCD0CF] flex items-center justify-center shadow">
+              #{myRank}
+            </span>
+          )}
         </div>
 
-        <span className="text-[9px] font-black tracking-widest text-[#CCD0CF] uppercase mt-1">
-          BẠN
+        <span className={`text-[9px] font-black tracking-widest uppercase mt-1 ${userRole === 'admin' ? 'text-amber-300' : 'text-[#CCD0CF]'}`}>
+          {userRole === 'admin' ? 'ADMIN' : 'BẠN'}
         </span>
       </div>
 

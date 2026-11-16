@@ -17,6 +17,7 @@ export const LeaderboardTable: React.FC = () => {
     simulateRivalActivity,
     setAddRivalOpen,
     syncToCloud,
+    userRole,
   } = useFaeQuestStore();
 
   const [communityProfiles, setCommunityProfiles] = useState<HunterProfileCloud[]>([]);
@@ -66,7 +67,10 @@ export const LeaderboardTable: React.FC = () => {
       };
     });
 
-  const communityCombatants = [myCombatant, ...otherCommunityCombatants];
+  // Nếu là Admin, ẩn hoàn toàn tài khoản của mình khỏi Đấu Trường BXH
+  const communityCombatants = userRole === 'admin'
+    ? otherCommunityCombatants
+    : [myCombatant, ...otherCommunityCombatants];
 
   // 3. Đối thủ AI dự phòng
   const aiCombatants = rivals.map((r) => ({
@@ -93,13 +97,23 @@ export const LeaderboardTable: React.FC = () => {
       {/* Leaderboard Header Banner */}
       <div className="rpg-card rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-opal/30 border border-opal-light/50 text-xs font-bold text-parchment">
-            <Swords className="w-3.5 h-3.5 text-fae" />
-            <span>Đấu Trường Danh Vọng • Supabase Realtime</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-opal/30 border border-opal-light/50 text-xs font-bold text-parchment">
+              <Swords className="w-3.5 h-3.5 text-fae" />
+              <span>Đấu Trường Danh Vọng • Supabase Realtime</span>
+            </div>
+            {userRole === 'admin' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[11px] font-extrabold text-amber-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>CHẾ ĐỘ QUẢN TRỊ VIÊN (ẨN KHỎI BXH)</span>
+              </span>
+            )}
           </div>
           <h2 className="text-2xl font-extrabold text-parchment">Bảng Xếp Hạng Thợ Săn</h2>
           <p className="text-sm text-parchment/75 max-w-2xl leading-relaxed">
-            BXH Cộng Đồng kết nối trực tiếp với đám mây Supabase (Top 50). Hoàn thành nhiệm vụ kỷ luật mỗi ngày để vươn lên ngôi vị Thách Đấu!
+            {userRole === 'admin'
+              ? 'Tài khoản Quản Trị Viên được tự động ẩn khỏi BXH để bảo toàn tính minh bạch và công bằng cho Đấu Trường.'
+              : 'BXH Cộng Đồng kết nối trực tiếp với đám mây Supabase (Top 50). Hoàn thành nhiệm vụ kỷ luật mỗi ngày để vươn lên ngôi vị Thách Đấu!'}
           </p>
         </div>
 

@@ -12,6 +12,7 @@ export interface HunterProfileCloud {
   equipped_title: string;
   streak: number;
   completed_tasks_count: number;
+  role?: string;
   updated_at: string;
 }
 
@@ -144,11 +145,16 @@ export const fetchCommunityLeaderboard = async (
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .neq('role', 'admin')
       .order('exp', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
-    return { profiles: (data as HunterProfileCloud[]) || [] };
+    // Đảm bảo loại bỏ tuyệt đối bất kỳ tài khoản nào mang role admin
+    const nonAdminProfiles = ((data as HunterProfileCloud[]) || []).filter(
+      (p) => p.role !== 'admin'
+    );
+    return { profiles: nonAdminProfiles };
   } catch (err: any) {
     console.error('Lỗi khi tải BXH Supabase:', err);
     return { profiles: [], error: err.message || 'Không thể tải BXH từ đám mây' };
