@@ -20,7 +20,7 @@ export const RANK_TIERS: RankTier[] = [
     coinBonus: 10,
     iconUrl: '/assets/ranks/rank-dong.png',
     badgeBg: 'from-[#8C583A] to-[#4D2C19]',
-    accentColor: '#D97352',
+    accentColor: '#9BA8AB',
     quote: 'Khởi đầu hành trình rèn luyện kỷ luật bản thân.',
   },
   {
@@ -67,7 +67,7 @@ export const RANK_TIERS: RankTier[] = [
     bonusCoins: 75,
     coinBonus: 75,
     iconUrl: '/assets/ranks/rank-cao-thu.png',
-    badgeBg: 'from-[#6850AD] to-[#2D1036]',
+    badgeBg: 'from-[#4A5C6A] to-[#11212D]',
     accentColor: '#A78BFA',
     quote: 'Làm chủ thời gian, ngọn lửa Opal huyền bí thức tỉnh.',
   },
@@ -91,7 +91,7 @@ export const RANK_TIERS: RankTier[] = [
     bonusCoins: 200,
     coinBonus: 200,
     iconUrl: '/assets/ranks/rank-thach-dau.png',
-    badgeBg: 'from-[#D97352] via-[#6850AD] to-[#6B0733]',
+    badgeBg: 'from-[#CCD0CF] via-[#4A5C6A] to-[#11212D]',
     accentColor: '#FBBF24',
     quote: 'Đỉnh cao huyền thoại! Bạn là chuẩn mực của sự kỷ luật tuyệt đối.',
   }

@@ -8,27 +8,37 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Obsidian & Steel Monochrome (6 Tiers)
+        obsidian: {
+          deep: '#06141B',      // Tier 1: Deepest Background
+          surface: '#11212D',   // Tier 2: Primary Surface
+          elevated: '#253745',  // Tier 3: Elevated Surface & Border
+          accent: '#4A5C6A',    // Tier 4: Accent & Progress
+          muted: '#9BA8AB',     // Tier 5: Muted Text & Secondary Icons
+          silver: '#CCD0CF',    // Tier 6: Primary Text & CTA
+        },
+        // Mapped legacy tokens for seamless backward compatibility
         thorn: {
-          DEFAULT: '#2D1036', // Thorn Crown
-          dark: '#1D0924',
-          light: '#3E174B',
+          DEFAULT: '#11212D',
+          dark: '#06141B',
+          light: '#253745',
         },
         bargain: {
-          DEFAULT: '#6B0733', // Blood Bargain
-          dark: '#4D0424',
-          light: '#8A0B43',
+          DEFAULT: '#253745',
+          dark: '#11212D',
+          light: '#4A5C6A',
         },
         opal: {
-          DEFAULT: '#6850AD', // Opal
-          dark: '#4E3A87',
-          light: '#8770CC',
+          DEFAULT: '#4A5C6A',
+          dark: '#253745',
+          light: '#9BA8AB',
         },
         fae: {
-          DEFAULT: '#D97352', // Fae Fruit
-          dark: '#B85A3B',
-          light: '#EB9275',
+          DEFAULT: '#CCD0CF',
+          dark: '#9BA8AB',
+          light: '#FFFFFF',
         },
-        parchment: '#FFF5EE',
+        parchment: '#CCD0CF',
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'sans-serif'],

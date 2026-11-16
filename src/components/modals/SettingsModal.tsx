@@ -239,31 +239,28 @@ export const SettingsModal: React.FC = () => {
         <div className="flex items-center gap-2 px-6 pt-4 border-b border-parchment/10 bg-thorn-dark/40 shrink-0">
           <button
             onClick={() => setActiveTab('general')}
-            className={`pb-3 px-3 text-xs font-bold border-b-2 transition ${
-              activeTab === 'general'
-                ? 'border-fae text-fae'
-                : 'border-transparent text-parchment/60 hover:text-parchment'
-            }`}
+            className={`pb-3 px-3 text-xs font-bold border-b-2 transition ${activeTab === 'general'
+              ? 'border-fae text-fae'
+              : 'border-transparent text-parchment/60 hover:text-parchment'
+              }`}
           >
             Chung & Âm Thanh
           </button>
           <button
             onClick={() => setActiveTab('data')}
-            className={`pb-3 px-3 text-xs font-bold border-b-2 transition ${
-              activeTab === 'data'
-                ? 'border-fae text-fae'
-                : 'border-transparent text-parchment/60 hover:text-parchment'
-            }`}
+            className={`pb-3 px-3 text-xs font-bold border-b-2 transition ${activeTab === 'data'
+              ? 'border-fae text-fae'
+              : 'border-transparent text-parchment/60 hover:text-parchment'
+              }`}
           >
             Sao Lưu & Đặt Lại
           </button>
           <button
             onClick={() => setActiveTab('about')}
-            className={`pb-3 px-3 text-xs font-bold border-b-2 transition ${
-              activeTab === 'about'
-                ? 'border-fae text-fae'
-                : 'border-transparent text-parchment/60 hover:text-parchment'
-            }`}
+            className={`pb-3 px-3 text-xs font-bold border-b-2 transition ${activeTab === 'about'
+              ? 'border-fae text-fae'
+              : 'border-transparent text-parchment/60 hover:text-parchment'
+              }`}
           >
             Thông Tin & Ủng Hộ
           </button>
@@ -276,7 +273,7 @@ export const SettingsModal: React.FC = () => {
             <div className="space-y-6 animate-in fade-in duration-200">
               {/* Account & Supabase Auth Info Section */}
               {currentUser && (
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-[#2D1036] via-thorn-dark to-[#6B0733]/50 border border-fae/40 shadow-lg space-y-3">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-[#11212D] via-[#06141B] to-[#253745]/50 border border-[#253745] shadow-lg space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fae to-bargain border border-fae/50 flex items-center justify-center text-parchment shadow">
@@ -338,10 +335,10 @@ export const SettingsModal: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="px-3 py-1.5 rounded-xl bg-[#6B0733] hover:bg-[#850b40] border border-[#D97352] text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow hover:scale-105 active:scale-95"
+                        className="px-3 py-1.5 rounded-xl bg-[#253745] hover:bg-rose-950/70 border border-[#4A5C6A] hover:border-rose-500/50 text-[#CCD0CF] hover:text-rose-200 text-xs font-bold transition flex items-center gap-1.5 shadow hover:scale-105 active:scale-95 cursor-pointer"
                         title="Đăng xuất khỏi tài khoản"
                       >
-                        <LogOut className="w-3.5 h-3.5 text-fae" />
+                        <LogOut className="w-3.5 h-3.5 text-[#CCD0CF]" />
                         <span>Đăng Xuất</span>
                       </button>
                     </div>
@@ -393,11 +390,10 @@ export const SettingsModal: React.FC = () => {
 
                   <button
                     onClick={toggleSound}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
-                      soundEnabled
-                        ? 'bg-fae text-thorn-dark shadow-md'
-                        : 'bg-thorn text-parchment/50 border border-parchment/20'
-                    }`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${soundEnabled
+                      ? 'bg-fae text-thorn-dark shadow-md'
+                      : 'bg-thorn text-parchment/50 border border-parchment/20'
+                      }`}
                   >
                     {soundEnabled ? (
                       <>
@@ -443,7 +439,7 @@ export const SettingsModal: React.FC = () => {
                   <span>Đồng Bộ Đám Mây Supabase (Cloud Sync)</span>
                 </label>
 
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-thorn-dark via-[#2D1036] to-thorn-dark border border-fae/40 shadow-lg space-y-3">
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-[#06141B] via-[#11212D] to-[#06141B] border border-[#253745] shadow-lg space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="font-rpg font-bold text-sm text-parchment">
@@ -451,23 +447,22 @@ export const SettingsModal: React.FC = () => {
                       </span>
                     </div>
                     <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border w-fit ${
-                        cloudSyncStatus === 'syncing'
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 animate-pulse'
-                          : cloudSyncStatus === 'synced'
+                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border w-fit ${cloudSyncStatus === 'syncing'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-400/40 animate-pulse'
+                        : cloudSyncStatus === 'synced'
                           ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
                           : cloudSyncStatus === 'error'
-                          ? 'bg-rose-500/20 text-rose-300 border-rose-400/40'
-                          : 'bg-thorn text-parchment/60 border-parchment/20'
-                      }`}
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-400/40'
+                            : 'bg-thorn text-parchment/60 border-parchment/20'
+                        }`}
                     >
                       {cloudSyncStatus === 'syncing'
                         ? '🔄 Đang đồng bộ...'
                         : cloudSyncStatus === 'synced'
-                        ? `✓ Đã đồng bộ: ${lastSyncedAt || 'Vừa xong'}`
-                        : cloudSyncStatus === 'error'
-                        ? '⚠️ Lỗi đồng bộ'
-                        : 'Sẵn sàng'}
+                          ? `✓ Đã đồng bộ: ${lastSyncedAt || 'Vừa xong'}`
+                          : cloudSyncStatus === 'error'
+                            ? '⚠️ Lỗi đồng bộ'
+                            : 'Sẵn sàng'}
                     </span>
                   </div>
 
@@ -613,7 +608,7 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               {/* Card 2: Donate / Support Developer */}
-              <div className="rounded-2xl border border-[#D97352]/40 bg-gradient-to-br from-[#2D1036]/90 via-[#3E174B]/40 to-[#6B0733]/30 p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden">
+              <div className="rounded-2xl border border-[#253745] bg-[#11212D] p-4 sm:p-5 shadow-xl space-y-4 relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5">
                   {/* Left Column: Information, Message, Copy Action */}
                   <div className="space-y-3 flex-1 min-w-0 text-center sm:text-left">
@@ -658,11 +653,10 @@ export const SettingsModal: React.FC = () => {
                           <button
                             type="button"
                             onClick={handleCopySTK}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 transition ${
-                              copiedStk
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40'
-                                : 'bg-fae/20 hover:bg-fae/30 text-fae-light border border-fae/40'
-                            }`}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 transition ${copiedStk
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40'
+                              : 'bg-fae/20 hover:bg-fae/30 text-fae-light border border-fae/40'
+                              }`}
                             title="Sao chép số tài khoản"
                           >
                             {copiedStk ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}

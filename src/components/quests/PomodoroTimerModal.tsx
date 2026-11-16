@@ -162,11 +162,10 @@ export const PomodoroTimerModal: React.FC = () => {
                     key={min}
                     type="button"
                     onClick={() => handleSelectDuration(min)}
-                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition border ${
-                      isSelected
-                        ? 'bg-fae text-thorn-dark border-fae shadow-sm'
-                        : 'bg-thorn text-parchment/70 hover:text-parchment border-opal/30 hover:border-opal/50'
-                    }`}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition border ${isSelected
+                      ? 'bg-fae text-thorn-dark border-fae shadow-sm'
+                      : 'bg-thorn text-parchment/70 hover:text-parchment border-opal/30 hover:border-opal/50'
+                      }`}
                   >
                     {min === 25 ? '25p (Chuẩn)' : `${min}p`}
                   </button>
@@ -210,7 +209,7 @@ export const PomodoroTimerModal: React.FC = () => {
           </div>
 
           {/* Combined Reward Preview Card (Gọn gàng & có icon i giải thích) */}
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#2D1036]/90 via-thorn-dark to-[#6B0733]/50 border border-amber-400/40 shadow-lg text-left space-y-2 relative">
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-[#11212D] via-[#06141B] to-[#253745]/50 border border-amber-400/40 shadow-lg text-left space-y-2 relative">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5">
                 {/* Icon 'i' chứa toàn bộ mô tả chi tiết khi hover / click */}
@@ -231,7 +230,7 @@ export const PomodoroTimerModal: React.FC = () => {
 
                   {/* Tooltip Popover */}
                   {showRewardInfo && (
-                    <div className="absolute left-0 bottom-full mb-2 z-40 w-72 p-3 rounded-2xl bg-[#1D0924] border border-amber-400/70 shadow-2xl text-[11px] text-parchment leading-relaxed backdrop-blur-md animate-in fade-in zoom-in-95">
+                    <div className="absolute left-0 bottom-full mb-2 z-40 w-72 p-3 rounded-2xl bg-[#11212D] border border-amber-400/70 shadow-2xl text-[11px] text-parchment leading-relaxed backdrop-blur-md animate-in fade-in zoom-in-95">
                       <p className="font-semibold text-emerald-300 flex items-center gap-1 mb-1">
                         <span>⚡ Tự Động Hoàn Thành Nhiệm Vụ</span>
                       </p>
@@ -246,7 +245,7 @@ export const PomodoroTimerModal: React.FC = () => {
                           • <strong className="text-fae">+{totalCombinedCoins} Xu</strong>: gồm +{taskCoins} Xu từ nhiệm vụ và +{maxFocusCoins} Xu từ {targetMinutes}p Focus.
                         </div>
                       </div>
-                      <div className="absolute left-2.5 top-full w-2 h-2 bg-[#1D0924] border-r border-b border-amber-400/70 transform rotate-45 -mt-1" />
+                      <div className="absolute left-2.5 top-full w-2 h-2 bg-[#11212D] border-r border-b border-amber-400/70 transform rotate-45 -mt-1" />
                     </div>
                   )}
                 </div>
@@ -318,11 +317,10 @@ export const PomodoroTimerModal: React.FC = () => {
                 }
               }}
               disabled={!canFinishEarly}
-              className={`px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition ${
-                canFinishEarly
-                  ? 'bg-emerald-600/40 hover:bg-emerald-600 border border-emerald-400 text-emerald-200 shadow-md cursor-pointer hover:scale-105'
-                  : 'bg-thorn-dark/60 border border-parchment/10 text-parchment/30 cursor-not-allowed'
-              }`}
+              className={`px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition ${canFinishEarly
+                ? 'bg-emerald-600/40 hover:bg-emerald-600 border border-emerald-400 text-emerald-200 shadow-md cursor-pointer hover:scale-105'
+                : 'bg-thorn-dark/60 border border-parchment/10 text-parchment/30 cursor-not-allowed'
+                }`}
               title={
                 canFinishEarly
                   ? `Nhận tổng gộp: +${earlyTotalExp} EXP (+${taskExp} Task + ${earlyFocusExp} Focus) & +${earlyTotalCoins} Xu`

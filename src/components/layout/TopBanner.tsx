@@ -14,11 +14,11 @@ export const TopBanner: React.FC = () => {
         viewBox="0 0 1200 120"
         preserveAspectRatio="none"
       >
-        <path d="M0,60 Q150,10 300,60 T600,60 T900,60 T1200,60" fill="none" stroke="#D97352" strokeWidth="3" />
-        <path d="M0,90 Q200,30 400,80 T800,50 T1200,80" fill="none" stroke="#6850AD" strokeWidth="2" />
-        <polygon points="150,25 155,38 168,43 155,48 150,61 145,48 132,43 145,38" fill="#D97352" />
-        <polygon points="620,15 624,25 634,29 624,33 620,43 616,33 606,29 616,25" fill="#FFF5EE" />
-        <polygon points="1040,30 1045,42 1057,47 1045,52 1040,64 1035,52 1023,47 1035,42" fill="#D97352" />
+        <path d="M0,60 Q150,10 300,60 T600,60 T900,60 T1200,60" fill="none" stroke="#CCD0CF" strokeWidth="3" />
+        <path d="M0,90 Q200,30 400,80 T800,50 T1200,80" fill="none" stroke="#4A5C6A" strokeWidth="2" />
+        <polygon points="150,25 155,38 168,43 155,48 150,61 145,48 132,43 145,38" fill="#CCD0CF" />
+        <polygon points="620,15 624,25 634,29 624,33 620,43 616,33 606,29 616,25" fill="#FFFFFF" />
+        <polygon points="1040,30 1045,42 1057,47 1045,52 1040,64 1035,52 1023,47 1035,42" fill="#CCD0CF" />
       </svg>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3 relative z-10">

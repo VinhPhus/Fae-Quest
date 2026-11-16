@@ -176,8 +176,8 @@ export const PlayerStatusCard: React.FC = () => {
                   className="w-full h-full object-cover rounded-2xl"
                 />
               ) : (
-                <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[#2D1036] via-[#4A152D] to-[#6B0733] flex flex-col items-center justify-center relative overflow-hidden select-none border border-fae/30">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(217,119,82,0.35)_0%,transparent_70%)]" />
+                <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[#11212D] via-[#253745] to-[#06141B] flex flex-col items-center justify-center relative overflow-hidden select-none border border-[#4A5C6A]">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(204,208,207,0.2)_0%,transparent_70%)]" />
                   <Shield className="w-10 h-10 sm:w-14 sm:h-14 text-fae/20 absolute -bottom-1" />
                   <span className="font-rpg font-black text-2xl sm:text-3xl md:text-4xl text-parchment drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] relative z-10">
                     {initialLetter}
@@ -224,9 +224,8 @@ export const PlayerStatusCard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('system-quests')}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold shadow transition hover:scale-105 ${
-                  (SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).badgeBg
-                } ${(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).borderColor}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] sm:text-[11px] font-bold shadow transition hover:scale-105 ${(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).badgeBg
+                  } ${(SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do).borderColor}`}
                 title="Bấm để mở Kho Danh Hiệu & Đổi Danh Hiệu"
               >
                 <img

@@ -69,8 +69,8 @@ export const SystemQuestsView: React.FC = () => {
     activeTabFilter === 'streak'
       ? streakQuests
       : activeTabFilter === 'milestone'
-      ? milestoneQuests
-      : systemQuests;
+        ? milestoneQuests
+        : systemQuests;
 
   return (
     <div className="space-y-7 animate-in fade-in duration-200">
@@ -136,11 +136,11 @@ export const SystemQuestsView: React.FC = () => {
                 key={title.id}
                 className={`rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between gap-3 relative group ${
                   isEquipped
-                    ? 'bg-gradient-to-b from-[#6B0733]/50 via-thorn-dark to-[#2D1036] border-fae ring-2 ring-fae/50 shadow-lg scale-[1.02]'
+                    ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-[#CCD0CF] ring-2 ring-[#CCD0CF]/40 shadow-lg scale-[1.02]'
                     : isUnlocked
                     ? 'bg-thorn-dark/80 hover:bg-thorn border-opal/40 hover:border-fae/50 hover:scale-105 shadow-md'
                     : 'bg-thorn-dark/40 border-parchment/10 opacity-60'
-                }`}
+                  }`}
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
@@ -148,11 +148,10 @@ export const SystemQuestsView: React.FC = () => {
                       <img
                         src={title.iconUrl}
                         alt={title.name}
-                        className={`w-full h-full object-contain transition-all duration-300 drop-shadow-md ${
-                          isUnlocked
-                            ? 'group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(217,119,82,0.85)]'
-                            : 'grayscale opacity-40 contrast-75'
-                        }`}
+                        className={`w-full h-full object-contain transition-all duration-300 drop-shadow-md ${isUnlocked
+                          ? 'group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(217,119,82,0.85)]'
+                          : 'grayscale opacity-40 contrast-75'
+                          }`}
                         loading="lazy"
                       />
                       {!isUnlocked && (
@@ -163,15 +162,14 @@ export const SystemQuestsView: React.FC = () => {
                     </div>
 
                     <span
-                      className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border ${
-                        title.rarity === 'legendary'
-                          ? 'bg-amber-500/20 text-amber-300 border-amber-400/50'
-                          : title.rarity === 'epic'
+                      className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border ${title.rarity === 'legendary'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-400/50'
+                        : title.rarity === 'epic'
                           ? 'bg-purple-500/20 text-purple-300 border-purple-400/50'
                           : title.rarity === 'rare'
-                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50'
-                          : 'bg-rose-500/20 text-rose-300 border-rose-400/50'
-                      }`}
+                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50'
+                            : 'bg-rose-500/20 text-rose-300 border-rose-400/50'
+                        }`}
                     >
                       {title.rarity.toUpperCase()}
                     </span>
@@ -223,31 +221,28 @@ export const SystemQuestsView: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTabFilter('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${
-              activeTabFilter === 'all'
-                ? 'bg-fae text-thorn-dark border-fae shadow-md'
-                : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${activeTabFilter === 'all'
+              ? 'bg-fae text-thorn-dark border-fae shadow-md'
+              : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
+              }`}
           >
             Tất Cả Thử Thách ({systemQuests.length})
           </button>
           <button
             onClick={() => setActiveTabFilter('streak')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${
-              activeTabFilter === 'streak'
-                ? 'bg-fae text-thorn-dark border-fae shadow-md'
-                : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${activeTabFilter === 'streak'
+              ? 'bg-fae text-thorn-dark border-fae shadow-md'
+              : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
+              }`}
           >
             Bộ Đếm Ngày ({streakQuests.length})
           </button>
           <button
             onClick={() => setActiveTabFilter('milestone')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${
-              activeTabFilter === 'milestone'
-                ? 'bg-fae text-thorn-dark border-fae shadow-md'
-                : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${activeTabFilter === 'milestone'
+              ? 'bg-fae text-thorn-dark border-fae shadow-md'
+              : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
+              }`}
           >
             Cột Mốc Thành Tựu ({milestoneQuests.length})
           </button>
@@ -270,13 +265,12 @@ export const SystemQuestsView: React.FC = () => {
             return (
               <div
                 key={quest.id}
-                className={`rpg-card rounded-3xl p-5 sm:p-6 border transition-all duration-300 space-y-4 ${
-                  canClaim
-                    ? 'border-amber-400/80 shadow-amber-500/20 shadow-xl bg-gradient-to-r from-bargain-dark via-thorn-dark to-thorn'
-                    : quest.isRewardClaimed
+                className={`rpg-card rounded-3xl p-5 sm:p-6 border transition-all duration-300 space-y-4 ${canClaim
+                  ? 'border-amber-400/80 shadow-amber-500/20 shadow-xl bg-gradient-to-r from-bargain-dark via-thorn-dark to-thorn'
+                  : quest.isRewardClaimed
                     ? 'border-emerald-500/30 opacity-80'
                     : 'border-opal/40 hover:border-fae/50'
-                }`}
+                  }`}
               >
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -346,13 +340,12 @@ export const SystemQuestsView: React.FC = () => {
                       return (
                         <div
                           key={dayNumber}
-                          className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center transition border ${
-                            isCurrent
-                              ? 'bg-fae text-thorn-dark border-fae scale-110 shadow'
-                              : isPast
+                          className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center transition border ${isCurrent
+                            ? 'bg-fae text-thorn-dark border-fae scale-110 shadow'
+                            : isPast
                               ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/40'
                               : 'bg-thorn-dark/60 text-parchment/40 border-parchment/10'
-                          }`}
+                            }`}
                           title={`Ngày ${dayNumber}`}
                         >
                           {dayNumber}
@@ -372,11 +365,11 @@ export const SystemQuestsView: React.FC = () => {
                         disabled={isCheckedInToday || isResetToday}
                         className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
                           isResetToday
-                            ? 'bg-[#2D1036]/80 border border-[#6B0733]/60 text-gray-400 cursor-not-allowed shadow-inner'
+                            ? 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] cursor-not-allowed shadow-inner'
                             : isCheckedInToday
                             ? 'bg-thorn-dark text-parchment/40 border border-parchment/15 cursor-not-allowed'
                             : 'rpg-btn-primary text-parchment shadow-lg hover:scale-105'
-                        }`}
+                          }`}
                       >
                         {isResetToday ? (
                           <>
@@ -419,7 +412,7 @@ export const SystemQuestsView: React.FC = () => {
                   {/* Reset Button with Dialog */}
                   <div className="w-full sm:w-auto">
                     {confirmResetQuestId === quest.id ? (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-[#2D1036] p-3 rounded-2xl border border-rose-500/50 shadow-xl animate-in fade-in w-full max-w-lg">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-[#11212D] p-3 rounded-2xl border border-rose-500/50 shadow-xl animate-in fade-in w-full max-w-lg">
                         <div className="flex items-start gap-2 text-xs text-rose-200">
                           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                           <span className="leading-snug">
@@ -495,13 +488,12 @@ export const SystemQuestsView: React.FC = () => {
             return (
               <div
                 key={quest.id}
-                className={`rpg-card rounded-3xl p-5 sm:p-6 border transition-all duration-300 space-y-4 ${
-                  canClaim
-                    ? 'border-fae shadow-fae/20 shadow-xl bg-gradient-to-r from-bargain-dark via-thorn-dark to-thorn'
-                    : quest.isRewardClaimed
+                className={`rpg-card rounded-3xl p-5 sm:p-6 border transition-all duration-300 space-y-4 ${canClaim
+                  ? 'border-fae shadow-fae/20 shadow-xl bg-gradient-to-r from-bargain-dark via-thorn-dark to-thorn'
+                  : quest.isRewardClaimed
                     ? 'border-emerald-500/30 opacity-80'
                     : 'border-opal/40 hover:border-fae/50'
-                }`}
+                  }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="space-y-1 min-w-0">

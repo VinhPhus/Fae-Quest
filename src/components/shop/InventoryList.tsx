@@ -52,7 +52,7 @@ export const InventoryList: React.FC = () => {
       return (
         <span className="text-xs text-parchment/70 inline-flex items-center gap-1">
           <span>🕒 Đổi lúc: {purchaseTime} •</span>
-          <span className="text-[#D97352] font-bold">Hạn dùng: còn {hoursLeft} giờ</span>
+          <span className="text-[#CCD0CF] font-bold">Hạn dùng: còn {hoursLeft} giờ</span>
         </span>
       );
     }
@@ -106,11 +106,10 @@ export const InventoryList: React.FC = () => {
         {inventory.map((ticket) => (
           <div
             key={ticket.id}
-            className={`rpg-card rounded-2xl p-5 flex items-center justify-between gap-4 border transition duration-200 ${
-              ticket.used
-                ? 'opacity-70 bg-thorn-dark/60 border-opal/30'
-                : 'border-fae/40 shadow-lg hover:border-fae'
-            }`}
+            className={`rpg-card rounded-2xl p-5 flex items-center justify-between gap-4 border transition duration-200 ${ticket.used
+              ? 'opacity-70 bg-thorn-dark/60 border-opal/30'
+              : 'border-fae/40 shadow-lg hover:border-fae'
+              }`}
           >
             {/* Left: Emoji & Information */}
             <div className="flex items-center gap-3.5 min-w-0">
@@ -120,9 +119,8 @@ export const InventoryList: React.FC = () => {
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h4
-                    className={`text-sm sm:text-base font-bold truncate ${
-                      ticket.used ? 'text-parchment/60' : 'text-parchment'
-                    }`}
+                    className={`text-sm sm:text-base font-bold truncate ${ticket.used ? 'text-parchment/60' : 'text-parchment'
+                      }`}
                   >
                     {ticket.title}
                   </h4>

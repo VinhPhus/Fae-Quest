@@ -68,6 +68,9 @@ interface FaeQuestState {
   activeCategoryFilter: string;
   activeStatusFilter: string;
   rankUpData: { achievedTier: RankTier; bonusCoins: number } | null;
+  searchQuery: string;
+  isCreateQuestOpen: boolean;
+  questViewMode: 'bento' | 'list';
   isRoadmapOpen: boolean;
   isRenameOpen: boolean;
   isResetOpen: boolean;
@@ -109,6 +112,9 @@ interface FaeQuestState {
   setResetOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setOathOpen: (open: boolean) => void;
+  setSearchQuery: (query: string) => void;
+  setCreateQuestOpen: (open: boolean) => void;
+  setQuestViewMode: (mode: 'bento' | 'list') => void;
   acceptOath: () => void;
   setConfirmEarlyTask: (data: { task: Task; coords?: { x: number; y: number } } | null) => void;
   toggleSidebar: () => void;
@@ -185,6 +191,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       activeTab: 'quests',
       activeCategoryFilter: 'all',
       activeStatusFilter: 'all',
+      searchQuery: '',
+      isCreateQuestOpen: false,
+      questViewMode: 'bento',
       rankUpData: null,
       isRoadmapOpen: false,
       isRenameOpen: false,
@@ -364,14 +373,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             tasks: prev.tasks.map((t) =>
               t.id === id
                 ? {
-                    ...t,
-                    completed: true,
-                    rewardClaimed: true,
-                    completedAt: now,
-                    lastAwardedExp: awardedExp,
-                    lastAwardedCoins: awardedCoins,
-                    lastRankUpBonus: rankUpBonus,
-                  }
+                  ...t,
+                  completed: true,
+                  rewardClaimed: true,
+                  completedAt: now,
+                  lastAwardedExp: awardedExp,
+                  lastAwardedCoins: awardedCoins,
+                  lastRankUpBonus: rankUpBonus,
+                }
                 : t
             ),
           }));
@@ -385,9 +394,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 particleCount: 80,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ['#D97352', '#6850AD', '#6B0733', '#FFF5EE'],
+                colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
               });
-            } catch (e) {}
+            } catch (e) { }
             playSoundEffect('rankup', state.soundEnabled);
             set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
           } else {
@@ -419,14 +428,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             tasks: prev.tasks.map((t) =>
               t.id === id
                 ? {
-                    ...t,
-                    completed: false,
-                    rewardClaimed: false,
-                    completedAt: undefined,
-                    lastAwardedExp: undefined,
-                    lastAwardedCoins: undefined,
-                    lastRankUpBonus: undefined,
-                  }
+                  ...t,
+                  completed: false,
+                  rewardClaimed: false,
+                  completedAt: undefined,
+                  lastAwardedExp: undefined,
+                  lastAwardedCoins: undefined,
+                  lastRankUpBonus: undefined,
+                }
                 : t
             ),
           }));
@@ -516,15 +525,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           tasks: prev.tasks.map((t) =>
             t.id === taskId
               ? {
-                  ...t,
-                  completed: true,
-                  rewardClaimed: true,
-                  focusRewardClaimed: true,
-                  completedAt: now,
-                  lastAwardedExp: taskExp,
-                  lastAwardedCoins: taskCoins,
-                  lastRankUpBonus: rankUpBonus,
-                }
+                ...t,
+                completed: true,
+                rewardClaimed: true,
+                focusRewardClaimed: true,
+                completedAt: now,
+                lastAwardedExp: taskExp,
+                lastAwardedCoins: taskCoins,
+                lastRankUpBonus: rankUpBonus,
+              }
               : t
           ),
         }));
@@ -539,9 +548,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               particleCount: 90,
               spread: 80,
               origin: { y: 0.6 },
-              colors: ['#D97352', '#6850AD', '#6B0733', '#FFF5EE'],
+              colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
             });
-          } catch (e) {}
+          } catch (e) { }
           playSoundEffect('rankup', state.soundEnabled);
           set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
         } else {
@@ -734,9 +743,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               particleCount: 90,
               spread: 80,
               origin: { y: 0.6 },
-              colors: ['#D97352', '#6850AD', '#6B0733', '#FFF5EE'],
+              colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
             });
-          } catch (e) {}
+          } catch (e) { }
           playSoundEffect('rankup', state.soundEnabled);
           set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
         } else {
@@ -753,6 +762,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setResetOpen: (open: boolean) => set({ isResetOpen: open }),
       setSettingsOpen: (open: boolean) => set({ isSettingsOpen: open }),
       setOathOpen: (open: boolean) => set({ isOathOpen: open }),
+      setSearchQuery: (query: string) => set({ searchQuery: query }),
+      setCreateQuestOpen: (open: boolean) => set({ isCreateQuestOpen: open }),
+      setQuestViewMode: (mode: 'bento' | 'list') => set({ questViewMode: mode }),
       acceptOath: () => {
         if (typeof window !== 'undefined') {
           localStorage.setItem('faequest_oath_accepted', 'true');
@@ -906,9 +918,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             particleCount: 75,
             spread: 60,
             origin: { y: 0.6 },
-            colors: ['#D97352', '#6850AD', '#6B0733', '#FFF5EE'],
+            colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
           });
-        } catch (e) {}
+        } catch (e) { }
 
         get().addToast(
           `🎉 Nhận thưởng thành công: +${quest.expReward} EXP, +${quest.coinReward} Xu và mở khóa Danh hiệu "${quest.rewardTitleName}"!`,
