@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SystemAchievement } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
@@ -7,6 +7,7 @@ import {
   Trophy,
   Plus,
   Trash2,
+  Edit2,
   Upload,
   Sparkles,
   Award,
@@ -23,11 +24,14 @@ export const AdminAchievementsTab: React.FC = () => {
   const {
     systemAchievements,
     addSystemAchievement,
+    updateSystemAchievement,
     deleteSystemAchievement,
     addToast,
   } = useFaeQuestStore();
 
   const [isAdding, setIsAdding] = useState<boolean>(false);
+  const [editingAchievement, setEditingAchievement] = useState<SystemAchievement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   // Form states
   const [title, setTitle] = useState<string>('');
@@ -71,7 +75,27 @@ export const AdminAchievementsTab: React.FC = () => {
     setRewardExp(200);
     setRewardCoins(50);
     setGrantedTitleName('');
+    setEditingAchievement(null);
     setIsAdding(false);
+  };
+
+  const handleEditClick = (ach: SystemAchievement) => {
+    setEditingAchievement(ach);
+    setTitle(ach.title);
+    setDescription(ach.description || '');
+    setIconUrl(ach.icon_url || '/assets/titles/title-tan-binh.png');
+    setCategory(ach.category || 'Kỷ Luật');
+    setRarity(ach.rarity || 'RARE');
+    setAchievementType(ach.achievement_type || 'streak_counter');
+    setTargetValue(ach.target_value);
+    setRewardExp(ach.reward_exp);
+    setRewardCoins(ach.reward_coins);
+    setGrantedTitleName(ach.granted_title_name || '');
+    setIsAdding(true);
+
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,22 +125,42 @@ export const AdminAchievementsTab: React.FC = () => {
       return;
     }
 
-    const success = await addSystemAchievement({
-      title: title.trim(),
-      description: description.trim(),
-      icon_url: iconUrl,
-      category: category.trim() || 'Chung',
-      rarity,
-      achievement_type: achievementType,
-      target_value: targetValue,
-      reward_exp: rewardExp,
-      reward_coins: rewardCoins,
-      granted_title_name: grantedTitleName.trim() || undefined,
-    });
+    if (editingAchievement) {
+      const success = await updateSystemAchievement(editingAchievement.id, {
+        title: title.trim(),
+        description: description.trim(),
+        icon_url: iconUrl,
+        category: category.trim() || 'Chung',
+        rarity,
+        achievement_type: achievementType,
+        target_value: targetValue,
+        reward_exp: rewardExp,
+        reward_coins: rewardCoins,
+        granted_title_name: grantedTitleName.trim() || undefined,
+      });
 
-    if (success) {
-      addToast(`Đã tạo thành tựu mới "${title}"!`, 'success');
-      resetForm();
+      if (success) {
+        addToast(`Đã cập nhật thành tựu "${title}"!`, 'success');
+        resetForm();
+      }
+    } else {
+      const success = await addSystemAchievement({
+        title: title.trim(),
+        description: description.trim(),
+        icon_url: iconUrl,
+        category: category.trim() || 'Chung',
+        rarity,
+        achievement_type: achievementType,
+        target_value: targetValue,
+        reward_exp: rewardExp,
+        reward_coins: rewardCoins,
+        granted_title_name: grantedTitleName.trim() || undefined,
+      });
+
+      if (success) {
+        addToast(`Đã tạo thành tựu mới "${title}"!`, 'success');
+        resetForm();
+      }
     }
   };
 
@@ -193,21 +237,37 @@ export const AdminAchievementsTab: React.FC = () => {
           className="px-4 py-2.5 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition cursor-pointer shrink-0"
         >
           {isAdding ? <X className="w-4 h-4 stroke-[3]" /> : <Plus className="w-4 h-4 stroke-[3]" />}
-          <span>{isAdding ? 'Đóng Biểu Mẫu' : 'Tạo Thành Tựu Mới'}</span>
+          <span>{isAdding ? (editingAchievement ? 'Hủy Chỉnh Sửa' : 'Đóng Biểu Mẫu') : 'Tạo Thành Tựu Mới'}</span>
         </button>
       </div>
 
-      {/* Add Achievement Form */}
+      {/* Add / Edit Achievement Form */}
       {isAdding && (
         <form
+          ref={formRef}
           onSubmit={handleSubmit}
-          className="bg-[#11212D] border-2 border-cyan-500/40 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in duration-200"
+          className={`bg-[#11212D] border-2 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in duration-200 ${
+            editingAchievement
+              ? 'border-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.15)]'
+              : 'border-cyan-500/40'
+          }`}
         >
           <div className="flex items-center justify-between border-b border-[#253745] pb-3">
-            <h3 className="text-base font-bold text-white font-rpg tracking-wide flex items-center gap-2">
-              <Award className="w-4 h-4 text-cyan-400" />
-              <span>Khắc Ghi Thành Tựu & Danh Hiệu Mới</span>
-            </h3>
+            <div className="flex items-center gap-2">
+              {editingAchievement ? (
+                <Edit2 className="w-4 h-4 text-cyan-400" />
+              ) : (
+                <Award className="w-4 h-4 text-cyan-400" />
+              )}
+              <h3 className="text-base font-bold text-white font-rpg tracking-wide flex items-center gap-2">
+                <span>{editingAchievement ? 'Chỉnh Sửa Thành Tựu Hệ Thống' : 'Khắc Ghi Thành Tựu & Danh Hiệu Mới'}</span>
+                {editingAchievement && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono">
+                    Đang chỉnh sửa
+                  </span>
+                )}
+              </h3>
+            </div>
             <button
               type="button"
               onClick={resetForm}
@@ -438,7 +498,7 @@ export const AdminAchievementsTab: React.FC = () => {
               className="px-6 py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold transition cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95"
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />
-              <span>Lưu Thành Tựu Vào Hệ Thống</span>
+              <span>{editingAchievement ? 'Cập Nhật Thành Tựu' : 'Lưu Thành Tựu Vào Hệ Thống'}</span>
             </button>
           </div>
         </form>
@@ -464,7 +524,11 @@ export const AdminAchievementsTab: React.FC = () => {
             {systemAchievements.map((ach) => (
               <div
                 key={ach.id}
-                className="rounded-3xl p-5 bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] flex flex-col justify-between gap-4 transition shadow-md"
+                className={`rounded-3xl p-5 bg-[#11212D] border flex flex-col justify-between gap-4 transition shadow-md ${
+                  editingAchievement?.id === ach.id
+                    ? 'border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.2)]'
+                    : 'border-[#253745] hover:border-[#4A5C6A]'
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] p-2 flex items-center justify-center shrink-0 shadow-inner">
@@ -510,13 +574,24 @@ export const AdminAchievementsTab: React.FC = () => {
                   )}
                 </div>
 
-                {/* Delete button */}
-                <div className="pt-2 border-t border-[#253745] flex items-center justify-end">
+                {/* Actions: Edit & Delete buttons */}
+                <div className="pt-2 border-t border-[#253745] flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick(ach)}
+                    className="py-1 px-3 rounded-xl bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Sửa</span>
+                  </button>
                   <button
                     type="button"
                     onClick={async () => {
                       if (confirm(`Bạn có chắc chắn muốn xóa thành tựu "${ach.title}"?`)) {
                         await deleteSystemAchievement(ach.id);
+                        if (editingAchievement?.id === ach.id) {
+                          resetForm();
+                        }
                       }
                     }}
                     className="py-1 px-3 rounded-xl bg-[#06141B] hover:bg-rose-950/70 border border-[#253745] hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"

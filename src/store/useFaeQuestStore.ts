@@ -122,6 +122,7 @@ interface FaeQuestState {
   deleteSystemShopItem: (id: string) => Promise<boolean>;
   fetchSystemAchievements: () => Promise<void>;
   addSystemAchievement: (achievement: Omit<SystemAchievement, 'id' | 'created_at'>) => Promise<boolean>;
+  updateSystemAchievement: (id: string, achievement: Partial<SystemAchievement>) => Promise<boolean>;
   deleteSystemAchievement: (id: string) => Promise<boolean>;
   adminSendMail: (
     receiverId: string,
@@ -567,6 +568,21 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return true;
         } catch (e: any) {
           get().addToast(e.message || 'Lỗi tạo thành tựu mới', 'error');
+          return false;
+        }
+      },
+
+      updateSystemAchievement: async (id, achievement) => {
+        try {
+          const { error } = await supabase
+            .from('system_achievements')
+            .update(achievement)
+            .eq('id', id);
+          if (error) throw error;
+          await get().fetchSystemAchievements();
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi cập nhật thành tựu', 'error');
           return false;
         }
       },
