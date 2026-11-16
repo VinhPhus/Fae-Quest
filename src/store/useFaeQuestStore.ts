@@ -15,6 +15,10 @@ import {
   SystemQuest,
   UserTitle,
   HunterUser,
+  UserRole,
+  SystemShopItem,
+  SystemAchievement,
+  UserMessage,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -65,6 +69,18 @@ interface FaeQuestState {
   cloudSyncStatus: 'idle' | 'syncing' | 'synced' | 'error';
   lastSyncedAt?: string;
 
+  // Admin Live-Ops Portal & User Messages
+  userRole: UserRole;
+  bannedUntil: string | null;
+  banReason: string | null;
+  adminPortalTab: 'users' | 'shop' | 'achievements' | 'analytics';
+  systemShopItems: SystemShopItem[];
+  systemAchievements: SystemAchievement[];
+  userMessages: UserMessage[];
+  unreadMessagesCount: number;
+  isUserInboxOpen: boolean;
+  activeWarningMessage: UserMessage | null;
+
   // UI state
   activeTab: ActiveTab;
   activeCategoryFilter: string;
@@ -89,6 +105,23 @@ interface FaeQuestState {
   toasts: ToastMessage[];
 
   // Actions
+  setUserRole: (role: UserRole) => void;
+  setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => void;
+  setUserInboxOpen: (open: boolean) => void;
+  setActiveWarningMessage: (msg: UserMessage | null) => void;
+  fetchUserMessages: () => Promise<void>;
+  markMessageAsRead: (messageId: string) => Promise<void>;
+  markAllMessagesAsRead: () => Promise<void>;
+  fetchSystemShopItems: () => Promise<void>;
+  addSystemShopItem: (item: Omit<SystemShopItem, 'id' | 'created_at'>) => Promise<boolean>;
+  updateSystemShopItem: (id: string, item: Partial<SystemShopItem>) => Promise<boolean>;
+  deleteSystemShopItem: (id: string) => Promise<boolean>;
+  fetchSystemAchievements: () => Promise<void>;
+  addSystemAchievement: (achievement: Omit<SystemAchievement, 'id' | 'created_at'>) => Promise<boolean>;
+  deleteSystemAchievement: (id: string) => Promise<boolean>;
+  adminSendMail: (receiverId: string, subject: string, content: string, type: 'warning' | 'notice' | 'gift') => Promise<boolean>;
+  adminBanUser: (targetUserId: string, hours: number, reason: string) => Promise<boolean>;
+  adminDeleteUser: (targetUserId: string) => Promise<boolean>;
   setLanguage: (lang: string) => void;
   setPlayerName: (name: string) => void;
   setAvatarUrl: (url: string) => void;
@@ -192,6 +225,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       cloudSyncStatus: 'idle',
       lastSyncedAt: undefined,
 
+      // Admin Live-Ops Initial State
+      userRole: 'user',
+      bannedUntil: null,
+      banReason: null,
+      adminPortalTab: 'users',
+      systemShopItems: [],
+      systemAchievements: [],
+      userMessages: [],
+      unreadMessagesCount: 0,
+      isUserInboxOpen: false,
+      activeWarningMessage: null,
+
       activeTab: 'quests',
       activeCategoryFilter: 'all',
       activeStatusFilter: 'all',
@@ -209,6 +254,315 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isSidebarCollapsed: false,
       language: 'vi',
       setLanguage: (lang: string) => set({ language: lang }),
+      setUserRole: (role: UserRole) => set({ userRole: role }),
+      setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => set({ adminPortalTab: tab }),
+      setUserInboxOpen: (open: boolean) => set({ isUserInboxOpen: open }),
+      setActiveWarningMessage: (msg: UserMessage | null) => set({ activeWarningMessage: msg }),
+
+      fetchUserMessages: async () => {
+        const userId = get().currentUser?.id;
+        if (!userId) return;
+
+        try {
+          const { data, error } = await supabase
+            .from('user_messages')
+            .select('*')
+            .eq('receiver_id', userId)
+            .order('created_at', { ascending: false });
+
+          if (!error && data) {
+            const msgs = data as UserMessage[];
+            const unread = msgs.filter((m) => !m.is_read).length;
+            set({ userMessages: msgs, unreadMessagesCount: unread });
+
+            // Tự động bật Modal thông báo nếu có thư cảnh báo chưa đọc
+            const unreadWarning = msgs.find((m) => !m.is_read && m.message_type === 'warning');
+            if (unreadWarning && !get().activeWarningMessage) {
+              set({ activeWarningMessage: unreadWarning });
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching user messages:', e);
+        }
+      },
+
+      markMessageAsRead: async (messageId: string) => {
+        try {
+          await supabase
+            .from('user_messages')
+            .update({ is_read: true })
+            .eq('id', messageId);
+
+          set((prev) => {
+            const updated = prev.userMessages.map((m) =>
+              m.id === messageId ? { ...m, is_read: true } : m
+            );
+            return {
+              userMessages: updated,
+              unreadMessagesCount: updated.filter((m) => !m.is_read).length,
+            };
+          });
+        } catch (e) {
+          console.error('Error marking message read:', e);
+        }
+      },
+
+      markAllMessagesAsRead: async () => {
+        const userId = get().currentUser?.id;
+        if (!userId) return;
+        try {
+          await supabase
+            .from('user_messages')
+            .update({ is_read: true })
+            .eq('receiver_id', userId);
+
+          set((prev) => ({
+            userMessages: prev.userMessages.map((m) => ({ ...m, is_read: true })),
+            unreadMessagesCount: 0,
+          }));
+          get().addToast('Đã đánh dấu tất cả thư là đã đọc', 'info');
+        } catch (e) {
+          console.error('Error marking all messages read:', e);
+        }
+      },
+
+      fetchSystemShopItems: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('system_shop_items')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+          if (!error && data) {
+            set({ systemShopItems: data as SystemShopItem[] });
+          }
+        } catch (e) {
+          console.error('Error fetching system shop items:', e);
+        }
+      },
+
+      addSystemShopItem: async (item) => {
+        try {
+          const { error } = await supabase
+            .from('system_shop_items')
+            .insert([{ ...item, is_system: true }]);
+          if (error) throw error;
+          await get().fetchSystemShopItems();
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi thêm vật phẩm hệ thống', 'error');
+          return false;
+        }
+      },
+
+      updateSystemShopItem: async (id, item) => {
+        try {
+          const { error } = await supabase
+            .from('system_shop_items')
+            .update(item)
+            .eq('id', id);
+          if (error) throw error;
+          await get().fetchSystemShopItems();
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi cập nhật vật phẩm', 'error');
+          return false;
+        }
+      },
+
+      deleteSystemShopItem: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('system_shop_items')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          await get().fetchSystemShopItems();
+          get().addToast('Đã xóa vật phẩm khỏi Cửa Hàng Hệ Thống', 'info');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi xóa vật phẩm', 'error');
+          return false;
+        }
+      },
+
+      fetchSystemAchievements: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('system_achievements')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+          if (!error && data) {
+            const achievements = data as SystemAchievement[];
+            set({ systemAchievements: achievements });
+
+            // Đồng bộ thành tựu động vào danh sách systemQuests để người dùng thực thi
+            const currentQuests = get().systemQuests;
+            const updatedQuests = [...currentQuests];
+
+            for (const ach of achievements) {
+              const existingIdx = updatedQuests.findIndex(
+                (q) => q.id === `sys_${ach.id}` || q.id === ach.id
+              );
+              const isStreak = ach.achievement_type === 'streak_counter';
+              let milestoneKey: 'completedTasks' | 'focusSessions' | undefined;
+              if (ach.achievement_type === 'milestone_tasks') milestoneKey = 'completedTasks';
+              if (ach.achievement_type === 'milestone_focus') milestoneKey = 'focusSessions';
+
+              let autoCompleted = false;
+              if (ach.achievement_type === 'milestone_tasks') {
+                autoCompleted = get().completedTotal >= ach.target_value;
+              } else if (ach.achievement_type === 'milestone_focus') {
+                autoCompleted = get().focusSessionsCompleted >= ach.target_value;
+              } else if (ach.achievement_type === 'milestone_exp') {
+                autoCompleted = get().exp >= ach.target_value;
+              }
+
+              if (existingIdx >= 0) {
+                const existing = updatedQuests[existingIdx];
+                updatedQuests[existingIdx] = {
+                  ...existing,
+                  title: ach.title,
+                  description: ach.description,
+                  targetDays: isStreak ? ach.target_value : undefined,
+                  targetMilestone: !isStreak ? ach.target_value : undefined,
+                  milestoneKey,
+                  expReward: ach.reward_exp,
+                  coinReward: ach.reward_coins,
+                  rewardTitleName: ach.granted_title_name || 'Vinh Quang Fae',
+                  isCompleted: existing.isCompleted || autoCompleted,
+                };
+              } else {
+                updatedQuests.push({
+                  id: `sys_${ach.id}`,
+                  type: isStreak ? 'streak_counter' : 'milestone',
+                  title: ach.title,
+                  description: ach.description,
+                  targetDays: isStreak ? ach.target_value : undefined,
+                  currentStreak: 0,
+                  targetMilestone: !isStreak ? ach.target_value : undefined,
+                  milestoneKey,
+                  expReward: ach.reward_exp,
+                  coinReward: ach.reward_coins,
+                  rewardTitleId: `title_${ach.id}`,
+                  rewardTitleName: ach.granted_title_name || 'Vinh Quang Fae',
+                  isCompleted: autoCompleted,
+                  isRewardClaimed: false,
+                });
+              }
+            }
+
+            set({ systemQuests: updatedQuests });
+          }
+        } catch (e) {
+          console.error('Error fetching system achievements:', e);
+        }
+      },
+
+      addSystemAchievement: async (achievement) => {
+        try {
+          const { error } = await supabase
+            .from('system_achievements')
+            .insert([achievement]);
+          if (error) throw error;
+          await get().fetchSystemAchievements();
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi tạo thành tựu mới', 'error');
+          return false;
+        }
+      },
+
+      deleteSystemAchievement: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('system_achievements')
+            .delete()
+            .eq('id', id);
+          if (error) throw error;
+          await get().fetchSystemAchievements();
+          get().addToast('Đã xóa thành tựu khỏi hệ thống', 'info');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi xóa thành tựu', 'error');
+          return false;
+        }
+      },
+
+      adminSendMail: async (receiverId, subject, content, type) => {
+        try {
+          const { error } = await supabase.rpc('rpc_admin_send_mail', {
+            p_receiver_id: receiverId,
+            p_subject: subject,
+            p_content: content,
+            p_type: type,
+          });
+
+          if (error) {
+            const { error: insErr } = await supabase.from('user_messages').insert({
+              receiver_id: receiverId,
+              subject,
+              content,
+              message_type: type,
+              is_read: false,
+            });
+            if (insErr) throw insErr;
+          }
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi gửi thư', 'error');
+          return false;
+        }
+      },
+
+      adminBanUser: async (targetUserId, hours, reason) => {
+        try {
+          const { error } = await supabase.rpc('rpc_admin_ban_user', {
+            p_target_user_id: targetUserId,
+            p_hours: hours,
+            p_reason: reason,
+          });
+
+          if (error) {
+            if (hours <= 0) {
+              await supabase
+                .from('profiles')
+                .update({ banned_until: null, ban_reason: null })
+                .eq('id', targetUserId);
+            } else {
+              const unbanDate = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+              await supabase
+                .from('profiles')
+                .update({ banned_until: unbanDate, ban_reason: reason })
+                .eq('id', targetUserId);
+            }
+          }
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khóa tài khoản', 'error');
+          return false;
+        }
+      },
+
+      adminDeleteUser: async (targetUserId) => {
+        try {
+          const { error } = await supabase.rpc('rpc_admin_delete_user', {
+            p_target_user_id: targetUserId,
+          });
+
+          if (error) {
+            await supabase.from('activity_logs').delete().eq('user_id', targetUserId);
+            await supabase.from('user_messages').delete().eq('receiver_id', targetUserId);
+            await supabase.from('user_states').delete().eq('user_id', targetUserId);
+            await supabase.from('profiles').delete().eq('id', targetUserId);
+          }
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi xóa tài khoản', 'error');
+          return false;
+        }
+      },
       isAddShopItemOpen: false,
       isAddRivalOpen: false,
       activePomodoroTaskId: null,
@@ -327,6 +681,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               p_difficulty: task.difficulty,
               p_focus_minutes: 0,
               p_is_focus_completed: false,
+              p_category: task.category,
             });
 
             if (rpcErr) {
@@ -361,75 +716,75 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           finalCoins = state.coins + awardedCoins + rankUpBonus;
         }
 
-          // Spawn floating reward & coin particles
-          if (coords) {
-            triggerCoinBurst(coords.x, coords.y, 8);
-            const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
-            const text = streakBonusMultiplier > 1
-              ? `+${awardedExp} EXP (+20% Streak!)  •  +${awardedCoins} Xu`
-              : `+${awardedExp} EXP  •  +${awardedCoins} Xu`;
-            set((prev) => ({
-              floatingRewards: [...prev.floatingRewards, { id: rewardId, x: coords.x, y: coords.y, text }],
-            }));
-            setTimeout(() => {
-              set((prev) => ({
-                floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
-              }));
-            }, 1400);
-          }
-
-          const today = getTodayString();
-          let newStreak = state.streakDays;
-          if (state.lastActiveDate !== today) {
-            newStreak = state.streakDays + 1;
-          }
-
+        // Spawn floating reward & coin particles
+        if (coords) {
+          triggerCoinBurst(coords.x, coords.y, 8);
+          const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
+          const text = streakBonusMultiplier > 1
+            ? `+${awardedExp} EXP (+20% Streak!)  •  +${awardedCoins} Xu`
+            : `+${awardedExp} EXP  •  +${awardedCoins} Xu`;
           set((prev) => ({
-            exp: newExp,
-            coins: finalCoins,
-            completedTotal: prev.completedTotal + 1,
-            dailyCompletedCount: prev.dailyCompletedCount + 1,
-            dailyBossCompletedCount: task.difficulty === 'boss' ? prev.dailyBossCompletedCount + 1 : prev.dailyBossCompletedCount,
-            streakDays: newStreak,
-            lastActiveDate: today,
-            lastCompletedTimestamp: now,
-            tasks: prev.tasks.map((t) =>
-              t.id === id
-                ? {
-                  ...t,
-                  completed: true,
-                  rewardClaimed: true,
-                  completedAt: now,
-                  lastAwardedExp: awardedExp,
-                  lastAwardedCoins: awardedCoins,
-                  lastRankUpBonus: rankUpBonus,
-                }
-                : t
-            ),
+            floatingRewards: [...prev.floatingRewards, { id: rewardId, x: coords.x, y: coords.y, text }],
           }));
+          setTimeout(() => {
+            set((prev) => ({
+              floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
+            }));
+          }, 1400);
+        }
 
-          get().checkSystemMilestones();
+        const today = getTodayString();
+        let newStreak = state.streakDays;
+        if (state.lastActiveDate !== today) {
+          newStreak = state.streakDays + 1;
+        }
 
-          if (newRankTier) {
-            triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
-            try {
-              confetti({
-                particleCount: 80,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
-              });
-            } catch (e) { }
-            playSoundEffect('rankup', state.soundEnabled);
-            set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
-          } else {
-            playSoundEffect('complete', state.soundEnabled);
-            get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
-          }
-          debouncedAutoSync(get());
-        },
+        set((prev) => ({
+          exp: newExp,
+          coins: finalCoins,
+          completedTotal: prev.completedTotal + 1,
+          dailyCompletedCount: prev.dailyCompletedCount + 1,
+          dailyBossCompletedCount: task.difficulty === 'boss' ? prev.dailyBossCompletedCount + 1 : prev.dailyBossCompletedCount,
+          streakDays: newStreak,
+          lastActiveDate: today,
+          lastCompletedTimestamp: now,
+          tasks: prev.tasks.map((t) =>
+            t.id === id
+              ? {
+                ...t,
+                completed: true,
+                rewardClaimed: true,
+                completedAt: now,
+                lastAwardedExp: awardedExp,
+                lastAwardedCoins: awardedCoins,
+                lastRankUpBonus: rankUpBonus,
+              }
+              : t
+          ),
+        }));
 
-        deleteTask: (id: string) => {
+        get().checkSystemMilestones();
+
+        if (newRankTier) {
+          triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
+          try {
+            confetti({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
+            });
+          } catch (e) { }
+          playSoundEffect('rankup', state.soundEnabled);
+          set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+        } else {
+          playSoundEffect('complete', state.soundEnabled);
+          get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
+        }
+        debouncedAutoSync(get());
+      },
+
+      deleteTask: (id: string) => {
         set((prev) => ({
           tasks: prev.tasks.filter((t) => t.id !== id),
         }));
@@ -469,6 +824,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               p_difficulty: task.difficulty,
               p_focus_minutes: cleanElapsed,
               p_is_focus_completed: true,
+              p_category: task.category,
             });
 
             if (rpcErr) {
@@ -567,7 +923,24 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       buyShopItem: async (itemId: string, coords) => {
         const state = get();
-        const item = state.shopItems.find((i) => i.id === itemId);
+        // Tìm trong custom shopItems hoặc systemShopItems
+        let item = state.shopItems.find((i) => i.id === itemId);
+        let isSystemItem = false;
+        if (!item) {
+          const cleanSysId = itemId.startsWith('sys_') ? itemId.replace('sys_', '') : itemId;
+          const sys = state.systemShopItems.find((s) => s.id === cleanSysId);
+          if (sys) {
+            item = {
+              id: `sys_${sys.id}`,
+              title: sys.name,
+              desc: sys.description,
+              cost: sys.cost,
+              emoji: sys.icon,
+              isSystem: true,
+            };
+            isSystemItem = true;
+          }
+        }
         if (!item) return;
 
         // Giới hạn sức chứa tối đa 50 vật phẩm
@@ -601,6 +974,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             if (rpcRes?.new_coins !== undefined) {
               finalCoins = rpcRes.new_coins;
             }
+
+            // Ghi nhật ký mua sắm vào activity_logs
+            await supabase.rpc('rpc_log_activity', {
+              p_action_type: 'SHOP_PURCHASE',
+              p_category: isSystemItem ? 'Vật Phẩm Hệ Thống' : 'Vật Phẩm Tự Thưởng',
+              p_difficulty: 'Normal',
+              p_exp_delta: 0,
+              p_coins_delta: -item.cost,
+            });
           } catch (e: any) {
             console.warn('RPC purchase_item error:', e);
           }
@@ -1013,6 +1395,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             isAchieved = state.focusSessionsCompleted >= (q.targetMilestone || 0);
           } else if (q.milestoneKey === 'rankIdx') {
             isAchieved = currentRankIdx >= (q.targetMilestone || 0);
+          } else {
+            isAchieved = state.exp >= (q.targetMilestone || 0);
           }
 
           if (isAchieved && !q.isCompleted) {
@@ -1180,16 +1564,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             setStoredHunterId(hunterId);
 
             // Fetch user profile and state from Supabase
-            const { data: profile } = await supabase
+            let { data: profile } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', hunterId)
-              .maybeSingle();
-
-            const { data: stateRow } = await supabase
-              .from('user_states')
-              .select('*')
-              .eq('user_id', hunterId)
               .maybeSingle();
 
             const hunterName =
@@ -1198,11 +1576,48 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               user.email?.split('@')[0] ||
               'Thợ Săn Fae';
 
+            // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
+            if (!profile) {
+              const { data: createdProfile } = await supabase
+                .from('profiles')
+                .insert({
+                  id: hunterId,
+                  username: hunterName,
+                  avatar_url: null,
+                  exp: 0,
+                  coins: 25,
+                  rank_id: 'dong',
+                  equipped_title: 'title_tan_binh_gai_do',
+                  role: 'user',
+                  streak: 0,
+                  completed_tasks_count: 0,
+                  updated_at: new Date().toISOString(),
+                })
+                .select('*')
+                .maybeSingle();
+              if (createdProfile) {
+                profile = createdProfile;
+              }
+            }
+
+            const { data: stateRow } = await supabase
+              .from('user_states')
+              .select('*')
+              .eq('user_id', hunterId)
+              .maybeSingle();
+
+            const userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
+            const bannedUntil = profile?.banned_until || null;
+            const banReason = profile?.ban_reason || null;
+
             if (stateRow?.state_json) {
               const s = stateRow.state_json;
               set({
                 currentUser: { id: user.id, email: user.email || '', name: hunterName },
                 hunterId,
+                userRole,
+                bannedUntil,
+                banReason,
                 playerName: s.playerName || hunterName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
                 exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
@@ -1253,6 +1668,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               set({
                 currentUser: { id: user.id, email: user.email || '', name: hunterName },
                 hunterId,
+                userRole,
+                bannedUntil,
+                banReason,
                 playerName: hunterName,
                 avatarUrl: profile?.avatar_url || '',
                 exp: profile?.exp || 0,
@@ -1276,6 +1694,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
               await get().syncToCloud(true);
             }
+
+            // Đồng bộ dữ liệu Live-Ops: Hộp thư, Cửa hàng hệ thống, Thành tựu động
+            get().fetchUserMessages();
+            get().fetchSystemShopItems();
+            get().fetchSystemAchievements();
           } else {
             set({ currentUser: null, authLoading: false });
           }
@@ -1472,16 +1895,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           setStoredHunterId(userId);
 
           // Load profile & state
-          const { data: profile } = await supabase
+          let { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
-            .maybeSingle();
-
-          const { data: stateRow } = await supabase
-            .from('user_states')
-            .select('*')
-            .eq('user_id', userId)
             .maybeSingle();
 
           const hunterName =
@@ -1490,11 +1907,48 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             cleanEmail.split('@')[0] ||
             'Thợ Săn Fae';
 
+          // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
+          if (!profile) {
+            const { data: createdProfile } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                username: hunterName,
+                avatar_url: null,
+                exp: 0,
+                coins: 25,
+                rank_id: 'dong',
+                equipped_title: 'title_tan_binh_gai_do',
+                role: 'user',
+                streak: 0,
+                completed_tasks_count: 0,
+                updated_at: new Date().toISOString(),
+              })
+              .select('*')
+              .maybeSingle();
+            if (createdProfile) {
+              profile = createdProfile;
+            }
+          }
+
+          const { data: stateRow } = await supabase
+            .from('user_states')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          const userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
+          const bannedUntil = profile?.banned_until || null;
+          const banReason = profile?.ban_reason || null;
+
           if (stateRow?.state_json) {
             const s = stateRow.state_json;
             set({
               currentUser: { id: userId, email: cleanEmail, name: hunterName },
               hunterId: userId,
+              userRole,
+              bannedUntil,
+              banReason,
               playerName: s.playerName || hunterName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
               exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
@@ -1544,6 +1998,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             set({
               currentUser: { id: userId, email: cleanEmail, name: hunterName },
               hunterId: userId,
+              userRole,
+              bannedUntil,
+              banReason,
               playerName: hunterName,
               avatarUrl: profile?.avatar_url || '',
               exp: profile?.exp || 0,
@@ -1565,6 +2022,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
             await get().syncToCloud(true);
           }
+
+          // Đồng bộ dữ liệu Live-Ops
+          get().fetchUserMessages();
+          get().fetchSystemShopItems();
+          get().fetchSystemAchievements();
 
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');
@@ -1594,6 +2056,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         // 3. Reset in-memory store
         set({
           currentUser: null,
+          userRole: 'user',
+          bannedUntil: null,
+          banReason: null,
+          userMessages: [],
+          unreadMessagesCount: 0,
+          activeWarningMessage: null,
+          isUserInboxOpen: false,
           hunterId: getOrInitHunterId(),
           playerName: 'Thợ Săn Fae',
           avatarUrl: '',

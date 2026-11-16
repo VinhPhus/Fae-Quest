@@ -44,6 +44,7 @@ export interface ShopItem {
   desc: string;
   cost: number;
   emoji: string;
+  isSystem?: boolean;
 }
 
 export interface InventoryTicket {
@@ -81,7 +82,75 @@ export interface ToastMessage {
   type: 'success' | 'info' | 'error';
 }
 
-export type ActiveTab = 'quests' | 'system-quests' | 'shop' | 'leaderboard' | 'inventory' | 'analytics';
+export type ActiveTab = 'quests' | 'system-quests' | 'shop' | 'leaderboard' | 'inventory' | 'analytics' | 'admin';
+
+export type UserRole = 'user' | 'admin';
+
+export interface ActivityLog {
+  id: string;
+  user_id: string;
+  username?: string;
+  action_type: 'TASK_COMPLETE' | 'FOCUS_COMPLETE' | 'SHOP_PURCHASE' | 'STREAK_CHECKIN';
+  category?: string;
+  difficulty?: string;
+  exp_delta: number;
+  coins_delta: number;
+  is_flagged: boolean;
+  flag_reason?: string;
+  created_at: string;
+}
+
+export interface UserMessage {
+  id: string;
+  receiver_id: string;
+  subject: string;
+  content: string;
+  message_type: 'warning' | 'notice' | 'gift';
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface SystemShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  icon: string;
+  is_system: boolean;
+  created_at?: string;
+}
+
+export interface SystemAchievement {
+  id: string;
+  title: string;
+  description: string;
+  icon_url: string;
+  category: string;
+  rarity: 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
+  achievement_type: 'streak_counter' | 'milestone_tasks' | 'milestone_exp' | 'milestone_focus';
+  target_value: number;
+  reward_exp: number;
+  reward_coins: number;
+  granted_title_name?: string;
+  created_at?: string;
+}
+
+export interface AdminUserOverview {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  exp: number;
+  coins: number;
+  rank_id: string;
+  equipped_title?: string;
+  role: UserRole;
+  banned_until?: string | null;
+  ban_reason?: string | null;
+  updated_at: string;
+  flagged_count_24h?: number;
+  exp_gained_24h?: number;
+  latest_flag_reason?: string | null;
+}
 
 export type SystemQuestType = 'streak_counter' | 'milestone';
 

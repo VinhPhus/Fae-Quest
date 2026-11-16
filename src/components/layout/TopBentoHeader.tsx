@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SYSTEM_TITLES } from '../../constants/systemQuests';
-import { Search, X, Scroll, Settings, Plus } from 'lucide-react';
+import { Search, X, Scroll, Settings, Plus, Mail } from 'lucide-react';
 
 export const TopBentoHeader: React.FC = () => {
   const {
@@ -13,6 +13,8 @@ export const TopBentoHeader: React.FC = () => {
     setCreateQuestOpen,
     searchQuery,
     setSearchQuery,
+    unreadMessagesCount,
+    setUserInboxOpen,
   } = useFaeQuestStore();
 
   const titleObj = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
@@ -79,6 +81,21 @@ export const TopBentoHeader: React.FC = () => {
             </button>
           )}
         </div>
+
+        {/* 📬 User Inbox Button with Red Badge */}
+        <button
+          type="button"
+          onClick={() => setUserInboxOpen(true)}
+          className="relative p-2 sm:p-2.5 rounded-full bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white hover:scale-105 active:scale-95 transition shadow-sm cursor-pointer shrink-0"
+          title={unreadMessagesCount > 0 ? `Hộp Thư (${unreadMessagesCount} chưa đọc)` : 'Hộp Thư Thợ Săn'}
+        >
+          <Mail className="w-4 h-4 text-[#CCD0CF]" />
+          {unreadMessagesCount > 0 && (
+            <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-rose-500 text-white shadow-sm border border-[#06141B] animate-pulse">
+              {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+            </span>
+          )}
+        </button>
 
         {/* Hunter's Oath Quick Button (chỉ hiện trên Mobile < md) */}
         <button

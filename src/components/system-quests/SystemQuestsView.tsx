@@ -134,10 +134,9 @@ export const SystemQuestsView: React.FC = () => {
             return (
               <div
                 key={title.id}
-                className={`rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between gap-3 relative group ${
-                  isEquipped
-                    ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-[#CCD0CF] ring-2 ring-[#CCD0CF]/40 shadow-lg scale-[1.02]'
-                    : isUnlocked
+                className={`rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between gap-3 relative group ${isEquipped
+                  ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-[#CCD0CF] ring-2 ring-[#CCD0CF]/40 shadow-lg scale-[1.02]'
+                  : isUnlocked
                     ? 'bg-thorn-dark/80 hover:bg-thorn border-opal/40 hover:border-fae/50 hover:scale-105 shadow-md'
                     : 'bg-thorn-dark/40 border-parchment/10 opacity-60'
                   }`}
@@ -363,10 +362,9 @@ export const SystemQuestsView: React.FC = () => {
                       <button
                         onClick={() => checkInStreakQuest(quest.id)}
                         disabled={isCheckedInToday || isResetToday}
-                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${
-                          isResetToday
-                            ? 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] cursor-not-allowed shadow-inner'
-                            : isCheckedInToday
+                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${isResetToday
+                          ? 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] cursor-not-allowed shadow-inner'
+                          : isCheckedInToday
                             ? 'bg-thorn-dark text-parchment/40 border border-parchment/15 cursor-not-allowed'
                             : 'rpg-btn-primary text-parchment shadow-lg hover:scale-105'
                           }`}
@@ -475,6 +473,9 @@ export const SystemQuestsView: React.FC = () => {
             } else if (quest.milestoneKey === 'rankIdx') {
               currentVal = currentRankIdx;
               metricName = `Rank: ${currentTier.name}`;
+            } else {
+              currentVal = exp;
+              metricName = 'EXP';
             }
 
             const isDone = quest.isCompleted;

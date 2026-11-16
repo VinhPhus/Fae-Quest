@@ -14,6 +14,8 @@ import {
   Scroll,
   ChevronLeft,
   ChevronRight,
+  ShieldAlert,
+  Mail,
 } from 'lucide-react';
 
 export const LeftSidebar: React.FC = () => {
@@ -29,6 +31,9 @@ export const LeftSidebar: React.FC = () => {
     setOathOpen,
     isSidebarCollapsed,
     toggleSidebar,
+    userRole,
+    unreadMessagesCount,
+    setUserInboxOpen,
   } = useFaeQuestStore();
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
@@ -94,6 +99,16 @@ export const LeftSidebar: React.FC = () => {
       mobileLabel: 'Thống Kê',
       icon: <BarChart2 className="w-5 h-5 shrink-0" />,
     },
+    ...(userRole === 'admin'
+      ? [
+          {
+            id: 'admin' as ActiveTab,
+            label: '🛡️ Quản Trị Hệ Thống',
+            mobileLabel: 'Admin',
+            icon: <ShieldAlert className="w-5 h-5 shrink-0 text-amber-300" />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -329,8 +344,19 @@ export const LeftSidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Quick Action Buttons (Khế Ước & Cài Đặt) */}
+        {/* Right: Quick Action Buttons (Hộp Thư, Khế Ước & Cài Đặt) */}
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setUserInboxOpen(true)}
+            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm relative cursor-pointer"
+            title="Hộp Thư Thợ Săn"
+          >
+            <Mail className="w-4 h-4" />
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 border border-[#06141B] animate-pulse" />
+            )}
+          </button>
+
           <button
             onClick={() => setOathOpen(true)}
             className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm"

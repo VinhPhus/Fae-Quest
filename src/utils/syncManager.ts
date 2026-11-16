@@ -74,15 +74,35 @@ export const syncProfileAndStateToCloud = async (
     const rankIdx = getRankIndexByExp(state.exp);
     const tier = RANK_TIERS[rankIdx];
 
-    // 1. Cập nhật thông tin hiển thị trên public.profiles
-    // (RLS bảo vệ: Client chỉ được phép cập nhật username, avatar_url, equipped_title;
-    // còn exp, coins, rank_id, streak được tính toán & cập nhật độc quyền bởi Server-Side RPC)
-    await supabase.from('profiles').update({
-      username: state.playerName || 'Thợ Săn Fae',
-      avatar_url: state.avatarUrl || null,
-      equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
-      updated_at: new Date().toISOString(),
-    }).eq('id', hunterId);
+    // 1. Cập nhật hoặc khởi tạo thông tin trên public.profiles
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', hunterId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      await supabase.from('profiles').insert({
+        id: hunterId,
+        username: state.playerName || 'Thợ Săn Fae',
+        avatar_url: state.avatarUrl || null,
+        exp: state.exp || 0,
+        coins: state.coins || 25,
+        rank_id: 'dong',
+        equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
+        streak: state.streakDays || 0,
+        completed_tasks_count: state.completedTotal || 0,
+        role: 'user',
+        updated_at: new Date().toISOString(),
+      });
+    } else {
+      await supabase.from('profiles').update({
+        username: state.playerName || 'Thợ Săn Fae',
+        avatar_url: state.avatarUrl || null,
+        equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
+        updated_at: new Date().toISOString(),
+      }).eq('id', hunterId);
+    }
 
     // 2. Upsert public.user_states (Lưu snapshot nhiệm vụ, shop, kho đồ của chính user)
     const { error: stateErr } = await supabase.from('user_states').upsert(

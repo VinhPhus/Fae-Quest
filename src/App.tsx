@@ -28,6 +28,10 @@ import { RenameModal } from './components/modals/RenameModal';
 import { ResetModal } from './components/modals/ResetModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { HuntersOathModal } from './components/modals/HuntersOathModal';
+import { UserInboxModal } from './components/modals/UserInboxModal';
+import { AdminWarningModal } from './components/modals/AdminWarningModal';
+import { AdminPortalView } from './components/admin/AdminPortalView';
+import { BannedScreen } from './components/auth/BannedScreen';
 import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
@@ -39,6 +43,7 @@ export const App: React.FC = () => {
     authLoading,
     initAuth,
     activeTab,
+    bannedUntil,
     checkDailyReset,
     checkSystemMilestones,
     cleanupExpiredInventory,
@@ -94,6 +99,20 @@ export const App: React.FC = () => {
     return (
       <>
         <AuthScreen />
+        <Toast />
+      </>
+    );
+  }
+
+  // Kiểm tra tài khoản bị tạm khóa (Banned until > NOW)
+  const isAccountBanned = Boolean(
+    bannedUntil && new Date(bannedUntil).getTime() > Date.now()
+  );
+
+  if (isAccountBanned) {
+    return (
+      <>
+        <BannedScreen />
         <Toast />
       </>
     );
@@ -185,6 +204,13 @@ export const App: React.FC = () => {
               <ProductivityAnalytics />
             </section>
           )}
+
+          {/* Tab: Admin Live-Ops Portal */}
+          {activeTab === 'admin' && (
+            <section className="animate-in fade-in duration-200">
+              <AdminPortalView />
+            </section>
+          )}
         </main>
       </div>
 
@@ -199,6 +225,8 @@ export const App: React.FC = () => {
       <PomodoroTimerModal />
       <HuntersOathModal />
       <CreateQuestDrawer />
+      <UserInboxModal />
+      <AdminWarningModal />
 
       {/* Interactive FX */}
       <FloatingReward />
