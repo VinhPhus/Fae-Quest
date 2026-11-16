@@ -11,7 +11,7 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
-export type SoundType = 'complete' | 'rankup' | 'coin' | 'timer' | 'click' | 'warning' | 'unseal' | 'stamp' | 'potion';
+export type SoundType = 'complete' | 'rankup' | 'coin' | 'timer' | 'click' | 'warning' | 'unseal' | 'stamp' | 'potion' | 'trash';
 
 export function playSoundEffect(type: SoundType, enabled = true) {
   if (!enabled || typeof window === 'undefined') return;
@@ -181,6 +181,19 @@ export function playSoundEffect(type: SoundType, enabled = true) {
         osc.start(now + idx * 0.06);
         osc.stop(now + idx * 0.06 + 0.46);
       });
+    } else if (type === 'trash') {
+      // Discard / crumple sound: crisp filtered sweep
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(340, now);
+      osc.frequency.exponentialRampToValueAtTime(75, now + 0.14);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
     }
   } catch (err) {
     console.debug('Audio playback error (ignorable):', err);

@@ -16,7 +16,7 @@ import {
   Sparkles,
   Coins,
   Star,
-  Package,
+  Trash2,
 } from 'lucide-react';
 
 export const UserInboxModal: React.FC = () => {
@@ -28,11 +28,14 @@ export const UserInboxModal: React.FC = () => {
     markMessageAsRead,
     markAllMessagesAsRead,
     claimMailReward,
+    deleteUserMessage,
+    clearClaimedMessages,
   } = useFaeQuestStore();
 
   const [activeTab, setActiveTab] = useState<'all' | 'warning' | 'notice' | 'gift'>('all');
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   if (!isUserInboxOpen) return null;
 
@@ -81,6 +84,16 @@ export const UserInboxModal: React.FC = () => {
       await claimMailReward(msgId);
     } finally {
       setClaimingId(null);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, msgId: string) => {
+    e.stopPropagation();
+    setDeletingId(msgId);
+    try {
+      await deleteUserMessage(msgId);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -135,7 +148,7 @@ export const UserInboxModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter Navigation Tabs */}
+        {/* Filter Navigation Tabs & Batch Clean Action */}
         <div className="px-5 sm:px-6 pt-3 pb-2 border-b border-[#253745] flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
           <div className="flex items-center gap-2">
             {[
@@ -159,15 +172,29 @@ export const UserInboxModal: React.FC = () => {
             ))}
           </div>
 
-          {unreadMessagesCount > 0 && (
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Quick Clean Claimed / Read Messages */}
             <button
               type="button"
-              onClick={() => markAllMessagesAsRead()}
-              className="sm:hidden text-xs text-[#9BA8AB] hover:text-white underline shrink-0 cursor-pointer"
+              onClick={() => clearClaimedMessages()}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#253745]/70 hover:bg-rose-500/20 text-[#CCD0CF] hover:text-rose-300 border border-[#4A5C6A] hover:border-rose-500/40 transition cursor-pointer flex items-center gap-1.5"
+              title="Dọn dẹp nhanh các thư đã nhận quà hoặc đã đọc"
             >
-              Đã đọc hết
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Dọn thư đã nhận</span>
+              <span className="sm:hidden">Dọn dẹp</span>
             </button>
-          )}
+
+            {unreadMessagesCount > 0 && (
+              <button
+                type="button"
+                onClick={() => markAllMessagesAsRead()}
+                className="sm:hidden text-xs text-[#9BA8AB] hover:text-white underline shrink-0 cursor-pointer"
+              >
+                Đã đọc hết
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Messages List Body */}
@@ -201,6 +228,11 @@ export const UserInboxModal: React.FC = () => {
                 (msg.reward_stars && msg.reward_stars > 0) ||
                 (msg.reward_items && msg.reward_items.length > 0)
               );
+
+              // Điều kiện hiển thị nút Xóa:
+              // Chỉ cho phép xóa khi thư đã nhận quà (msg.is_claimed === true)
+              // hoặc là thư thông báo/cảnh báo không có quà đính kèm
+              const canDelete = msg.is_claimed || !hasRewards;
 
               return (
                 <div
@@ -245,7 +277,7 @@ export const UserInboxModal: React.FC = () => {
                           {hasRewards && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
                               <Gift className="w-3 h-3 text-emerald-400" />
-                              <span>Đính kèm quà</span>
+                              <span>{msg.is_claimed ? 'Đã nhận quà' : 'Đính kèm quà'}</span>
                             </span>
                           )}
 
@@ -271,12 +303,27 @@ export const UserInboxModal: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0 pt-1 text-[#9BA8AB]">
-                      {isExpanded ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 shrink-0 pt-0.5 text-[#9BA8AB]">
+                      {/* Quick Delete Button on Card Header (Only visible when allowed) */}
+                      {canDelete && (
+                        <button
+                          type="button"
+                          disabled={deletingId === msg.id}
+                          onClick={(e) => handleDelete(e, msg.id)}
+                          className="p-1.5 rounded-xl text-[#9BA8AB] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          title="Xóa thư này khỏi hộp thư"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       )}
+
+                      <div className="p-1">
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -340,7 +387,7 @@ export const UserInboxModal: React.FC = () => {
                               ))}
                           </div>
 
-                          {/* Action Button: Nhận Thưởng or Đã Nhận Quà */}
+                          {/* Action Button: Nhận Thưởng or Đã Nhận Quà kèm nút Xóa */}
                           <div className="pt-2 border-t border-[#253745]/60 flex items-center justify-between">
                             <span className="text-[11px] text-[#9BA8AB]">
                               {!msg.is_claimed
@@ -359,9 +406,21 @@ export const UserInboxModal: React.FC = () => {
                                 <span>{claimingId === msg.id ? 'Đang nhận quà...' : '✨ Nhận Thưởng'}</span>
                               </button>
                             ) : (
-                              <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#253745]/60 border border-[#4A5C6A]/50 text-[#9BA8AB] text-xs font-bold cursor-default">
-                                <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                <span>✔ Đã Nhận Quà</span>
+                              <div className="flex items-center gap-2">
+                                <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#253745]/60 border border-[#4A5C6A]/50 text-[#9BA8AB] text-xs font-bold cursor-default">
+                                  <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>✔ Đã Nhận Quà</span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={deletingId === msg.id}
+                                  onClick={(e) => handleDelete(e, msg.id)}
+                                  className="p-1.5 rounded-xl text-[#9BA8AB] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer border border-[#253745] hover:border-rose-500/30"
+                                  title="Xóa thư này"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                               </div>
                             )}
                           </div>
@@ -370,19 +429,32 @@ export const UserInboxModal: React.FC = () => {
 
                       <div className="flex items-center justify-between pt-1 border-t border-[#253745]/40 text-[11px] text-[#9BA8AB]">
                         <span>Hệ thống Live-Ops FaeQuest</span>
-                        {!msg.is_read && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markMessageAsRead(msg.id);
-                            }}
-                            className="text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Đánh dấu đã đọc</span>
-                          </button>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {canDelete && !hasRewards && (
+                            <button
+                              type="button"
+                              disabled={deletingId === msg.id}
+                              onClick={(e) => handleDelete(e, msg.id)}
+                              className="text-xs text-[#9BA8AB] hover:text-rose-400 flex items-center gap-1 transition cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Xóa thư</span>
+                            </button>
+                          )}
+                          {!msg.is_read && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markMessageAsRead(msg.id);
+                              }}
+                              className="text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Đánh dấu đã đọc</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

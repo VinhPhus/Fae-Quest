@@ -114,6 +114,8 @@ interface FaeQuestState {
   fetchUserMessages: () => Promise<void>;
   markMessageAsRead: (messageId: string) => Promise<void>;
   markAllMessagesAsRead: () => Promise<void>;
+  deleteUserMessage: (messageId: string) => Promise<boolean>;
+  clearClaimedMessages: () => Promise<number>;
   fetchSystemShopItems: () => Promise<void>;
   addSystemShopItem: (item: Omit<SystemShopItem, 'id' | 'created_at'>) => Promise<boolean>;
   updateSystemShopItem: (id: string, item: Partial<SystemShopItem>) => Promise<boolean>;
@@ -337,6 +339,87 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã đánh dấu tất cả thư là đã đọc', 'info');
         } catch (e) {
           console.error('Error marking all messages read:', e);
+        }
+      },
+
+      deleteUserMessage: async (messageId: string) => {
+        const state = get();
+        const msg = state.userMessages.find((m) => m.id === messageId);
+        if (!msg) return false;
+
+        const hasRewards = Boolean(
+          (msg.reward_exp && msg.reward_exp > 0) ||
+          (msg.reward_coins && msg.reward_coins > 0) ||
+          (msg.reward_stars && msg.reward_stars > 0) ||
+          (msg.reward_items && msg.reward_items.length > 0)
+        );
+
+        if (hasRewards && !msg.is_claimed) {
+          get().addToast('⚠️ Thư có phần thưởng chưa nhận, không thể xóa!', 'error');
+          return false;
+        }
+
+        try {
+          const { error } = await supabase.from('user_messages').delete().eq('id', messageId);
+          if (error) {
+            await supabase.rpc('rpc_delete_user_message', { p_message_id: messageId });
+          }
+
+          set((prev) => {
+            const filtered = prev.userMessages.filter((m) => m.id !== messageId);
+            return {
+              userMessages: filtered,
+              unreadMessagesCount: filtered.filter((m) => !m.is_read).length,
+            };
+          });
+
+          playSoundEffect('trash', get().soundEnabled);
+          get().addToast('🗑️ Đã xóa thư khỏi hộp thư.', 'info');
+          return true;
+        } catch (err: any) {
+          get().addToast(err.message || 'Lỗi khi xóa thư', 'error');
+          return false;
+        }
+      },
+
+      clearClaimedMessages: async () => {
+        const state = get();
+        const deletable = state.userMessages.filter((m) => {
+          const hasRewards = Boolean(
+            (m.reward_exp && m.reward_exp > 0) ||
+            (m.reward_coins && m.reward_coins > 0) ||
+            (m.reward_stars && m.reward_stars > 0) ||
+            (m.reward_items && m.reward_items.length > 0)
+          );
+          return m.is_claimed || (!hasRewards && m.is_read);
+        });
+
+        if (deletable.length === 0) {
+          get().addToast('Không có thư đã nhận hoặc đã đọc nào để dọn dẹp', 'info');
+          return 0;
+        }
+
+        const ids = deletable.map((m) => m.id);
+        try {
+          const { error } = await supabase.from('user_messages').delete().in('id', ids);
+          if (error) {
+            await supabase.rpc('rpc_clear_claimed_user_messages');
+          }
+
+          set((prev) => {
+            const remaining = prev.userMessages.filter((m) => !ids.includes(m.id));
+            return {
+              userMessages: remaining,
+              unreadMessagesCount: remaining.filter((m) => !m.is_read).length,
+            };
+          });
+
+          playSoundEffect('trash', get().soundEnabled);
+          get().addToast(`🗑️ Đã dọn dẹp ${ids.length} thư khỏi hộp thư thành công!`, 'success');
+          return ids.length;
+        } catch (err: any) {
+          get().addToast(err.message || 'Lỗi khi dọn dẹp hộp thư', 'error');
+          return 0;
         }
       },
 

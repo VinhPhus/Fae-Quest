@@ -227,6 +227,24 @@ TO authenticated
 USING (auth.uid()::text = receiver_id)
 WITH CHECK (auth.uid()::text = receiver_id);
 
+DROP POLICY IF EXISTS "Users can delete own messages" ON public.user_messages;
+CREATE POLICY "Users can delete own messages"
+ON public.user_messages
+FOR DELETE
+TO authenticated
+USING (
+  auth.uid()::text = receiver_id
+  AND (
+    is_claimed = TRUE
+    OR (
+      COALESCE(reward_exp, 0) = 0
+      AND COALESCE(reward_coins, 0) = 0
+      AND COALESCE(reward_stars, 0) = 0
+      AND (reward_items IS NULL OR jsonb_array_length(reward_items) = 0)
+    )
+  )
+);
+
 -- 8.3. RLS cho system_shop_items
 DROP POLICY IF EXISTS "Public can view system shop items" ON public.system_shop_items;
 DROP POLICY IF EXISTS "Admins can manage system shop items" ON public.system_shop_items;
@@ -446,6 +464,89 @@ BEGIN
     'reward_stars', COALESCE(v_msg.reward_stars, 0),
     'reward_items', COALESCE(v_msg.reward_items, '[]'::jsonb)
   );
+END;
+$$;
+
+-- 10.1c. Xóa thư của người dùng (Bảo vệ: không xóa thư có quà chưa nhận)
+CREATE OR REPLACE FUNCTION public.rpc_delete_user_message(
+  p_message_id UUID
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id TEXT;
+  v_msg RECORD;
+BEGIN
+  v_user_id := auth.uid()::text;
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: Vui lòng đăng nhập để xóa thư.';
+  END IF;
+
+  SELECT * INTO v_msg
+  FROM public.user_messages
+  WHERE id = p_message_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'NotFound');
+  END IF;
+
+  IF v_msg.receiver_id != v_user_id AND NOT public.fn_is_admin() THEN
+    RAISE EXCEPTION 'Forbidden: Bạn không có quyền xóa thư này.';
+  END IF;
+
+  IF NOT v_msg.is_claimed AND (
+    COALESCE(v_msg.reward_exp, 0) > 0 OR
+    COALESCE(v_msg.reward_coins, 0) > 0 OR
+    COALESCE(v_msg.reward_stars, 0) > 0 OR
+    (v_msg.reward_items IS NOT NULL AND jsonb_array_length(v_msg.reward_items) > 0)
+  ) THEN
+    RAISE EXCEPTION 'UnclaimedReward: Thư có phần thưởng chưa nhận, không thể xóa!';
+  END IF;
+
+  DELETE FROM public.user_messages WHERE id = p_message_id;
+
+  RETURN jsonb_build_object('success', true, 'deleted_id', p_message_id);
+END;
+$$;
+
+-- 10.1d. Dọn dẹp nhanh các thư đã nhận quà hoặc đã đọc không có quà
+CREATE OR REPLACE FUNCTION public.rpc_clear_claimed_user_messages()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id TEXT;
+  v_deleted_count INT;
+BEGIN
+  v_user_id := auth.uid()::text;
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: Vui lòng đăng nhập.';
+  END IF;
+
+  WITH deleted AS (
+    DELETE FROM public.user_messages
+    WHERE receiver_id = v_user_id
+    AND (
+      is_claimed = TRUE
+      OR (
+        is_read = TRUE
+        AND COALESCE(reward_exp, 0) = 0
+        AND COALESCE(reward_coins, 0) = 0
+        AND COALESCE(reward_stars, 0) = 0
+        AND (reward_items IS NULL OR jsonb_array_length(reward_items) = 0)
+      )
+    )
+    RETURNING id
+  )
+  SELECT count(*) INTO v_deleted_count FROM deleted;
+
+  RETURN jsonb_build_object('success', true, 'deleted_count', v_deleted_count);
 END;
 $$;
 
@@ -833,6 +934,8 @@ GRANT EXECUTE ON FUNCTION public.fn_record_activity_log(TEXT, TEXT, TEXT, TEXT, 
 GRANT EXECUTE ON FUNCTION public.rpc_log_activity(TEXT, TEXT, TEXT, INT, INT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_send_mail(TEXT, TEXT, TEXT, TEXT, INT, INT, INT, JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_claim_mail_reward(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_delete_user_message(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_clear_claimed_user_messages() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_ban_user(TEXT, INT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_delete_user(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_get_users_overview() TO authenticated;
