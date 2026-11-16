@@ -15,6 +15,7 @@ import {
   Trophy,
   Sparkles,
   Scroll,
+  Star,
 } from 'lucide-react';
 
 export const HeroBentoBanner: React.FC = () => {
@@ -23,6 +24,7 @@ export const HeroBentoBanner: React.FC = () => {
     avatarUrl,
     setAvatarUrl,
     exp,
+    stars,
     streakDays,
     rivals,
     setRoadmapOpen,
@@ -139,6 +141,12 @@ export const HeroBentoBanner: React.FC = () => {
               <Trophy className="w-3 h-3 text-amber-300" />
               <span>#{playerRankPos} BXH Đấu Trường</span>
             </span>
+            {stars > 0 && (
+              <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-yellow-500/15 border border-yellow-400/40 text-yellow-300 flex items-center gap-1 shadow-sm">
+                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                <span>⭐ {stars} Sao Vinh Dự</span>
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setOathOpen(true)}

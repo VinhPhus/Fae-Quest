@@ -150,9 +150,8 @@ export const HuntersOathModal: React.FC = () => {
           >
             {/* Shimmering Halo when hovered */}
             <div
-              className={`absolute inset-0 bg-gradient-to-r from-[#CCD0CF]/10 via-[#4A5C6A]/20 to-[#CCD0CF]/10 rounded-3xl blur-2xl transition-opacity duration-500 pointer-events-none ${
-                isHovered ? 'opacity-100 scale-110' : 'opacity-40 scale-95'
-              }`}
+              className={`absolute inset-0 bg-gradient-to-r from-[#CCD0CF]/10 via-[#4A5C6A]/20 to-[#CCD0CF]/10 rounded-3xl blur-2xl transition-opacity duration-500 pointer-events-none ${isHovered ? 'opacity-100 scale-110' : 'opacity-40 scale-95'
+                }`}
             />
 
             {/* 3D CLOSED SCROLL CYLINDER TUBE */}

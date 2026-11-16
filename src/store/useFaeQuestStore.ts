@@ -19,6 +19,7 @@ import {
   SystemShopItem,
   SystemAchievement,
   UserMessage,
+  MailRewardItem,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -47,6 +48,7 @@ interface FaeQuestState {
   avatarUrl: string;
   exp: number;
   coins: number;
+  stars: number;
   completedTotal: number;
   streakDays: number;
   lastActiveDate: string;
@@ -119,7 +121,17 @@ interface FaeQuestState {
   fetchSystemAchievements: () => Promise<void>;
   addSystemAchievement: (achievement: Omit<SystemAchievement, 'id' | 'created_at'>) => Promise<boolean>;
   deleteSystemAchievement: (id: string) => Promise<boolean>;
-  adminSendMail: (receiverId: string, subject: string, content: string, type: 'warning' | 'notice' | 'gift') => Promise<boolean>;
+  adminSendMail: (
+    receiverId: string,
+    subject: string,
+    content: string,
+    type?: 'warning' | 'notice' | 'gift',
+    rewardExp?: number,
+    rewardCoins?: number,
+    rewardStars?: number,
+    rewardItems?: MailRewardItem[]
+  ) => Promise<boolean>;
+  claimMailReward: (messageId: string) => Promise<{ success: boolean; error?: string }>;
   adminBanUser: (targetUserId: string, hours: number, reason: string) => Promise<boolean>;
   adminDeleteUser: (targetUserId: string) => Promise<boolean>;
   adminSetUserRole: (targetUserId: string, newRole: UserRole) => Promise<boolean>;
@@ -207,6 +219,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       avatarUrl: '',
       exp: 0,
       coins: 25,
+      stars: 0,
       completedTotal: 0,
       streakDays: 0,
       lastActiveDate: getTodayString(),
@@ -491,13 +504,26 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
-      adminSendMail: async (receiverId, subject, content, type) => {
+      adminSendMail: async (
+        receiverId,
+        subject,
+        content,
+        type = 'notice',
+        rewardExp = 0,
+        rewardCoins = 0,
+        rewardStars = 0,
+        rewardItems = []
+      ) => {
         try {
           const { error } = await supabase.rpc('rpc_admin_send_mail', {
             p_receiver_id: receiverId,
             p_subject: subject,
             p_content: content,
             p_type: type,
+            p_reward_exp: rewardExp,
+            p_reward_coins: rewardCoins,
+            p_reward_stars: rewardStars,
+            p_reward_items: rewardItems,
           });
 
           if (error) {
@@ -507,6 +533,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               content,
               message_type: type,
               is_read: false,
+              reward_exp: rewardExp,
+              reward_coins: rewardCoins,
+              reward_stars: rewardStars,
+              reward_items: rewardItems,
+              is_claimed: false,
             });
             if (insErr) throw insErr;
           }
@@ -514,6 +545,79 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         } catch (e: any) {
           get().addToast(e.message || 'Lỗi khi gửi thư', 'error');
           return false;
+        }
+      },
+
+      claimMailReward: async (messageId: string) => {
+        const state = get();
+        const msg = state.userMessages.find((m) => m.id === messageId);
+        if (!msg) {
+          get().addToast('Không tìm thấy thư yêu cầu nhận thưởng', 'error');
+          return { success: false, error: 'Thư không tồn tại' };
+        }
+
+        if (msg.is_claimed) {
+          get().addToast('Phần thưởng trong thư này đã được nhận rồi!', 'info');
+          return { success: false, error: 'Đã nhận thưởng' };
+        }
+
+        const rewardItems = msg.reward_items || [];
+        const itemsCount = rewardItems.reduce((acc, it) => acc + (it.count || 1), 0);
+        if (state.inventory.length + itemsCount > 50) {
+          get().addToast('⚠️ Túi Đồ đã đầy (tối đa 50 ô). Hãy dùng bớt vật phẩm trong Túi Đồ trước khi nhận thưởng!', 'error');
+          return { success: false, error: 'Túi Đồ đã đầy (tối đa 50 ô)' };
+        }
+
+        try {
+          const { data, error } = await supabase.rpc('rpc_claim_mail_reward', {
+            p_message_id: messageId,
+          });
+
+          if (error) {
+            get().addToast(`⚠️ Lỗi khi nhận quà: ${error.message}`, 'error');
+            return { success: false, error: error.message };
+          }
+
+          const newExp = data?.new_exp ?? (state.exp + (msg.reward_exp || 0));
+          const newCoins = data?.new_coins ?? (state.coins + (msg.reward_coins || 0));
+          const newStars = data?.new_stars ?? (state.stars + (msg.reward_stars || 0));
+          const claimedItems = (data?.reward_items || rewardItems) as MailRewardItem[];
+
+          // Chuyển reward_items thành InventoryTicket với thời hạn 7 ngày
+          const newTickets: InventoryTicket[] = (claimedItems || []).flatMap((it) => {
+            const count = it.count || 1;
+            return Array.from({ length: count }, (_, idx) => ({
+              id: `mail_reward_${Date.now()}_${it.id}_${idx}_${Math.random().toString(36).substring(2, 6)}`,
+              title: it.name,
+              emoji: it.icon,
+              cost: it.cost || 0,
+              redeemedAt: new Date().toISOString(),
+              purchasedAt: Date.now(),
+              expiresAt: Date.now() + 7 * 24 * 3600 * 1000, // Hạn sử dụng 7 ngày
+              used: false,
+              isSystem: true,
+            }));
+          });
+
+          set((prev) => ({
+            exp: newExp,
+            coins: newCoins,
+            stars: newStars,
+            inventory: [...newTickets, ...prev.inventory],
+            userMessages: prev.userMessages.map((m) =>
+              m.id === messageId
+                ? { ...m, is_claimed: true, is_read: true, claimed_at: new Date().toISOString() }
+                : m
+            ),
+          }));
+
+          playSoundEffect('rankup', get().soundEnabled);
+          get().addToast('🎁 Nhận toàn bộ phần thưởng thành công! Vật phẩm đã được chuyển vào Túi Đồ.', 'success');
+          debouncedAutoSync(get());
+          return { success: true };
+        } catch (err: any) {
+          get().addToast(err.message || 'Lỗi khi nhận thưởng', 'error');
+          return { success: false, error: err.message };
         }
       },
 
@@ -699,12 +803,25 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         // BẢO MẬT MÁY CHỦ: Xác thực qua Server-Side RPC
         if (state.currentUser) {
           try {
-            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
+            let { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
               p_difficulty: task.difficulty,
               p_focus_minutes: 0,
               p_is_focus_completed: false,
               p_category: task.category,
             });
+
+            if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
+              try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+              await get().syncToCloud(true);
+              const retry = await supabase.rpc('rpc_complete_task', {
+                p_difficulty: task.difficulty,
+                p_focus_minutes: 0,
+                p_is_focus_completed: false,
+                p_category: task.category,
+              });
+              rpcRes = retry.data;
+              rpcErr = retry.error;
+            }
 
             if (rpcErr) {
               playSoundEffect('warning', state.soundEnabled);
@@ -842,12 +959,25 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         // BẢO MẬT MÁY CHỦ: Gọi Server RPC
         if (state.currentUser) {
           try {
-            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
+            let { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
               p_difficulty: task.difficulty,
               p_focus_minutes: cleanElapsed,
               p_is_focus_completed: true,
               p_category: task.category,
             });
+
+            if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
+              try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+              await get().syncToCloud(true);
+              const retry = await supabase.rpc('rpc_complete_task', {
+                p_difficulty: task.difficulty,
+                p_focus_minutes: cleanElapsed,
+                p_is_focus_completed: true,
+                p_category: task.category,
+              });
+              rpcRes = retry.data;
+              rpcErr = retry.error;
+            }
 
             if (rpcErr) {
               playSoundEffect('warning', state.soundEnabled);
@@ -1606,34 +1736,44 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
             if (!profile) {
-              const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
-              const { data: createdProfile } = await supabase
+              try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+              const { data: refetched } = await supabase
                 .from('profiles')
-                .insert({
-                  id: hunterId,
-                  username: hunterName,
-                  avatar_url: null,
-                  exp: 0,
-                  coins: 25,
-                  rank_id: 'dong',
-                  equipped_title: 'title_tan_binh_gai_do',
-                  role: defaultRole,
-                  streak: 0,
-                  completed_tasks_count: 0,
-                  updated_at: new Date().toISOString(),
-                })
                 .select('*')
+                .eq('id', hunterId)
                 .maybeSingle();
-              if (createdProfile) {
-                profile = createdProfile;
+              if (refetched) {
+                profile = refetched;
+              } else {
+                const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
+                const { data: createdProfile } = await supabase
+                  .from('profiles')
+                  .insert({
+                    id: hunterId,
+                    username: hunterName,
+                    avatar_url: null,
+                    exp: 0,
+                    coins: 25,
+                    rank_id: 'dong',
+                    equipped_title: 'title_tan_binh_gai_do',
+                    role: defaultRole,
+                    streak: 0,
+                    completed_tasks_count: 0,
+                    stars: 0,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .select('*')
+                  .maybeSingle();
+                if (createdProfile) {
+                  profile = createdProfile;
+                }
               }
             }
 
-            let userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
+            let userRole: UserRole = (profile?.role === 'admin' || isAdminCandidate) ? 'admin' : 'user';
             // Tự động đồng bộ quyền Admin nếu tài khoản thuộc diện Quản Trị nhưng chưa được gán role
-            if (userRole !== 'admin' && isAdminCandidate) {
-              userRole = 'admin';
-              await supabase.from('profiles').update({ role: 'admin' }).eq('id', hunterId);
+            if (profile?.role !== 'admin' && isAdminCandidate) {
+              try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: hunterId, p_new_role: 'admin' }); } catch {}
             }
 
             const { data: stateRow } = await supabase
@@ -1664,6 +1804,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
                 exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
                 coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
+                stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
                 completedTotal: profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0),
                 streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
                 dailyCompletedCount: s.dailyCompletedCount || 0,
@@ -1719,6 +1860,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 avatarUrl: profile?.avatar_url || '',
                 exp: profile?.exp || 0,
                 coins: profile?.coins || 25,
+                stars: profile?.stars || 0,
                 completedTotal: 0,
                 streakDays: 0,
                 dailyCompletedCount: 0,
@@ -1856,6 +1998,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               avatarUrl: '',
               exp: 0,
               coins: 25,
+              stars: 0,
               completedTotal: 0,
               streakDays: 0,
               dailyCompletedCount: 0,
@@ -1898,6 +2041,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 avatarUrl: '',
                 exp: 0,
                 coins: 25,
+                stars: 0,
                 completedTotal: 0,
                 streakDays: 0,
                 dailyCompletedCount: 0,
@@ -1978,34 +2122,44 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
           if (!profile) {
-            const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
-            const { data: createdProfile } = await supabase
+            try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+            const { data: refetched } = await supabase
               .from('profiles')
-              .insert({
-                id: userId,
-                username: hunterName,
-                avatar_url: null,
-                exp: 0,
-                coins: 25,
-                rank_id: 'dong',
-                equipped_title: 'title_tan_binh_gai_do',
-                role: defaultRole,
-                streak: 0,
-                completed_tasks_count: 0,
-                updated_at: new Date().toISOString(),
-              })
               .select('*')
+              .eq('id', userId)
               .maybeSingle();
-            if (createdProfile) {
-              profile = createdProfile;
+            if (refetched) {
+              profile = refetched;
+            } else {
+              const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
+              const { data: createdProfile } = await supabase
+                .from('profiles')
+                .insert({
+                  id: userId,
+                  username: hunterName,
+                  avatar_url: null,
+                  exp: 0,
+                  coins: 25,
+                  stars: 0,
+                  rank_id: 'dong',
+                  equipped_title: 'title_tan_binh_gai_do',
+                  role: defaultRole,
+                  streak: 0,
+                  completed_tasks_count: 0,
+                  updated_at: new Date().toISOString(),
+                })
+                .select('*')
+                .maybeSingle();
+              if (createdProfile) {
+                profile = createdProfile;
+              }
             }
           }
 
-          let userRole: UserRole = profile?.role === 'admin' ? 'admin' : 'user';
+          let userRole: UserRole = (profile?.role === 'admin' || isAdminCandidate) ? 'admin' : 'user';
           // Tự động đồng bộ quyền Admin nếu tài khoản thuộc diện Quản Trị nhưng chưa được gán role
-          if (userRole !== 'admin' && isAdminCandidate) {
-            userRole = 'admin';
-            await supabase.from('profiles').update({ role: 'admin' }).eq('id', userId);
+          if (profile?.role !== 'admin' && isAdminCandidate) {
+            try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: userId, p_new_role: 'admin' }); } catch {}
           }
 
           const { data: stateRow } = await supabase
@@ -2036,6 +2190,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
               exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
               coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
+              stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
               completedTotal: profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0),
               streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
               dailyCompletedCount: s.dailyCompletedCount || 0,
@@ -2090,6 +2245,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               avatarUrl: profile?.avatar_url || '',
               exp: profile?.exp || 0,
               coins: profile?.coins || 25,
+              stars: profile?.stars || 0,
               completedTotal: 0,
               streakDays: 0,
               dailyCompletedCount: 0,

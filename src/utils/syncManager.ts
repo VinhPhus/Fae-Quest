@@ -8,6 +8,7 @@ export interface HunterProfileCloud {
   avatar_url: string | null;
   exp: number;
   coins: number;
+  stars?: number;
   rank_id: string;
   equipped_title: string;
   streak: number;
@@ -21,6 +22,7 @@ export interface UserStateCloud {
   avatarUrl?: string;
   exp: number;
   coins: number;
+  stars?: number;
   completedTotal: number;
   streakDays: number;
   dailyCompletedCount: number;
@@ -90,12 +92,13 @@ export const syncProfileAndStateToCloud = async (
         lowerName.includes('quản trị') || lowerName.includes('admin') ? 'admin' : 'user'
       );
 
-      await supabase.from('profiles').insert({
+      const { error: insErr } = await supabase.from('profiles').insert({
         id: hunterId,
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
         exp: state.exp || 0,
         coins: state.coins || 25,
+        stars: state.stars || 0,
         rank_id: 'dong',
         equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
         streak: state.streakDays || 0,
@@ -103,6 +106,22 @@ export const syncProfileAndStateToCloud = async (
         role: detectedRole,
         updated_at: new Date().toISOString(),
       });
+
+      if (insErr) {
+        // Fallback insert nếu bảng profiles chưa có cột role/stars
+        await supabase.from('profiles').insert({
+          id: hunterId,
+          username: state.playerName || 'Thợ Săn Fae',
+          avatar_url: state.avatarUrl || null,
+          exp: state.exp || 0,
+          coins: state.coins || 25,
+          rank_id: 'dong',
+          equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
+          streak: state.streakDays || 0,
+          completed_tasks_count: state.completedTotal || 0,
+          updated_at: new Date().toISOString(),
+        });
+      }
     } else {
       await supabase.from('profiles').update({
         username: state.playerName || 'Thợ Săn Fae',

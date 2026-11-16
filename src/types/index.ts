@@ -57,6 +57,7 @@ export interface InventoryTicket {
   expiresAt?: number;
   used: boolean;
   usedAt?: number | null;
+  isSystem?: boolean;
 }
 
 export type InventoryItem = InventoryTicket;
@@ -100,6 +101,15 @@ export interface ActivityLog {
   created_at: string;
 }
 
+export interface MailRewardItem {
+  id: string;
+  name: string;
+  icon: string;
+  cost?: number;
+  count: number;
+  description?: string;
+}
+
 export interface UserMessage {
   id: string;
   receiver_id: string;
@@ -107,6 +117,12 @@ export interface UserMessage {
   content: string;
   message_type: 'warning' | 'notice' | 'gift';
   is_read: boolean;
+  reward_exp?: number;
+  reward_coins?: number;
+  reward_stars?: number;
+  reward_items?: MailRewardItem[];
+  is_claimed?: boolean;
+  claimed_at?: string;
   created_at: string;
 }
 

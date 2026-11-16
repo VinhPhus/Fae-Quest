@@ -10,6 +10,7 @@
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin'));
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ban_reason TEXT DEFAULT NULL;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS stars INT DEFAULT 0;
 
 -- Index hỗ trợ tìm kiếm nhanh theo role và trạng thái ban
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
@@ -35,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON public.activity_logs(use
 CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_logs_is_flagged ON public.activity_logs(is_flagged);
 
--- 3. Tạo bảng public.user_messages (Hộp thư Admin -> Thợ Săn)
+-- 3. Tạo bảng public.user_messages (Hộp thư Admin -> Thợ Săn kèm Thưởng)
 CREATE TABLE IF NOT EXISTS public.user_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   receiver_id TEXT NOT NULL,
@@ -43,8 +44,22 @@ CREATE TABLE IF NOT EXISTS public.user_messages (
   content TEXT NOT NULL,
   message_type TEXT NOT NULL DEFAULT 'notice' CHECK (message_type IN ('warning', 'notice', 'gift')),
   is_read BOOLEAN DEFAULT FALSE,
+  reward_exp INT DEFAULT 0,
+  reward_coins INT DEFAULT 0,
+  reward_stars INT DEFAULT 0,
+  reward_items JSONB DEFAULT '[]'::jsonb,
+  is_claimed BOOLEAN DEFAULT FALSE,
+  claimed_at TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Cập nhật cột nếu bảng đã tồn tại từ trước
+ALTER TABLE public.user_messages ADD COLUMN IF NOT EXISTS reward_exp INT DEFAULT 0;
+ALTER TABLE public.user_messages ADD COLUMN IF NOT EXISTS reward_coins INT DEFAULT 0;
+ALTER TABLE public.user_messages ADD COLUMN IF NOT EXISTS reward_stars INT DEFAULT 0;
+ALTER TABLE public.user_messages ADD COLUMN IF NOT EXISTS reward_items JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.user_messages ADD COLUMN IF NOT EXISTS is_claimed BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.user_messages ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ DEFAULT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_user_messages_receiver ON public.user_messages(receiver_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_user_messages_created ON public.user_messages(created_at DESC);
@@ -290,12 +305,16 @@ $$;
 
 -- 10. RPC FUNCTIONS DÀNH RIÊNG CHO QUẢN TRỊ VIÊN (ADMIN)
 
--- 10.1. Gửi thư / cảnh báo từ Admin tới Thợ Săn
+-- 10.1. Gửi thư / cảnh báo / quà tặng từ Admin tới Thợ Săn
 CREATE OR REPLACE FUNCTION public.rpc_admin_send_mail(
   p_receiver_id TEXT,
   p_subject TEXT,
   p_content TEXT,
-  p_type TEXT DEFAULT 'notice'
+  p_type TEXT DEFAULT 'notice',
+  p_reward_exp INT DEFAULT 0,
+  p_reward_coins INT DEFAULT 0,
+  p_reward_stars INT DEFAULT 0,
+  p_reward_items JSONB DEFAULT '[]'::jsonb
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -322,15 +341,110 @@ BEGIN
   END IF;
 
   INSERT INTO public.user_messages (
-    receiver_id, subject, content, message_type, is_read, created_at
+    receiver_id, subject, content, message_type, is_read,
+    reward_exp, reward_coins, reward_stars, reward_items, is_claimed, created_at
   ) VALUES (
-    p_receiver_id, p_subject, p_content, p_type, false, NOW()
+    p_receiver_id, p_subject, p_content, p_type, false,
+    GREATEST(0, COALESCE(p_reward_exp, 0)),
+    GREATEST(0, COALESCE(p_reward_coins, 0)),
+    GREATEST(0, COALESCE(p_reward_stars, 0)),
+    COALESCE(p_reward_items, '[]'::jsonb),
+    false,
+    NOW()
   )
   RETURNING id INTO v_msg_id;
 
   RETURN jsonb_build_object(
     'success', true,
     'message_id', v_msg_id
+  );
+END;
+$$;
+
+-- 10.1b. Nhận phần thưởng đính kèm trong thư của Thợ Săn
+CREATE OR REPLACE FUNCTION public.rpc_claim_mail_reward(
+  p_message_id UUID
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id TEXT;
+  v_msg RECORD;
+  v_profile RECORD;
+  v_new_exp INT;
+  v_new_coins INT;
+  v_new_stars INT;
+  v_new_rank TEXT;
+BEGIN
+  v_user_id := auth.uid()::text;
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized: Vui lòng đăng nhập để nhận thưởng.';
+  END IF;
+
+  -- 1. Tìm thư và khóa dòng
+  SELECT * INTO v_msg
+  FROM public.user_messages
+  WHERE id = p_message_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'NotFound: Không tìm thấy thư này.';
+  END IF;
+
+  IF v_msg.receiver_id != v_user_id THEN
+    RAISE EXCEPTION 'Forbidden: Bạn không có quyền nhận phần thưởng của thư này.';
+  END IF;
+
+  IF v_msg.is_claimed THEN
+    RAISE EXCEPTION 'AlreadyClaimed: Bạn đã nhận phần thưởng của thư này rồi.';
+  END IF;
+
+  -- 2. Đánh dấu đã nhận
+  UPDATE public.user_messages
+  SET is_claimed = TRUE,
+      claimed_at = NOW(),
+      is_read = TRUE
+  WHERE id = p_message_id;
+
+  -- 3. Cập nhật hồ sơ profiles (Tự động tạo hồ sơ an toàn nếu chưa tồn tại)
+  SELECT * INTO v_profile FROM public.profiles WHERE id = v_user_id FOR UPDATE;
+  IF NOT FOUND THEN
+    INSERT INTO public.profiles (
+      id, username, avatar_url, exp, coins, rank_id, equipped_title, streak, completed_tasks_count, role, stars, updated_at
+    ) VALUES (
+      v_user_id, 'Thợ Săn Fae', NULL, 0, 25, 'dong', 'title_tan_binh_gai_do', 0, 0, 'user', 0, NOW()
+    )
+    ON CONFLICT (id) DO NOTHING;
+    SELECT * INTO v_profile FROM public.profiles WHERE id = v_user_id FOR UPDATE;
+  END IF;
+
+  v_new_exp := COALESCE(v_profile.exp, 0) + COALESCE(v_msg.reward_exp, 0);
+  v_new_coins := COALESCE(v_profile.coins, 0) + COALESCE(v_msg.reward_coins, 0);
+  v_new_stars := COALESCE(v_profile.stars, 0) + COALESCE(v_msg.reward_stars, 0);
+  v_new_rank := public.fn_calc_rank_id(v_new_exp);
+
+  UPDATE public.profiles
+  SET exp = v_new_exp,
+      coins = v_new_coins,
+      stars = v_new_stars,
+      rank_id = v_new_rank,
+      updated_at = NOW()
+  WHERE id = v_user_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'message_id', p_message_id,
+    'new_exp', v_new_exp,
+    'new_coins', v_new_coins,
+    'new_stars', v_new_stars,
+    'new_rank_id', v_new_rank,
+    'reward_exp', COALESCE(v_msg.reward_exp, 0),
+    'reward_coins', COALESCE(v_msg.reward_coins, 0),
+    'reward_stars', COALESCE(v_msg.reward_stars, 0),
+    'reward_items', COALESCE(v_msg.reward_items, '[]'::jsonb)
   );
 END;
 $$;
@@ -540,10 +654,16 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized: Vui lòng đăng nhập để nghiệm thu nhiệm vụ.';
   END IF;
 
-  -- 2. Kiểm tra trạng thái Ban
+  -- 2. Kiểm tra trạng thái Ban (Tự động tạo hồ sơ an toàn nếu chưa tồn tại)
   SELECT * INTO v_profile FROM public.profiles WHERE id = v_user_id FOR UPDATE;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'ProfileNotFound: Không tìm thấy hồ sơ Thợ Săn trên máy chủ.';
+    INSERT INTO public.profiles (
+      id, username, avatar_url, exp, coins, rank_id, equipped_title, streak, completed_tasks_count, role, stars, updated_at
+    ) VALUES (
+      v_user_id, 'Thợ Săn Fae', NULL, 0, 25, 'dong', 'title_tan_binh_gai_do', 0, 0, 'user', 0, NOW()
+    )
+    ON CONFLICT (id) DO NOTHING;
+    SELECT * INTO v_profile FROM public.profiles WHERE id = v_user_id FOR UPDATE;
   END IF;
 
   IF v_profile.banned_until IS NOT NULL AND v_profile.banned_until > NOW() THEN
@@ -711,7 +831,8 @@ $$;
 GRANT EXECUTE ON FUNCTION public.fn_is_admin() TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION public.fn_record_activity_log(TEXT, TEXT, TEXT, TEXT, TEXT, INT, INT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_log_activity(TEXT, TEXT, TEXT, INT, INT) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.rpc_admin_send_mail(TEXT, TEXT, TEXT, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_admin_send_mail(TEXT, TEXT, TEXT, TEXT, INT, INT, INT, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_claim_mail_reward(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_ban_user(TEXT, INT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_delete_user(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.rpc_admin_get_users_overview() TO authenticated;
@@ -744,13 +865,117 @@ INSERT INTO public.system_achievements (title, description, icon_url, category, 
 SELECT 'Bậc Thầy Tĩnh Lặng 50 Phiên', 'Hoàn thành 50 phiên tập trung Fae Focus không xao nhãng.', '/assets/titles/title-hien-nhan.png', 'Tập Trung', 'EPIC', 'milestone_focus', 50, 300, 120, 'Hiền Nhân Tĩnh Lặng'
 WHERE NOT EXISTS (SELECT 1 FROM public.system_achievements WHERE title = 'Bậc Thầy Tĩnh Lặng 50 Phiên');
 
--- 15. Cập nhật Role Admin chuẩn xác (sử dụng id::text để tránh lỗi Type Mismatch text = uuid)
+-- 15. TỰ ĐỘNG KHỞI TẠO HỒ SƠ THỢ SĂN & CẬP NHẬT ROLE ADMIN CHUẨN XÁC
+-- 15.1. Trigger tự động tạo hồ sơ trong public.profiles ngay khi tài khoản đăng ký trên Supabase Auth
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (
+    id, username, avatar_url, exp, coins, rank_id, equipped_title, streak, completed_tasks_count, role, stars, updated_at
+  ) VALUES (
+    new.id::text,
+    COALESCE(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1), 'Thợ Săn Fae'),
+    new.raw_user_meta_data->>'avatar_url',
+    0,
+    25,
+    'dong',
+    'title_tan_binh_gai_do',
+    0,
+    0,
+    CASE WHEN new.email = 'admin@faequest.com' THEN 'admin' ELSE 'user' END,
+    0,
+    NOW()
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    role = CASE WHEN new.email = 'admin@faequest.com' THEN 'admin' ELSE public.profiles.role END;
+  RETURN new;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 15.2. Đồng bộ ngược toàn bộ tài khoản hiện có trong auth.users vào public.profiles (tránh lỗi ProfileNotFound)
+INSERT INTO public.profiles (
+  id, username, avatar_url, exp, coins, rank_id, equipped_title, streak, completed_tasks_count, role, stars, updated_at
+)
+SELECT 
+  u.id::text,
+  COALESCE(u.raw_user_meta_data->>'display_name', split_part(u.email, '@', 1), 'Thợ Săn Fae'),
+  u.raw_user_meta_data->>'avatar_url',
+  0,
+  25,
+  'dong',
+  'title_tan_binh_gai_do',
+  0,
+  0,
+  CASE WHEN u.email = 'admin@faequest.com' THEN 'admin' ELSE 'user' END,
+  0,
+  NOW()
+FROM auth.users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.profiles p WHERE p.id = u.id::text
+);
+
+-- 15.3. Chỉ định tài khoản admin@faequest.com làm Quản Trị Viên (Admin Portal) duy nhất
 UPDATE public.profiles
 SET role = 'admin'
 WHERE id IN (
-  SELECT id::text FROM auth.users WHERE email ILIKE '%admin%' OR email = 'admin@faequest.com'
+  SELECT id::text FROM auth.users WHERE email = 'admin@faequest.com'
 )
-OR username ILIKE '%quản trị%'
-OR username ILIKE '%admin%';
+OR username ILIKE '%quản trị%';
+
+-- Hạ quyền các tài khoản khác về user thông thường
+UPDATE public.profiles
+SET role = 'user'
+WHERE id NOT IN (
+  SELECT id::text FROM auth.users WHERE email = 'admin@faequest.com'
+)
+AND username NOT ILIKE '%quản trị%';
+
+-- 15.4. Helper RPC: Đảm bảo hồ sơ người dùng hiện tại luôn tồn tại khi mở ứng dụng
+CREATE OR REPLACE FUNCTION public.rpc_ensure_profile()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid TEXT;
+  v_email TEXT;
+  v_name TEXT;
+  v_role TEXT;
+BEGIN
+  v_uid := auth.uid()::text;
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Chưa đăng nhập');
+  END IF;
+
+  SELECT email, COALESCE(raw_user_meta_data->>'display_name', split_part(email, '@', 1), 'Thợ Săn Fae')
+  INTO v_email, v_name
+  FROM auth.users
+  WHERE id = auth.uid();
+
+  v_role := CASE WHEN v_email = 'admin@faequest.com' THEN 'admin' ELSE 'user' END;
+
+  INSERT INTO public.profiles (
+    id, username, avatar_url, exp, coins, rank_id, equipped_title, streak, completed_tasks_count, role, stars, updated_at
+  ) VALUES (
+    v_uid, v_name, NULL, 0, 25, 'dong', 'title_tan_binh_gai_do', 0, 0, v_role, 0, NOW()
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    role = CASE WHEN v_email = 'admin@faequest.com' THEN 'admin' ELSE public.profiles.role END;
+
+  RETURN jsonb_build_object('success', true, 'user_id', v_uid);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.rpc_ensure_profile() TO authenticated;
 
 -- Hoàn tất nâng cấp FaeQuest Admin Portal & Live-Ops Database

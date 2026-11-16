@@ -2,10 +2,10 @@ import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SYSTEM_TITLES } from '../../constants/systemQuests';
 import { CoinIcon } from '../ui/CoinIcon';
-import { Flame, Shield, Award, ChevronRight } from 'lucide-react';
+import { Flame, Shield, Award, ChevronRight, Star } from 'lucide-react';
 
 export const HunterStatisticsWidget: React.FC = () => {
-  const { coins, streakDays, completedTotal, equippedTitleId, setActiveTab } = useFaeQuestStore();
+  const { coins, streakDays, completedTotal, equippedTitleId, setActiveTab, stars } = useFaeQuestStore();
 
   const titleObj = SYSTEM_TITLES[equippedTitleId] || SYSTEM_TITLES.title_tan_binh_gai_do;
 
@@ -84,6 +84,13 @@ export const HunterStatisticsWidget: React.FC = () => {
               <span>Đổi danh hiệu</span>
             </span>
           </div>
+
+          {stars > 0 && (
+            <div className="mt-1.5 px-3 py-1 rounded-full bg-yellow-500/15 border border-yellow-400/40 text-yellow-300 inline-flex items-center gap-1.5 text-xs font-bold shadow-sm">
+              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+              <span>⭐ {stars} Sao Vinh Dự</span>
+            </div>
+          )}
         </div>
       </div>
 

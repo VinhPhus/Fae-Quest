@@ -194,11 +194,10 @@ export const LeaderboardTable: React.FC = () => {
             return (
               <div
                 key={c.id}
-                className={`px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between sm:grid sm:grid-cols-12 gap-2 sm:gap-0 transition ${
-                  c.isPlayer
-                    ? 'bg-gradient-to-r from-bargain via-bargain-light/40 to-transparent border-l-4 border-l-fae'
-                    : 'hover:bg-thorn-dark/40'
-                }`}
+                className={`px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between sm:grid sm:grid-cols-12 gap-2 sm:gap-0 transition ${c.isPlayer
+                  ? 'bg-gradient-to-r from-bargain via-bargain-light/40 to-transparent border-l-4 border-l-fae'
+                  : 'hover:bg-thorn-dark/40'
+                  }`}
               >
                 {/* Desktop: Rank Pos (1 col) */}
                 <div className="hidden sm:flex sm:col-span-1 items-center">{rankBadge}</div>
