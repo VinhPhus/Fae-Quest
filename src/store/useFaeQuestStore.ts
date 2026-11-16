@@ -78,6 +78,7 @@ interface FaeQuestState {
   isResetOpen: boolean;
   isSettingsOpen: boolean;
   isSidebarCollapsed: boolean;
+  language: string;
   isAddShopItemOpen: boolean;
   isAddRivalOpen: boolean;
   activePomodoroTaskId: string | null;
@@ -88,6 +89,7 @@ interface FaeQuestState {
   toasts: ToastMessage[];
 
   // Actions
+  setLanguage: (lang: string) => void;
   setPlayerName: (name: string) => void;
   setAvatarUrl: (url: string) => void;
   toggleSound: () => void;
@@ -96,12 +98,12 @@ interface FaeQuestState {
   setStatusFilter: (status: string) => void;
   addTask: (title: string, category: TaskCategory, difficulty: TaskDifficulty, isDailyRecurring?: boolean, focusDuration?: number | null) => void;
   updateTaskFocusDuration: (taskId: string, duration: number) => void;
-  toggleTask: (id: string, coords?: { x: number; y: number }, forceSkipAgeCheck?: boolean) => void;
+  toggleTask: (id: string, coords?: { x: number; y: number }, forceSkipAgeCheck?: boolean) => Promise<void> | void;
   confirmEarlyTaskCompletion: () => void;
   cancelEarlyTaskConfirmation: () => void;
   deleteTask: (id: string) => void;
-  completePomodoro: (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => void;
-  buyShopItem: (itemId: string, coords?: { x: number; y: number }) => void;
+  completePomodoro: (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => Promise<void> | void;
+  buyShopItem: (itemId: string, coords?: { x: number; y: number }) => Promise<void> | void;
   addShopItem: (title: string, desc: string, cost: number, emoji: string) => void;
   deleteShopItem: (itemId: string) => void;
   useInventoryTicket: (ticketId: string) => void;
@@ -128,7 +130,7 @@ interface FaeQuestState {
   addToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   removeToast: (id: string) => void;
   checkDailyReset: () => void;
-  checkInStreakQuest: (questId: string) => void;
+  checkInStreakQuest: (questId: string) => Promise<void> | void;
   resetStreakQuest: (questId: string) => void;
   claimSystemQuestReward: (questId: string) => void;
   equipTitle: (titleId: string) => void;
@@ -205,6 +207,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       confirmEarlyTask: null,
       lastCompletedTimestamp: 0,
       isSidebarCollapsed: false,
+      language: 'vi',
+      setLanguage: (lang: string) => set({ language: lang }),
       isAddShopItemOpen: false,
       isAddRivalOpen: false,
       activePomodoroTaskId: null,
@@ -279,7 +283,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      toggleTask: (id: string, coords) => {
+      toggleTask: async (id: string, coords) => {
         const state = get();
         const task = state.tasks.find((t) => t.id === id);
         if (!task) return;
@@ -294,61 +298,68 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
 
         // Anti-Cheat 1: 3-second Cooldown between completions
-          if (now - state.lastCompletedTimestamp < 3000) {
-            playSoundEffect('warning', state.soundEnabled);
-            get().addToast('⏳ Chậm lại nào Thợ Săn! Hãy nghỉ 3 giây trước khi nghiệm thu nhiệm vụ tiếp theo.', 'info');
-            return;
+        if (now - state.lastCompletedTimestamp < 3000) {
+          playSoundEffect('warning', state.soundEnabled);
+          get().addToast('⏳ Chậm lại nào Thợ Săn! Hãy nghỉ 3 giây trước khi nghiệm thu nhiệm vụ tiếp theo.', 'info');
+          return;
+        }
+
+        // Anti-Cheat 2: Minimum Task Age (60 seconds)
+        const taskAge = now - (task.createdAt || 0);
+        if (taskAge < 60000) {
+          playSoundEffect('warning', state.soundEnabled);
+          get().addToast('⏳ Nhiệm vụ vừa được khắc lệnh chưa đầy 1 phút! Hãy thực hiện ít nhất 1 phút trước khi nghiệm thu.', 'info');
+          return;
+        }
+
+        let streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
+        let awardedExp = Math.round(diff.exp * streakBonusMultiplier);
+        let awardedCoins = diff.coins;
+        let newExp = state.exp + awardedExp;
+        let finalCoins = state.coins + awardedCoins;
+        let rankUpBonus = 0;
+        let newRankTier: RankTier | null = null;
+
+        // BẢO MẬT MÁY CHỦ: Xác thực qua Server-Side RPC
+        if (state.currentUser) {
+          try {
+            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
+              p_difficulty: task.difficulty,
+              p_focus_minutes: 0,
+              p_is_focus_completed: false,
+            });
+
+            if (rpcErr) {
+              playSoundEffect('warning', state.soundEnabled);
+              get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+              return;
+            }
+
+            if (rpcRes) {
+              awardedExp = rpcRes.awarded_exp ?? awardedExp;
+              awardedCoins = rpcRes.awarded_coins ?? awardedCoins;
+              newExp = rpcRes.new_exp ?? newExp;
+              finalCoins = rpcRes.new_coins ?? finalCoins;
+              rankUpBonus = rpcRes.rank_bonus_coins ?? 0;
+              if (rpcRes.rank_up_occurred) {
+                const newRankIdx = getRankIndexByExp(newExp);
+                newRankTier = RANK_TIERS[newRankIdx];
+              }
+            }
+          } catch (e: any) {
+            console.warn('RPC complete_task error:', e);
           }
-
-          // Anti-Cheat 2: Minimum Task Age (60 seconds)
-          const taskAge = now - (task.createdAt || 0);
-          if (taskAge < 60000) {
-            playSoundEffect('warning', state.soundEnabled);
-            get().addToast('⏳ Nhiệm vụ vừa được khắc lệnh chưa đầy 1 phút! Hãy thực hiện ít nhất 1 phút trước khi nghiệm thu.', 'info');
-            return;
-          }
-
-          // Anti-Cheat 3: Daily Cap (Max 15 tasks/day with rewards)
-          if (state.dailyCompletedCount >= 15) {
-            playSoundEffect('warning', state.soundEnabled);
-            get().addToast('🛡️ Đã đạt giới hạn 15 nhiệm vụ nhận thưởng trong ngày! Hãy nghỉ ngơi để bảo toàn thể lực.', 'info');
-            return;
-          }
-
-          // Anti-Cheat 4: Daily Boss Cap (Max 2 Boss tasks/day)
-          if (task.difficulty === 'boss' && state.dailyBossCompletedCount >= 2) {
-            playSoundEffect('warning', state.soundEnabled);
-            get().addToast('⚔️ Đã đạt giới hạn 2 nhiệm vụ Trùm Cuối hôm nay! Danh dự Thách Đấu không cho phép vắt kiệt sức.', 'info');
-            return;
-          }
-
-          // Marking completed
-          const streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
-          const awardedExp = Math.round(diff.exp * streakBonusMultiplier);
-          const awardedCoins = diff.coins;
-
-          const newExp = state.exp + awardedExp;
-          const newCoins = state.coins + awardedCoins;
+        } else {
+          // Fallback offline / guest
           const newRankIdx = getRankIndexByExp(newExp);
-
-          // Update streak if needed
-          const today = getTodayString();
-          let newStreak = state.streakDays;
-          if (state.lastActiveDate !== today) {
-            newStreak = state.streakDays + 1;
-          }
-
-          // Check for Rank Up
-          let rankUpBonus = 0;
-          let newRankTier: RankTier | null = null;
           if (newRankIdx > oldRankIdx) {
             for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
               rankUpBonus += RANK_TIERS[i].coinBonus;
             }
             newRankTier = RANK_TIERS[newRankIdx];
           }
-
-          const finalCoins = newCoins + rankUpBonus;
+          finalCoins = state.coins + awardedCoins + rankUpBonus;
+        }
 
           // Spawn floating reward & coin particles
           if (coords) {
@@ -365,6 +376,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
               }));
             }, 1400);
+          }
+
+          const today = getTodayString();
+          let newStreak = state.streakDays;
+          if (state.lastActiveDate !== today) {
+            newStreak = state.streakDays + 1;
           }
 
           set((prev) => ({
@@ -420,29 +437,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      completePomodoro: (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => {
+      completePomodoro: async (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => {
         const state = get();
         const task = state.tasks.find((t) => t.id === taskId);
         if (!task) return;
 
         const target = targetMinutes || task.focusDuration || 25;
-        const maxFocusExp = Math.round(target * 1);
-        const maxFocusCoins = Math.max(1, Math.floor(target * 0.4));
-
-        let earnedFocusExp = maxFocusExp;
-        let earnedFocusCoins = maxFocusCoins;
-
-        if (elapsedMinutes !== undefined && elapsedMinutes < target) {
-          const ratio = Math.min(1, Math.max(0, elapsedMinutes / target));
-          earnedFocusExp = Math.max(1, Math.floor(maxFocusExp * ratio));
-          earnedFocusCoins = Math.max(1, Math.floor(maxFocusCoins * ratio));
-        }
-
-        // If focus reward was already claimed today for this task, focus bonus is 0
-        if (task.focusRewardClaimed) {
-          earnedFocusExp = 0;
-          earnedFocusCoins = 0;
-        }
+        const actualMinutes = elapsedMinutes !== undefined ? elapsedMinutes : target;
+        const cleanElapsed = Math.min(180, Math.max(5, actualMinutes));
 
         // Task base rewards (if task is not already completed)
         const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
@@ -450,24 +452,56 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const isAlreadyCompleted = Boolean(task.completed);
         const taskExp = !isAlreadyCompleted ? Math.round(diff.exp * streakBonusMultiplier) : 0;
         const taskCoins = !isAlreadyCompleted ? diff.coins : 0;
+        const earnedFocusExp = task.focusRewardClaimed ? 0 : Math.round(cleanElapsed * 1);
+        const earnedFocusCoins = task.focusRewardClaimed ? 0 : Math.max(1, Math.floor(cleanElapsed * 0.4));
 
-        const totalExp = taskExp + earnedFocusExp;
-        const totalCoins = taskCoins + earnedFocusCoins;
-
-        const oldRankIdx = getRankIndexByExp(state.exp);
-        const newExp = state.exp + totalExp;
-        const newRankIdx = getRankIndexByExp(newExp);
-
-        let rankUpBonus = 0;
+        let totalExp = taskExp + earnedFocusExp;
+        let totalCoins = taskCoins + earnedFocusCoins;
+        let newExp = state.exp + totalExp;
+        let finalCoins = state.coins + totalCoins;
         let newRankTier: RankTier | null = null;
-        if (newRankIdx > oldRankIdx) {
-          for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
-            rankUpBonus += RANK_TIERS[i].coinBonus;
-          }
-          newRankTier = RANK_TIERS[newRankIdx];
-        }
+        let rankUpBonus = 0;
 
-        const finalCoins = state.coins + totalCoins + rankUpBonus;
+        // BẢO MẬT MÁY CHỦ: Gọi Server RPC
+        if (state.currentUser) {
+          try {
+            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
+              p_difficulty: task.difficulty,
+              p_focus_minutes: cleanElapsed,
+              p_is_focus_completed: true,
+            });
+
+            if (rpcErr) {
+              playSoundEffect('warning', state.soundEnabled);
+              get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+              return;
+            }
+
+            if (rpcRes) {
+              newExp = rpcRes.new_exp ?? newExp;
+              finalCoins = rpcRes.new_coins ?? finalCoins;
+              totalExp = rpcRes.awarded_exp ?? totalExp;
+              totalCoins = rpcRes.awarded_coins ?? totalCoins;
+              rankUpBonus = rpcRes.rank_bonus_coins ?? 0;
+              if (rpcRes.rank_up_occurred) {
+                const newRankIdx = getRankIndexByExp(newExp);
+                newRankTier = RANK_TIERS[newRankIdx];
+              }
+            }
+          } catch (e: any) {
+            console.warn('RPC complete_task error:', e);
+          }
+        } else {
+          const oldRankIdx = getRankIndexByExp(state.exp);
+          const newRankIdx = getRankIndexByExp(newExp);
+          if (newRankIdx > oldRankIdx) {
+            for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
+              rankUpBonus += RANK_TIERS[i].coinBonus;
+            }
+            newRankTier = RANK_TIERS[newRankIdx];
+          }
+          finalCoins = state.coins + totalCoins + rankUpBonus;
+        }
         const today = getTodayString();
         const now = Date.now();
         let newStreak = state.streakDays;
@@ -531,7 +565,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      buyShopItem: (itemId: string, coords) => {
+      buyShopItem: async (itemId: string, coords) => {
         const state = get();
         const item = state.shopItems.find((i) => i.id === itemId);
         if (!item) return;
@@ -546,6 +580,30 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         if (state.coins < item.cost) {
           get().addToast(`Bạn cần thêm ${item.cost - state.coins} Xu nữa để mua "${item.title}"!`, 'error');
           return;
+        }
+
+        let finalCoins = state.coins - item.cost;
+
+        // BẢO MẬT MÁY CHỦ: Trừ Xu nguyên tử qua Server-Side RPC
+        if (state.currentUser) {
+          try {
+            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_purchase_item', {
+              p_item_cost: item.cost,
+              p_current_inventory_count: state.inventory.length,
+            });
+
+            if (rpcErr) {
+              playSoundEffect('warning', state.soundEnabled);
+              get().addToast(`⚠️ Giao dịch thất bại: ${rpcErr.message}`, 'error');
+              return;
+            }
+
+            if (rpcRes?.new_coins !== undefined) {
+              finalCoins = rpcRes.new_coins;
+            }
+          } catch (e: any) {
+            console.warn('RPC purchase_item error:', e);
+          }
         }
 
         const now = Date.now();
@@ -781,12 +839,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         get().addToast('Đã khởi tạo lại toàn bộ dữ liệu ban đầu!', 'info');
       },
 
-      checkInStreakQuest: (questId: string) => {
+      checkInStreakQuest: async (questId: string) => {
         const state = get();
         const quest = state.systemQuests.find((q) => q.id === questId);
         if (!quest || quest.type !== 'streak_counter') return;
 
-        const today = getTodayString();
+        let today = getTodayString();
 
         if (quest.lastResetDate === today) {
           get().addToast('Hôm nay bạn đã Reset bộ đếm này. Hãy quay lại điểm danh sau 00:00 đêm nay nhé!', 'info');
@@ -798,8 +856,38 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return;
         }
 
-        const nextStreak = (quest.currentStreak || 0) + 1;
-        const isCompleted = nextStreak >= (quest.targetDays || 1);
+        let nextStreak = (quest.currentStreak || 0) + 1;
+        let isCompleted = nextStreak >= (quest.targetDays || 1);
+
+        // BẢO MẬT MÁY CHỦ: Xác thực ngày điểm danh theo máy chủ (CURRENT_DATE)
+        if (state.currentUser) {
+          try {
+            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_checkin_streak', {
+              p_last_checkin_date: quest.lastCheckInDate || '',
+              p_last_reset_date: quest.lastResetDate || '',
+              p_target_days: quest.targetDays,
+              p_current_streak: quest.currentStreak || 0,
+              p_bonus_exp: quest.expReward,
+              p_bonus_coins: quest.coinReward,
+            });
+
+            if (rpcErr) {
+              playSoundEffect('warning', state.soundEnabled);
+              get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+              return;
+            }
+
+            if (rpcRes) {
+              nextStreak = rpcRes.new_streak ?? nextStreak;
+              today = rpcRes.today_server || today;
+              if (rpcRes.new_exp !== undefined) {
+                set({ exp: rpcRes.new_exp, coins: rpcRes.new_coins });
+              }
+            }
+          } catch (e: any) {
+            console.warn('RPC checkin_streak error:', e);
+          }
+        }
 
         const updatedQuests = state.systemQuests.map((q) => {
           if (q.id === questId) {
@@ -1117,10 +1205,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 hunterId,
                 playerName: s.playerName || hunterName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
-                exp: typeof s.exp === 'number' ? s.exp : (profile?.exp || 0),
-                coins: typeof s.coins === 'number' ? s.coins : (profile?.coins || 25),
-                completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : (profile?.completed_tasks_count || 0),
-                streakDays: typeof s.streakDays === 'number' ? s.streakDays : (profile?.streak || 0),
+                exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
+                coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
+                completedTotal: profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0),
+                streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
                 dailyCompletedCount: s.dailyCompletedCount || 0,
                 dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
@@ -1409,10 +1497,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               hunterId: userId,
               playerName: s.playerName || hunterName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
-              exp: typeof s.exp === 'number' ? s.exp : (profile?.exp || 0),
-              coins: typeof s.coins === 'number' ? s.coins : (profile?.coins || 25),
-              completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : (profile?.completed_tasks_count || 0),
-              streakDays: typeof s.streakDays === 'number' ? s.streakDays : (profile?.streak || 0),
+              exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
+              coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
+              completedTotal: profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0),
+              streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
               dailyCompletedCount: s.dailyCompletedCount || 0,
               dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
@@ -1531,29 +1619,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
     }),
     {
-      name: 'faequest_rpg_todo_storage_v2',
+      name: 'faequest_ui_preferences',
       partialize: (state) => ({
-        currentUser: state.currentUser,
-        hunterId: state.hunterId,
-        lastSyncedAt: state.lastSyncedAt,
-        playerName: state.playerName,
-        avatarUrl: state.avatarUrl,
-        exp: state.exp,
-        coins: state.coins,
-        completedTotal: state.completedTotal,
-        streakDays: state.streakDays,
-        dailyCompletedCount: state.dailyCompletedCount,
-        dailyBossCompletedCount: state.dailyBossCompletedCount,
-        lastActiveDate: state.lastActiveDate,
         soundEnabled: state.soundEnabled,
-        tasks: state.tasks,
-        shopItems: state.shopItems,
-        inventory: state.inventory,
-        rivals: state.rivals,
-        systemQuests: state.systemQuests,
-        unlockedTitleIds: state.unlockedTitleIds,
-        equippedTitleId: state.equippedTitleId,
-        focusSessionsCompleted: state.focusSessionsCompleted,
+        language: state.language || 'vi',
+        isSidebarCollapsed: state.isSidebarCollapsed,
       }),
     }
   )
