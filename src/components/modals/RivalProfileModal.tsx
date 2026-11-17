@@ -32,6 +32,7 @@ export const RivalProfileModal: React.FC = () => {
     streakDays: myStreak,
     completedTotal: myTasks,
     equippedTitleId,
+    communityProfiles,
   } = useFaeQuestStore();
 
   const [isComparing, setIsComparing] = useState(false);
@@ -50,9 +51,18 @@ export const RivalProfileModal: React.FC = () => {
       (t) => t.name === rival.equippedTitle || t.id === rival.equippedTitle
     ) || resolveTitleObject(rival.equippedTitle);
 
-  const coverImage = rival.isPlayer
-    ? (coverUrl && coverUrl.trim() ? coverUrl : DEFAULT_COVER_URL)
-    : (rival.coverUrl && rival.coverUrl.trim() ? rival.coverUrl : DEFAULT_COVER_URL);
+  // Tìm profile mới nhất trong danh sách communityProfiles nếu có
+  const liveProfile = (communityProfiles || []).find((p) => p.id === rival.id);
+
+  // Kiểm tra đồng thời cả player.coverUrl || player.cover_url || liveProfile.cover_url
+  const candidateCover = rival.isPlayer
+    ? (coverUrl && coverUrl.trim() ? coverUrl : (liveProfile?.cover_url || rival.coverUrl || rival.cover_url))
+    : (liveProfile?.cover_url || rival.coverUrl || rival.cover_url);
+
+  const coverImage =
+    candidateCover && typeof candidateCover === 'string' && candidateCover.trim() !== ''
+      ? candidateCover.trim()
+      : DEFAULT_COVER_URL;
 
   // Comparison deltas
   const expDiff = myExp - rival.exp;
@@ -127,6 +137,10 @@ export const RivalProfileModal: React.FC = () => {
               alt={`${rival.name} Cover`}
               className="w-full h-full object-cover"
               loading="lazy"
+              onError={(e) => {
+                // Tự động fallback về ảnh mặc định nếu link ảnh bị hỏng
+                (e.currentTarget as HTMLImageElement).src = DEFAULT_COVER_URL;
+              }}
             />
             {/* Gradient Mask Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-[#11212D] via-transparent to-black/40" />

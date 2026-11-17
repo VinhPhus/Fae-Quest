@@ -120,6 +120,14 @@ export const useRealtimeSync = (): void => {
             patch.stars = p.stars;
           }
 
+          // Cập nhật ảnh bìa & Avatar Realtime cho chính tài khoản hiện tại
+          if (p.cover_url !== undefined && p.cover_url !== useFaeQuestStore.getState().coverUrl) {
+            patch.coverUrl = p.cover_url || '';
+          }
+          if (p.avatar_url !== undefined && p.avatar_url !== useFaeQuestStore.getState().avatarUrl) {
+            patch.avatarUrl = p.avatar_url || '';
+          }
+
           if (Object.keys(patch).length > 0) {
             useFaeQuestStore.setState(patch);
           }

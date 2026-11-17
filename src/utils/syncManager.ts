@@ -184,7 +184,7 @@ export const fetchCommunityLeaderboard = async (
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, username, avatar_url, cover_url, equipped_title, exp, coins, stars, streak, completed_tasks_count, role, updated_at')
       .order('exp', { ascending: false })
       .limit(limit);
 
@@ -211,18 +211,41 @@ export const restoreUserStateFromCloud = async (
   }
 
   try {
+    const cleanId = hunterId.trim();
+    // 1. Lấy snapshot từ user_states
     const { data, error } = await supabase
       .from('user_states')
       .select('*')
-      .eq('user_id', hunterId.trim())
-      .single();
+      .eq('user_id', cleanId)
+      .maybeSingle();
 
     if (error) throw error;
     if (!data || !data.state_json) {
       return { success: false, error: 'Không tìm thấy dữ liệu cho mã thợ săn này' };
     }
 
-    return { success: true, state: data.state_json as UserStateCloud };
+    // 2. Lấy profile chính chủ từ public.profiles để luôn ưu tiên cover_url & avatar_url chuẩn
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('cover_url, avatar_url, exp, coins, stars, equipped_title, streak, completed_tasks_count')
+      .eq('id', cleanId)
+      .maybeSingle();
+
+    const rawState = data.state_json as UserStateCloud;
+    const finalState: UserStateCloud = {
+      ...rawState,
+      // Luôn đọc cover_url từ profiles làm nguồn chuẩn
+      coverUrl:
+        profileData?.cover_url !== undefined && profileData?.cover_url !== null
+          ? profileData.cover_url
+          : (rawState.coverUrl || ''),
+      avatarUrl:
+        profileData?.avatar_url !== undefined && profileData?.avatar_url !== null
+          ? profileData.avatar_url
+          : (rawState.avatarUrl || ''),
+    };
+
+    return { success: true, state: finalState };
   } catch (err: any) {
     return { success: false, error: err.message || 'Lỗi khi khôi phục dữ liệu' };
   }

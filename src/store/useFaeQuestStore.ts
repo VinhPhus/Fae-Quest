@@ -1152,19 +1152,28 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       setCoverUrl: async (url: string) => {
-        set({ coverUrl: url });
+        const cleanUrl = url && url.trim() ? url.trim() : null;
+        set({ coverUrl: cleanUrl || '' });
         const targetUserId = get().currentUser?.id || get().hunterId;
         if (targetUserId) {
           try {
-            await supabase
+            const { error: updErr } = await supabase
               .from('profiles')
               .update({
-                cover_url: url || null,
+                cover_url: cleanUrl,
                 updated_at: new Date().toISOString(),
               })
               .eq('id', targetUserId);
-          } catch (e) {
+
+            if (updErr) {
+              console.error('Lỗi cập nhật cover_url lên profiles:', updErr);
+              get().addToast(`Lỗi lưu ảnh bìa lên Supabase: ${updErr.message}`, 'error');
+            } else {
+              get().fetchCommunityProfiles();
+            }
+          } catch (e: any) {
             console.error('Lỗi cập nhật cover_url lên profiles:', e);
+            get().addToast(`Lỗi kết nối khi cập nhật ảnh bìa: ${e?.message || e}`, 'error');
           }
         }
         await get().syncToCloud(true);
@@ -2362,7 +2371,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isOathOpen: false,
                 playerName: s.playerName || hunterName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
-                coverUrl: s.coverUrl || profile?.cover_url || '',
+                coverUrl:
+                  profile?.cover_url !== undefined && profile?.cover_url !== null
+                    ? profile.cover_url
+                    : (s.coverUrl || ''),
                 exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
                 coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
                 stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
@@ -2754,7 +2766,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               isOathOpen: false,
               playerName: s.playerName || hunterName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
-              coverUrl: s.coverUrl || profile?.cover_url || '',
+              coverUrl:
+                profile?.cover_url !== undefined && profile?.cover_url !== null
+                  ? profile.cover_url
+                  : (s.coverUrl || ''),
               exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
               coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
               stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),

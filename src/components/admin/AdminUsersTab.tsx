@@ -56,7 +56,7 @@ export const AdminUsersTab: React.FC = () => {
       // Fallback query trực tiếp nếu RPC chưa deploy
       const { data: profileList, error: pErr } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, avatar_url, cover_url, equipped_title, exp, coins, stars, streak, completed_tasks_count, role, banned_until, ban_reason, updated_at')
         .order('exp', { ascending: false });
 
       if (!pErr && profileList) {
@@ -76,6 +76,7 @@ export const AdminUsersTab: React.FC = () => {
             id: p.id,
             username: p.username || 'Thợ Săn Fae',
             avatar_url: p.avatar_url,
+            cover_url: p.cover_url || null,
             exp: p.exp || 0,
             coins: p.coins || 0,
             rank_id: p.rank_id || 'dong',

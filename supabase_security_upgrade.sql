@@ -50,9 +50,9 @@ WITH CHECK (auth.uid()::text = id);
 -- Thu hồi quyền UPDATE chung trên bảng profiles từ anon và authenticated
 REVOKE UPDATE ON public.profiles FROM anon, authenticated;
 
--- CHỈ cấp quyền UPDATE cho client trên 3 cột hiển thị: username, avatar_url, equipped_title, updated_at
+-- CHỈ cấp quyền UPDATE cho client trên các cột hiển thị: username, avatar_url, cover_url, equipped_title, updated_at
 -- Tuyệt đối KHÔNG cấp quyền UPDATE client trên: exp, coins, rank_id, streak, completed_tasks_count
-GRANT UPDATE (username, avatar_url, equipped_title, updated_at) ON public.profiles TO authenticated;
+GRANT UPDATE (username, avatar_url, cover_url, equipped_title, updated_at) ON public.profiles TO authenticated;
 
 -- Policy 2.4: Bảo vệ bảng user_states (chỉ chủ tài khoản mới được đọc và ghi snapshot)
 CREATE POLICY "Allow users to read own user_state"

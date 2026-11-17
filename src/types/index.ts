@@ -76,6 +76,7 @@ export interface RivalProfileData {
   name: string;
   avatarUrl: string | null;
   coverUrl?: string | null;
+  cover_url?: string | null;
   exp: number;
   streak: number;
   completedTasks: number;
