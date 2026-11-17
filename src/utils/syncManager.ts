@@ -20,6 +20,7 @@ export interface HunterProfileCloud {
 export interface UserStateCloud {
   playerName: string;
   avatarUrl?: string;
+  coverUrl?: string;
   exp: number;
   coins: number;
   stars?: number;

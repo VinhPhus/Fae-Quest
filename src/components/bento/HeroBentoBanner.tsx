@@ -8,6 +8,7 @@ import {
 } from '../../constants/cloudinary';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
 import { CoinIcon } from '../ui/CoinIcon';
+import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 import {
   ChevronRight,
   Camera,
@@ -26,6 +27,8 @@ export const HeroBentoBanner: React.FC = () => {
     playerName,
     avatarUrl,
     setAvatarUrl,
+    coverUrl,
+    setChangeCoverOpen,
     exp,
     stars,
     coins,
@@ -144,10 +147,21 @@ export const HeroBentoBanner: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch w-full">
         {/* ================= CỘT TRÁI (lg:col-span-7): THẺ CĂN CƯỚC THỢ SĂN VỚI ẢNH BÌA ================= */}
         <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl bg-[#11212D] border border-[#253745] shadow-xl relative overflow-hidden flex flex-col justify-between">
+          {/* Nút Đổi Ảnh Bìa (Top-right of card) */}
+          <button
+            type="button"
+            onClick={() => setChangeCoverOpen(true)}
+            className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 px-2.5 py-1 rounded-full bg-[#06141B]/80 hover:bg-[#11212D] text-[#CCD0CF] hover:text-white border border-[#253745] hover:border-[#4A5C6A] backdrop-blur-md text-[10px] sm:text-[11px] font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer group"
+            title="Tùy chỉnh hoặc thay đổi ảnh bìa Thợ Săn"
+          >
+            <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#9BA8AB] group-hover:text-amber-300 transition-colors" />
+            <span>Đổi Ảnh Bìa</span>
+          </button>
+
           {/* 1. Background Ảnh Bìa (Cover Banner Dark Fantasy 120px - 140px) */}
           <div className="absolute top-0 inset-x-0 h-32 sm:h-36 overflow-hidden pointer-events-none z-0">
             <img
-              src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2000&auto=format&fit=crop"
+              src={coverUrl || DEFAULT_COVER_URL}
               alt="Hunter Dark Fantasy Cover"
               className="w-full h-full object-cover object-center opacity-50 brightness-90 scale-105"
               style={{

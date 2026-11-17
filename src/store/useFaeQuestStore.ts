@@ -53,6 +53,7 @@ export const MAX_INVENTORY_SLOTS = 50;
 interface FaeQuestState {
   playerName: string;
   avatarUrl: string;
+  coverUrl?: string;
   exp: number;
   coins: number;
   stars: number;
@@ -108,6 +109,7 @@ interface FaeQuestState {
   isAddRivalOpen: boolean;
   activePomodoroTaskId: string | null;
   isOathOpen: boolean;
+  isChangeCoverOpen: boolean;
   confirmEarlyTask: { task: Task; coords?: { x: number; y: number } } | null;
   lastCompletedTimestamp: number;
   floatingRewards: FloatingRewardItem[];
@@ -149,6 +151,8 @@ interface FaeQuestState {
   setLanguage: (lang: string) => void;
   setPlayerName: (name: string) => void;
   setAvatarUrl: (url: string) => void;
+  setCoverUrl: (url: string) => void;
+  setChangeCoverOpen: (open: boolean) => void;
   toggleSound: () => void;
   setActiveTab: (tab: ActiveTab) => void;
   setCategoryFilter: (cat: string) => void;
@@ -228,6 +232,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       playerName: 'Thợ Săn Fae',
       avatarUrl: '',
+      coverUrl: '',
       exp: 0,
       coins: 25,
       stars: 0,
@@ -273,6 +278,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isRenameOpen: false,
       isResetOpen: false,
       isSettingsOpen: false,
+      isChangeCoverOpen: false,
       isOathOpen: typeof window !== 'undefined' ? localStorage.getItem('faequest_oath_accepted') !== 'true' : false,
       confirmEarlyTask: null,
       lastCompletedTimestamp: 0,
@@ -953,6 +959,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
+      setCoverUrl: (url: string) => {
+        set({ coverUrl: url });
+        debouncedAutoSync(get());
+      },
+
       toggleSound: () => {
         const next = !get().soundEnabled;
         set({ soundEnabled: next });
@@ -1566,6 +1577,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setRenameOpen: (open: boolean) => set({ isRenameOpen: open }),
       setResetOpen: (open: boolean) => set({ isResetOpen: open }),
       setSettingsOpen: (open: boolean) => set({ isSettingsOpen: open }),
+      setChangeCoverOpen: (open: boolean) => set({ isChangeCoverOpen: open }),
       setOathOpen: (open: boolean) => set({ isOathOpen: open }),
       setSearchQuery: (query: string) => set({ searchQuery: query }),
       setCreateQuestOpen: (open: boolean) => set({ isCreateQuestOpen: open }),
@@ -1614,6 +1626,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           focusSessionsCompleted: 0,
           isResetOpen: false,
           isSettingsOpen: false,
+      isChangeCoverOpen: false,
         });
         get().addToast('Đã khởi tạo lại toàn bộ dữ liệu ban đầu!', 'info');
       },
@@ -1930,6 +1943,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const snapshot: UserStateCloud = {
           playerName: state.playerName,
           avatarUrl: state.avatarUrl,
+          coverUrl: state.coverUrl,
           exp: state.exp,
           coins: state.coins,
           completedTotal: state.completedTotal,
@@ -1982,6 +1996,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             hunterId: cleanId,
             playerName: s.playerName || get().playerName,
             avatarUrl: s.avatarUrl || '',
+            coverUrl: s.coverUrl || '',
             exp: typeof s.exp === 'number' ? s.exp : get().exp,
             coins: typeof s.coins === 'number' ? s.coins : get().coins,
             completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : get().completedTotal,
@@ -2112,6 +2127,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isOathOpen: false,
                 playerName: s.playerName || hunterName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
+                coverUrl: s.coverUrl || '',
                 exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
                 coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
                 stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
@@ -2498,6 +2514,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               isOathOpen: false,
               playerName: s.playerName || hunterName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
+              coverUrl: s.coverUrl || '',
               exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
               coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
               stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
