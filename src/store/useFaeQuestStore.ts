@@ -29,7 +29,6 @@ import {
   INITIAL_TASKS,
   INITIAL_SHOP_ITEMS,
   INITIAL_INVENTORY,
-  INITIAL_RIVALS,
 } from '../constants/initialData';
 import {
   INITIAL_SYSTEM_QUESTS,
@@ -48,6 +47,8 @@ import {
   getOrInitHunterId,
   setStoredHunterId,
   UserStateCloud,
+  HunterProfileCloud,
+  fetchCommunityLeaderboard,
 } from '../utils/syncManager';
 
 export const MAX_INVENTORY_SLOTS = 50;
@@ -110,7 +111,7 @@ interface FaeQuestState {
   isSidebarCollapsed: boolean;
   language: string;
   isAddShopItemOpen: boolean;
-  isAddRivalOpen: boolean;
+  communityProfiles: HunterProfileCloud[];
   activePomodoroTaskId: string | null;
   isOathOpen: boolean;
   isChangeCoverOpen: boolean;
@@ -178,8 +179,6 @@ interface FaeQuestState {
   addShopItem: (title: string, desc: string, cost: number, emoji: string) => void;
   deleteShopItem: (itemId: string) => void;
   useInventoryTicket: (ticketId: string) => void;
-  simulateRivalActivity: () => void;
-  addRival: (name: string, title: string, exp: number, avatar: string) => void;
   grantDemoBoost: (amount?: number) => void;
   closeRankUpModal: () => void;
   setRoadmapOpen: (open: boolean) => void;
@@ -195,7 +194,6 @@ interface FaeQuestState {
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setAddShopItemOpen: (open: boolean) => void;
-  setAddRivalOpen: (open: boolean) => void;
   setActivePomodoroTaskId: (id: string | null) => void;
   resetAllData: () => void;
   addToast: (text: string, type?: 'success' | 'info' | 'error') => void;
@@ -210,6 +208,7 @@ interface FaeQuestState {
   setHunterId: (id: string) => void;
   syncToCloud: (silent?: boolean) => Promise<boolean>;
   restoreFromCloud: (targetHunterId: string) => Promise<boolean>;
+  fetchCommunityProfiles: () => Promise<HunterProfileCloud[]>;
 
   // Authentication Actions
   initAuth: () => Promise<void>;
@@ -257,7 +256,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       tasks: INITIAL_TASKS,
       shopItems: INITIAL_SHOP_ITEMS,
       inventory: INITIAL_INVENTORY,
-      rivals: INITIAL_RIVALS,
+      rivals: [],
+      communityProfiles: [],
       systemQuests: INITIAL_SYSTEM_QUESTS,
       unlockedTitleIds: ['title_tan_binh_gai_do'],
       equippedTitleId: 'title_tan_binh_gai_do',
@@ -955,7 +955,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
       isAddShopItemOpen: false,
-      isAddRivalOpen: false,
       activePomodoroTaskId: null,
       floatingRewards: [],
       toasts: [],
@@ -1585,35 +1584,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
-      simulateRivalActivity: () => {
-        const state = get();
-        const updated = state.rivals.map((r) => {
-          const randomGain = Math.floor(Math.random() * 41) + 10; // 10 to 50 EXP
-          return { ...r, exp: r.exp + randomGain };
-        });
-
-        set({ rivals: updated });
-        playSound('streak_flame', state.soundEnabled);
-        get().addToast('Các đối thủ vừa hoàn thành nhiệm vụ và gia tăng EXP!', 'info');
-      },
-
-      addRival: (name, title, exp, avatar) => {
-        const newRival: Rival = {
-          id: 'rival_' + Date.now(),
-          name: name.trim(),
-          title: title.trim(),
-          exp: Math.max(0, exp),
-          avatar: avatar || '⚔️',
-        };
-
-        set((prev) => ({
-          rivals: [...prev.rivals, newRival],
-          isAddRivalOpen: false,
-        }));
-
-        get().addToast(`Đã triệu hồi chiến binh "${newRival.name}" vào bảng xếp hạng!`, 'success');
-      },
-
       grantDemoBoost: (amount = 150) => {
         const state = get();
         const oldRankIdx = getRankIndexByExp(state.exp);
@@ -1691,7 +1661,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
       setSidebarCollapsed: (collapsed: boolean) => set({ isSidebarCollapsed: collapsed }),
       setAddShopItemOpen: (open: boolean) => set({ isAddShopItemOpen: open }),
-      setAddRivalOpen: (open: boolean) => set({ isAddRivalOpen: open }),
       setActivePomodoroTaskId: (id: string | null) => set({ activePomodoroTaskId: id }),
 
       resetAllData: () => {
@@ -1708,7 +1677,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           tasks: INITIAL_TASKS,
           shopItems: INITIAL_SHOP_ITEMS,
           inventory: INITIAL_INVENTORY,
-          rivals: INITIAL_RIVALS,
+          rivals: [],
           systemQuests: INITIAL_SYSTEM_QUESTS,
           unlockedTitleIds: ['title_tan_binh_gai_do'],
           equippedTitleId: 'title_tan_binh_gai_do',
@@ -2124,6 +2093,17 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
+      fetchCommunityProfiles: async () => {
+        try {
+          const res = await fetchCommunityLeaderboard(50);
+          const list = res.profiles || [];
+          set({ communityProfiles: list });
+          return list;
+        } catch {
+          return [];
+        }
+      },
+
       initAuth: async () => {
         set({ authLoading: true });
         try {
@@ -2231,7 +2211,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
                 shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
                 inventory: Array.isArray(s.inventory) ? s.inventory : [],
-                rivals: Array.isArray(s.rivals) ? s.rivals : INITIAL_RIVALS,
+                rivals: [],
                 systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : INITIAL_SYSTEM_QUESTS,
                 unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
                 equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
@@ -2288,7 +2268,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 tasks: starterTasks,
                 shopItems: INITIAL_SHOP_ITEMS,
                 inventory: [],
-                rivals: INITIAL_RIVALS,
+                rivals: [],
                 systemQuests: INITIAL_SYSTEM_QUESTS,
                 unlockedTitleIds: ['title_tan_binh_gai_do'],
                 equippedTitleId: 'title_tan_binh_gai_do',
@@ -2300,10 +2280,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               await get().syncToCloud(true);
             }
 
-            // Đồng bộ dữ liệu Live-Ops: Hộp thư, Cửa hàng hệ thống, Thành tựu động
+            // Đồng bộ dữ liệu Live-Ops: Hộp thư, Cửa hàng hệ thống, Thành tựu động, BXH thật
             get().fetchUserMessages();
             get().fetchSystemShopItems();
             get().fetchSystemAchievements();
+            get().fetchCommunityProfiles();
           } else {
             set({ currentUser: null, authLoading: false });
           }
@@ -2393,7 +2374,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             tasks: starterTasks,
             shopItems: INITIAL_SHOP_ITEMS,
             inventory: [],
-            rivals: INITIAL_RIVALS,
+            rivals: [],
             systemQuests: INITIAL_SYSTEM_QUESTS,
             unlockedTitleIds: ['title_tan_binh_gai_do'],
             equippedTitleId: 'title_tan_binh_gai_do',
@@ -2426,7 +2407,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               tasks: starterTasks,
               shopItems: INITIAL_SHOP_ITEMS,
               inventory: [],
-              rivals: INITIAL_RIVALS,
+              rivals: [],
               systemQuests: INITIAL_SYSTEM_QUESTS,
               unlockedTitleIds: ['title_tan_binh_gai_do'],
               equippedTitleId: 'title_tan_binh_gai_do',
@@ -2469,7 +2450,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 tasks: starterTasks,
                 shopItems: INITIAL_SHOP_ITEMS,
                 inventory: [],
-                rivals: INITIAL_RIVALS,
+                rivals: [],
                 systemQuests: INITIAL_SYSTEM_QUESTS,
                 unlockedTitleIds: ['title_tan_binh_gai_do'],
                 equippedTitleId: 'title_tan_binh_gai_do',
@@ -2619,7 +2600,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
               shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
               inventory: Array.isArray(s.inventory) ? s.inventory : [],
-              rivals: Array.isArray(s.rivals) ? s.rivals : INITIAL_RIVALS,
+              rivals: Array.isArray(s.rivals) ? s.rivals : [],
               systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : INITIAL_SYSTEM_QUESTS,
               unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
               equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
@@ -2675,7 +2656,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               tasks: starterTasks,
               shopItems: INITIAL_SHOP_ITEMS,
               inventory: [],
-              rivals: INITIAL_RIVALS,
+              rivals: [],
               systemQuests: INITIAL_SYSTEM_QUESTS,
               unlockedTitleIds: ['title_tan_binh_gai_do'],
               equippedTitleId: 'title_tan_binh_gai_do',
@@ -2737,7 +2718,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           tasks: [],
           shopItems: INITIAL_SHOP_ITEMS,
           inventory: [],
-          rivals: INITIAL_RIVALS,
+          rivals: [],
           systemQuests: INITIAL_SYSTEM_QUESTS,
           unlockedTitleIds: ['title_tan_binh_gai_do'],
           equippedTitleId: 'title_tan_binh_gai_do',

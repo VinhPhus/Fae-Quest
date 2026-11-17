@@ -30,7 +30,8 @@ export const PlayerStatusCard: React.FC = () => {
     coins,
     completedTotal,
     streakDays,
-    rivals,
+    hunterId,
+    communityProfiles,
     equippedTitleId,
     setActiveTab,
     setRoadmapOpen,
@@ -55,10 +56,12 @@ export const PlayerStatusCard: React.FC = () => {
     expNeeded = nextTier.minExp - exp;
   }
 
-  // Calculate player position in leaderboard
+  // Calculate player position in real leaderboard
   const allCombatants = [
-    { name: playerName, exp, isPlayer: true },
-    ...rivals.map((r) => ({ name: r.name, exp: r.exp, isPlayer: false })),
+    { id: hunterId, name: playerName, exp: typeof exp === 'number' ? exp : 0, isPlayer: true },
+    ...(communityProfiles || [])
+      .filter((p) => p.id !== hunterId && p.role !== 'admin')
+      .map((p) => ({ id: p.id, name: p.username, exp: typeof p.exp === 'number' ? p.exp : 0, isPlayer: false })),
   ].sort((a, b) => b.exp - a.exp);
   const playerRankPos = allCombatants.findIndex((c) => c.isPlayer) + 1;
 

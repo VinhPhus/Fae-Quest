@@ -108,12 +108,4 @@ export const INITIAL_INVENTORY: InventoryTicket[] = [
   },
 ];
 
-export const INITIAL_RIVALS: Rival[] = [
-  { id: 'r1', name: 'Linh Nhi', title: 'Tân Binh Gai Đỏ', exp: 160, avatar: '🦊' },
-  { id: 'r2', name: 'Hoàng Phúc', title: 'Kẻ Chế Ngự Thời Gian', exp: 310, avatar: '🐺' },
-  { id: 'r3', name: 'Minh Khôi', title: 'Thể Phách Kim Cương', exp: 640, avatar: '🦁' },
-  { id: 'r4', name: 'Bảo Ngọc', title: 'Học Giả Huyền Bí', exp: 1250, avatar: '🦄' },
-  { id: 'r5', name: 'Tuấn Kiệt', title: 'Chiến Binh Bất Khuất', exp: 2150, avatar: '🐉' },
-  { id: 'r6', name: 'Huyền Trang', title: 'Hiền Nhân Tập Trung', exp: 3100, avatar: '🦅' },
-  { id: 'r7', name: 'Ares Vũ', title: 'Độc Cô Cầu Bại', exp: 4350, avatar: '👑' },
-];
+export const INITIAL_RIVALS: Rival[] = [];

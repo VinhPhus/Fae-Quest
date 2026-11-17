@@ -4,19 +4,25 @@ import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { SYSTEM_TITLES, resolveTitleObject } from '../../constants/systemQuests';
 import { RivalTargetBanner } from './RivalTargetBanner';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
-import { DARK_FANTASY_COVERS } from '../modals/ChangeCoverModal';
-import { Trophy, RefreshCw, UserPlus, Swords, Globe, Bot, ShieldCheck } from 'lucide-react';
+import { Trophy, RefreshCw, Swords, ShieldCheck } from 'lucide-react';
 
 export const LeaderboardHeader: React.FC = () => {
-  const { userRole, simulateRivalActivity, setAddRivalOpen, syncToCloud } = useFaeQuestStore();
+  const { userRole, syncToCloud, communityProfiles, fetchCommunityProfiles, hunterId } = useFaeQuestStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRefresh = async () => {
     setIsLoading(true);
     await syncToCloud(true);
+    await fetchCommunityProfiles();
     window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
     setTimeout(() => setIsLoading(false), 800);
   };
+
+  // Tính số lượng người chơi thật đang thi đấu
+  const isIncluded = (communityProfiles || []).some((p) => p.id === hunterId);
+  const totalRealHunters = userRole === 'admin'
+    ? (communityProfiles || []).length
+    : (isIncluded ? (communityProfiles || []).length : (communityProfiles || []).length + 1);
 
   return (
     <div className="space-y-3">
@@ -39,37 +45,28 @@ export const LeaderboardHeader: React.FC = () => {
           <p className="text-xs text-[#9BA8AB] max-w-2xl leading-relaxed hidden sm:block">
             {userRole === 'admin'
               ? 'Tài khoản Quản Trị Viên được tự động ẩn khỏi BXH để bảo toàn tính minh bạch và công bằng cho Đấu Trường.'
-              : 'BXH Cộng Đồng kết nối trực tiếp với đám mây Supabase (Top 50). Hoàn thành nhiệm vụ kỷ luật mỗi ngày để vươn lên ngôi vị Thách Đấu!'}
+              : 'BXH 100% người chơi thật kết nối trực tiếp với đám mây Supabase (Top 50). Hoàn thành nhiệm vụ kỷ luật mỗi ngày để vươn lên ngôi vị Thách Đấu!'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Thẻ đếm số lượng người chơi thật */}
+          <div className="px-3.5 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs font-bold text-[#CCD0CF] flex items-center gap-2 shadow-inner">
+            <Swords className="w-3.5 h-3.5 text-cyan-400" />
+            <span>
+              <strong className="text-white font-extrabold">{totalRealHunters}</strong> Thợ Săn Đang Thi Đấu
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={handleRefresh}
             disabled={isLoading}
-            className="px-3.5 py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50"
-            title="Tải lại BXH cộng đồng từ Supabase"
+            className="px-4 py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50"
+            title="Tải lại BXH người chơi thật từ Supabase"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             <span>{isLoading ? 'Đang tải...' : 'Làm Mới BXH'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={simulateRivalActivity}
-            className="px-3 py-2 rounded-xl bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer"
-            title="Mô phỏng đối thủ AI tăng điểm EXP"
-          >
-            <Bot className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Luyện Tập Với AI</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAddRivalOpen(true)}
-            className="px-3 py-2 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] flex items-center gap-1.5 transition shadow cursor-pointer"
-          >
-            <UserPlus className="w-3.5 h-3.5 text-amber-300" />
-            <span>Thêm Đối Thủ</span>
           </button>
         </div>
       </div>
@@ -89,17 +86,15 @@ export const LeaderboardTable: React.FC = () => {
     streakDays,
     completedTotal,
     stars,
-    rivals,
     equippedTitleId,
     hunterId,
-    simulateRivalActivity,
-    setAddRivalOpen,
     syncToCloud,
+    communityProfiles,
+    fetchCommunityProfiles,
     userRole,
     openRivalModal,
   } = useFaeQuestStore();
 
-  const [communityProfiles, setCommunityProfiles] = useState<HunterProfileCloud[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
 
@@ -109,8 +104,7 @@ export const LeaderboardTable: React.FC = () => {
     setIsLoading(true);
     // Đồng bộ trạng thái mới nhất của bạn lên Supabase trước khi tải lại
     await syncToCloud(true);
-    const res = await fetchCommunityLeaderboard(50);
-    setCommunityProfiles(res.profiles || []);
+    await fetchCommunityProfiles();
     setIsLoading(false);
     setLastRefreshed(new Date().toLocaleTimeString('vi-VN'));
   };
@@ -127,7 +121,7 @@ export const LeaderboardTable: React.FC = () => {
     id: hunterId || 'player_me',
     name: playerName,
     title: playerTitle,
-    exp,
+    exp: typeof exp === 'number' ? exp : 0,
     avatar: avatarUrl || '🛡️',
     coverUrl: coverUrl || null,
     streak: streakDays,
@@ -135,19 +129,18 @@ export const LeaderboardTable: React.FC = () => {
     equippedTitle: equippedTitleId,
     stars: stars || 0,
     isPlayer: true,
-    isCommunity: true,
   };
 
-  // 2. Dữ liệu thợ săn cộng đồng từ Supabase (loại bỏ chính mình để tránh trùng lặp)
-  const otherCommunityCombatants = communityProfiles
-    .filter((p) => p.id !== hunterId)
+  // 2. Dữ liệu 100% thợ săn thật từ Supabase (loại bỏ chính mình & tài khoản admin)
+  const otherCommunityCombatants = (communityProfiles || [])
+    .filter((p) => p.id !== hunterId && p.role !== 'admin')
     .map((p) => {
       const matchingTitle = resolveTitleObject(p.equipped_title);
       return {
         id: p.id,
-        name: p.username,
+        name: p.username || 'Thợ Săn Ẩn Danh',
         title: matchingTitle.name,
-        exp: p.exp,
+        exp: typeof p.exp === 'number' ? p.exp : 0,
         avatar: p.avatar_url || '⚔️',
         coverUrl: p.cover_url || null,
         streak: p.streak || 0,
@@ -155,39 +148,14 @@ export const LeaderboardTable: React.FC = () => {
         equippedTitle: p.equipped_title,
         stars: p.stars || 0,
         isPlayer: false,
-        isCommunity: true,
       };
     });
 
   // Nếu là Admin, ẩn hoàn toàn tài khoản của mình khỏi Đấu Trường BXH
-  const communityCombatants = userRole === 'admin'
+  const allCombatants = (userRole === 'admin'
     ? otherCommunityCombatants
-    : [myCombatant, ...otherCommunityCombatants];
-
-  // 3. Đối thủ AI dự phòng (Gán ảnh bìa Dark Fantasy phân biệt rõ ràng, không lẫn lộn)
-  const aiCombatants = rivals.map((r, i) => ({
-    id: r.id,
-    name: r.name,
-    title: r.title,
-    exp: r.exp,
-    avatar: r.avatar,
-    coverUrl: DARK_FANTASY_COVERS[i % DARK_FANTASY_COVERS.length]?.url || null,
-    streak: Math.max(1, Math.floor(r.exp / 150)),
-    completedTasks: Math.max(1, Math.floor(r.exp / 35)),
-    equippedTitle: r.title,
-    stars: Math.floor(r.exp / 1000),
-    isPlayer: false,
-    isCommunity: false,
-  }));
-
-  // Kết hợp: Nếu số lượng người chơi thật < 10, bổ sung thêm các đối thủ AI để bảng luôn đủ 10 bậc
-  let combined = [...communityCombatants];
-  if (communityCombatants.length < 10) {
-    const slotsNeeded = 10 - communityCombatants.length;
-    combined = [...communityCombatants, ...aiCombatants.slice(0, slotsNeeded)];
-  }
-
-  const allCombatants = combined.sort((a, b) => b.exp - a.exp);
+    : [myCombatant, ...otherCommunityCombatants]
+  ).sort((a, b) => b.exp - a.exp);
 
   return (
     <div className="space-y-4">
@@ -294,19 +262,9 @@ export const LeaderboardTable: React.FC = () => {
                   <div className="min-w-0 space-y-0.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="text-xs sm:text-sm font-bold text-parchment truncate">{c.name}</p>
-                      {c.isPlayer ? (
+                      {c.isPlayer && (
                         <span className="px-1.5 py-0.2 sm:px-2 sm:py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-fae text-thorn-dark shadow">
                           BẠN
-                        </span>
-                      ) : c.isCommunity ? (
-                        <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 items-center gap-0.5">
-                          <Globe className="w-2.5 h-2.5" />
-                          <span>Cộng Đồng</span>
-                        </span>
-                      ) : (
-                        <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-400/30 items-center gap-0.5">
-                          <Bot className="w-2.5 h-2.5" />
-                          <span>AI</span>
                         </span>
                       )}
                     </div>

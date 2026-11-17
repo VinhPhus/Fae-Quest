@@ -146,7 +146,7 @@ export const RivalProfileModal: React.FC = () => {
               ) : (
                 <div className="px-2.5 py-1 rounded-full bg-[#06141B]/80 backdrop-blur-md border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] flex items-center gap-1.5 shadow-md">
                   <Swords className="w-3.5 h-3.5 text-[#CCD0CF]" />
-                  <span>Đối Thủ Đấu Trường</span>
+                  <span>Thợ Săn Fae</span>
                 </div>
               )}
             </div>

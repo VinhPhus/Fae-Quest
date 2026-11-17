@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
-import { DARK_FANTASY_COVERS } from '../modals/ChangeCoverModal';
 import { Trophy, ChevronRight } from 'lucide-react';
 import { EASING_SPRING } from '../../constants/motion';
 
@@ -17,8 +16,9 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
     completedTotal,
     stars,
     equippedTitleId,
-    rivals,
     hunterId,
+    communityProfiles: storeProfiles,
+    fetchCommunityProfiles,
     setActiveTab,
     userRole,
     openRivalModal,
@@ -51,11 +51,13 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
     };
   }, [exp]);
 
+  const activeProfiles = communityProfiles.length > 0 ? communityProfiles : storeProfiles;
+
   // 1. Hồ sơ trực tiếp (live state) của người dùng hiện tại
   const myCombatant = {
     id: hunterId || 'player_me',
     name: playerName,
-    exp,
+    exp: typeof exp === 'number' ? exp : 0,
     avatar: avatarUrl || null,
     coverUrl: coverUrl || null,
     streak: streakDays,
@@ -67,12 +69,12 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
 
   // 2. Thợ săn thật từ bảng profiles Supabase (loại trừ tài khoản hiện tại để tránh trùng/lẫn lộn)
   const myIdentifier = hunterId;
-  const otherCommunity = communityProfiles
-    .filter((p) => p.id !== myIdentifier)
+  const otherCommunity = (activeProfiles || [])
+    .filter((p) => p.id !== myIdentifier && p.role !== 'admin')
     .map((p) => ({
       id: p.id,
       name: p.username || 'Thợ Săn Ẩn Danh',
-      exp: p.exp || 0,
+      exp: typeof p.exp === 'number' ? p.exp : 0,
       avatar: p.avatar_url || null,
       coverUrl: p.cover_url || null,
       streak: p.streak || 0,
@@ -82,39 +84,18 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       isPlayer: false,
     }));
 
-  // 3. Dự phòng đối thủ AI nếu chưa đủ 5 người chơi (Gán ảnh bìa Dark Fantasy sống động, phân biệt rõ ràng)
-  const aiCombatants = rivals.map((r, i) => ({
-    id: r.id,
-    name: r.name,
-    exp: r.exp,
-    avatar:
-      r.avatar &&
-      (r.avatar.startsWith('http') || r.avatar.startsWith('/') || r.avatar.startsWith('data:'))
-        ? r.avatar
-        : null,
-    coverUrl: DARK_FANTASY_COVERS[i % DARK_FANTASY_COVERS.length]?.url || null,
-    streak: Math.max(1, Math.floor(r.exp / 150)),
-    completedTasks: Math.max(1, Math.floor(r.exp / 35)),
-    equippedTitle: r.title,
-    stars: Math.floor(r.exp / 1000),
-    isPlayer: false,
-  }));
-
-  // Hợp nhất và sắp xếp giảm dần theo EXP (Tài khoản Admin không tham gia đua top)
-  let combined = userRole === 'admin' ? [...otherCommunity] : [myCombatant, ...otherCommunity];
-  if (combined.length < 5) {
-    const needed = 5 - combined.length;
-    combined = [...combined, ...aiCombatants.slice(0, needed)];
-  }
-
-  const allCombatants = combined.sort((a, b) => b.exp - a.exp);
+  // Hợp nhất và sắp xếp giảm dần theo EXP (100% người chơi thật, Tài khoản Admin không tham gia đua top)
+  const allCombatants = (userRole === 'admin'
+    ? otherCommunity
+    : [myCombatant, ...otherCommunity]
+  ).sort((a, b) => b.exp - a.exp);
 
   // Vị trí thứ hạng chính xác 100% của người dùng trên BXH tổng
   const userRankIndex = allCombatants.findIndex((c) => c.isPlayer);
   const myRank = userRankIndex !== -1 ? userRankIndex + 1 : 1;
   const myRankTier = RANK_TIERS[getRankIndexByExp(exp)];
 
-  // Top 5 Thợ Săn dẫn đầu
+  // Top 5 Thợ Săn dẫn đầu (chỉ lấy tối đa 5 người chơi thật)
   const top5 = allCombatants.slice(0, 5);
 
   // Hàm render Avatar thật hoặc chữ cái đầu tiên (không dùng emoji giả)

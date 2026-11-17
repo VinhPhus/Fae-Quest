@@ -15,7 +15,6 @@ import { RewardShopHeader, RewardShopGrid } from './components/shop/RewardShopGr
 import { AddShopItemModal } from './components/shop/AddShopItemModal';
 import { InventoryHeader, InventoryList } from './components/shop/InventoryList';
 import { LeaderboardHeader, LeaderboardTable } from './components/leaderboard/LeaderboardTable';
-import { AddRivalModal } from './components/leaderboard/AddRivalModal';
 import { ProductivityAnalyticsHeader, ProductivityAnalytics } from './components/analytics/ProductivityAnalytics';
 import { RankUpModal } from './components/modals/RankUpModal';
 import { RankRoadmapModal } from './components/modals/RankRoadmapModal';
@@ -234,7 +233,6 @@ export const App: React.FC = () => {
       <RankUpModal />
       <RankRoadmapModal />
       <AddShopItemModal />
-      <AddRivalModal />
       <RenameModal />
       <ResetModal />
       <SettingsModal />

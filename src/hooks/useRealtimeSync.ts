@@ -137,6 +137,7 @@ export const useRealtimeSync = (): void => {
         table: 'profiles',
       },
       (payload) => {
+        useFaeQuestStore.getState().fetchCommunityProfiles();
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard', { detail: payload }));
         }
