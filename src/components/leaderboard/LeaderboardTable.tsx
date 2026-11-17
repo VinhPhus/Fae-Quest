@@ -6,6 +6,79 @@ import { RivalTargetBanner } from './RivalTargetBanner';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
 import { Trophy, RefreshCw, UserPlus, Swords, Globe, Bot, ShieldCheck } from 'lucide-react';
 
+export const LeaderboardHeader: React.FC = () => {
+  const { userRole, simulateRivalActivity, setAddRivalOpen, syncToCloud } = useFaeQuestStore();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await syncToCloud(true);
+    window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
+    setTimeout(() => setIsLoading(false), 800);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Leaderboard Header Banner */}
+      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF]">
+              <Swords className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Đấu Trường Danh Vọng • Supabase Realtime</span>
+            </div>
+            {userRole === 'admin' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[11px] font-extrabold text-amber-300">
+                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                <span>CHẾ ĐỘ QUẢN TRỊ VIÊN (ẨN KHỎI BXH)</span>
+              </span>
+            )}
+          </div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide">Bảng Xếp Hạng Thợ Săn</h2>
+          <p className="text-xs text-[#9BA8AB] max-w-2xl leading-relaxed hidden sm:block">
+            {userRole === 'admin'
+              ? 'Tài khoản Quản Trị Viên được tự động ẩn khỏi BXH để bảo toàn tính minh bạch và công bằng cho Đấu Trường.'
+              : 'BXH Cộng Đồng kết nối trực tiếp với đám mây Supabase (Top 50). Hoàn thành nhiệm vụ kỷ luật mỗi ngày để vươn lên ngôi vị Thách Đấu!'}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="px-3.5 py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50"
+            title="Tải lại BXH cộng đồng từ Supabase"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>{isLoading ? 'Đang tải...' : 'Làm Mới BXH'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={simulateRivalActivity}
+            className="px-3 py-2 rounded-xl bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer"
+            title="Mô phỏng đối thủ AI tăng điểm EXP"
+          >
+            <Bot className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Luyện Tập Với AI</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAddRivalOpen(true)}
+            className="px-3 py-2 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] flex items-center gap-1.5 transition shadow cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-amber-300" />
+            <span>Thêm Đối Thủ</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Target Banner */}
+      <RivalTargetBanner />
+    </div>
+  );
+};
+
 export const LeaderboardTable: React.FC = () => {
   const {
     playerName,
@@ -38,6 +111,9 @@ export const LeaderboardTable: React.FC = () => {
 
   useEffect(() => {
     loadLeaderboard();
+    const handleReload = () => loadLeaderboard();
+    window.addEventListener('faequest:reload_leaderboard', handleReload);
+    return () => window.removeEventListener('faequest:reload_leaderboard', handleReload);
   }, []);
 
   // 1. Dữ liệu của người dùng hiện tại
@@ -94,60 +170,6 @@ export const LeaderboardTable: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Leaderboard Header Banner */}
-      <div className="rpg-card rounded-3xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-opal/30 border border-opal-light/50 text-xs font-bold text-parchment">
-              <Swords className="w-3.5 h-3.5 text-fae" />
-              <span>Đấu Trường Danh Vọng • Supabase Realtime</span>
-            </div>
-            {userRole === 'admin' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[11px] font-extrabold text-amber-300">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>CHẾ ĐỘ QUẢN TRỊ VIÊN (ẨN KHỎI BXH)</span>
-              </span>
-            )}
-          </div>
-          <h2 className="text-2xl font-extrabold text-parchment">Bảng Xếp Hạng Thợ Săn</h2>
-          <p className="text-sm text-parchment/75 max-w-2xl leading-relaxed">
-            {userRole === 'admin'
-              ? 'Tài khoản Quản Trị Viên được tự động ẩn khỏi BXH để bảo toàn tính minh bạch và công bằng cho Đấu Trường.'
-              : 'BXH Cộng Đồng kết nối trực tiếp với đám mây Supabase (Top 50). Hoàn thành nhiệm vụ kỷ luật mỗi ngày để vươn lên ngôi vị Thách Đấu!'}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={loadLeaderboard}
-            disabled={isLoading}
-            className="px-4 py-2.5 rounded-xl rpg-btn-primary text-xs font-bold text-parchment flex items-center gap-2 shadow hover:scale-105 transition disabled:opacity-50"
-            title="Tải lại BXH cộng đồng từ Supabase"
-          >
-            <RefreshCw className={`w-4 h-4 text-parchment ${isLoading ? 'animate-spin' : ''}`} />
-            <span>{isLoading ? 'Đang tải...' : 'Làm Mới BXH Cloud'}</span>
-          </button>
-          <button
-            onClick={simulateRivalActivity}
-            className="px-3.5 py-2.5 rounded-xl rpg-btn-opal text-xs font-bold text-parchment flex items-center gap-1.5 shadow"
-            title="Mô phỏng đối thủ AI tăng điểm EXP"
-          >
-            <Bot className="w-4 h-4 text-fae" />
-            <span>Luyện Tập Với AI</span>
-          </button>
-          <button
-            onClick={() => setAddRivalOpen(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-bargain hover:bg-bargain-light border border-fae/40 text-xs font-bold text-parchment flex items-center gap-1.5 transition shadow"
-          >
-            <UserPlus className="w-4 h-4 text-fae" />
-            <span>Thêm Đối Thủ</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Target Banner */}
-      <RivalTargetBanner />
-
       {/* Leaderboard List */}
       <div className="rpg-card rounded-2xl sm:rounded-3xl overflow-hidden border border-opal/30 shadow-2xl">
         <div className="px-3.5 sm:px-6 py-3 sm:py-4 bg-thorn-dark/90 border-b border-parchment/10 flex items-center justify-between sm:grid sm:grid-cols-12 text-xs font-bold uppercase tracking-wider text-parchment/60">

@@ -24,6 +24,63 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+export const SystemQuestsHeader: React.FC = () => {
+  const { systemAchievements, unlockedTitleIds, equippedTitleId, exp } = useFaeQuestStore();
+  const currentRankIdx = getRankIndexByExp(exp);
+  const currentTier = RANK_TIERS[currentRankIdx];
+  const allTitles = getAllUnifiedTitles(systemAchievements);
+  const unlockedCount = allTitles.filter((t) => isTitleUnlocked(t.id, unlockedTitleIds)).length;
+  const equippedTitle = resolveTitleObject(equippedTitleId);
+
+  return (
+    <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl relative overflow-hidden">
+      <div className="space-y-1 z-10 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#06141B] border border-[#253745] text-xs font-bold text-[#CCD0CF]">
+            <Scroll className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Đại Sảnh Vinh Dự FaeQuest</span>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[11px] font-extrabold text-[#CCD0CF]">
+            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain" />
+            <span>{currentTier.name.toUpperCase()}</span>
+          </span>
+          <span className="text-[11px] text-[#9BA8AB] font-mono">
+            {exp} EXP
+          </span>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide">
+          Thành Tựu & Kho Danh Hiệu
+        </h2>
+        <p className="text-xs text-[#9BA8AB] max-w-2xl leading-relaxed hidden sm:block">
+          Thử thách giới hạn bản thân với các chuỗi bộ đếm kỷ luật và hoàn thành các cột mốc danh giá để thu thập những danh hiệu uy dũng nhất.
+        </p>
+      </div>
+
+      {/* Current Equipped Title Highlight Card */}
+      <div className="shrink-0 z-10 w-full md:w-auto bg-[#06141B] px-3.5 py-2.5 rounded-2xl border border-[#253745] shadow-inner flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-[#11212D] border border-[#4A5C6A] flex items-center justify-center p-1 shadow-inner shrink-0 relative overflow-hidden group">
+          <img
+            src={equippedTitle.iconUrl}
+            alt={equippedTitle.name}
+            className="w-full h-full object-contain drop-shadow-[0_0_14px_rgba(204,208,207,0.5)] animate-pulse"
+          />
+        </div>
+        <div>
+          <span className="text-[9px] text-[#9BA8AB] uppercase tracking-widest block font-semibold">
+            Danh Hiệu Đang Trang Bị
+          </span>
+          <span className={`text-sm font-extrabold ${equippedTitle.color} flex items-center gap-1.5`}>
+            <span>{equippedTitle.name}</span>
+          </span>
+          <span className="text-[10px] text-[#9BA8AB]">
+            Đã mở: <strong className="text-cyan-400 font-bold">{unlockedCount}</strong>/{allTitles.length} danh hiệu
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const SystemQuestsView: React.FC = () => {
   const {
     systemQuests,
@@ -99,45 +156,7 @@ export const SystemQuestsView: React.FC = () => {
         : systemQuests;
 
   return (
-    <div className="space-y-7 animate-in fade-in duration-200">
-      {/* 1. Header Banner */}
-      <div className="rpg-card-opal rounded-3xl p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative overflow-hidden shadow-2xl border border-fae/40">
-        <div className="space-y-1.5 z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fae/20 border border-fae/40 text-xs font-bold text-fae-light">
-            <Scroll className="w-3.5 h-3.5 text-fae" />
-            <span>Đại Sảnh Vinh Dự FaeQuest</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-parchment font-rpg tracking-wide">
-            Thành Tựu & Kho Danh Hiệu
-          </h2>
-          <p className="text-xs sm:text-sm text-parchment/75 max-w-2xl leading-relaxed">
-            Thử thách giới hạn bản thân với các chuỗi bộ đếm kỷ luật và hoàn thành các cột mốc danh giá để thu thập những danh hiệu uy dũng nhất.
-          </p>
-        </div>
-
-        {/* Current Equipped Title Highlight Card */}
-        <div className="shrink-0 z-10 w-full md:w-auto bg-[#11212D]/90 p-4 rounded-2xl border border-[#253745] shadow-xl flex items-center gap-3.5">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-[#06141B] border border-[#4A5C6A] flex items-center justify-center p-1 shadow-inner shrink-0 relative overflow-hidden group">
-            <img
-              src={equippedTitle.iconUrl}
-              alt={equippedTitle.name}
-              className="w-full h-full object-contain drop-shadow-[0_0_16px_rgba(204,208,207,0.5)] animate-pulse"
-            />
-          </div>
-          <div>
-            <span className="text-[10px] text-[#9BA8AB] uppercase tracking-widest block font-semibold">
-              Danh Hiệu Đang Trang Bị
-            </span>
-            <span className={`text-base font-extrabold ${equippedTitle.color} flex items-center gap-1.5`}>
-              <span>{equippedTitle.name}</span>
-            </span>
-            <span className="text-[10px] text-[#9BA8AB]">
-              Đã mở: {unlockedCount}/{allTitles.length} danh hiệu
-            </span>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* 2. Kho Danh Hiệu (Horizontal Carousel Slider) */}
       <div className="bg-[#11212D] rounded-3xl p-5 sm:p-6 space-y-4 border border-[#253745] shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#253745]">

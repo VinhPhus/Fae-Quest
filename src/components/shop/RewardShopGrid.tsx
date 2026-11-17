@@ -1,7 +1,58 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
 import { Sparkles, ShoppingBag, Plus, Trash2 } from 'lucide-react';
+
+export const RewardShopHeader: React.FC = () => {
+  const { coins, setAddShopItemOpen, exp } = useFaeQuestStore();
+  const currentRankIdx = getRankIndexByExp(exp);
+  const currentTier = RANK_TIERS[currentRankIdx];
+
+  return (
+    <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF]">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Thương Hội Fae Fruit</span>
+          </div>
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[11px] font-extrabold text-[#CCD0CF]">
+            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain" />
+            <span>{currentTier.name.toUpperCase()}</span>
+          </span>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide">
+          Cửa Hàng Tự Thưởng Bản Thân
+        </h2>
+        <p className="text-xs text-[#9BA8AB] max-w-2xl leading-relaxed hidden sm:block">
+          Dùng Xu Vàng tích lũy từ nhiệm vụ để đổi lấy những phần thưởng xứng đáng ngoài đời thực!
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 self-stretch md:self-auto justify-between md:justify-end bg-[#06141B] px-4 py-2.5 rounded-2xl border border-[#253745] shadow-xl">
+        <div className="flex items-center gap-2.5">
+          <CoinIcon size="lg" />
+          <div>
+            <span className="text-[10px] text-[#9BA8AB] block">Số dư hiện tại</span>
+            <span className="text-xl font-extrabold text-amber-300 flex items-center gap-1 font-rpg">
+              <span>{coins}</span>
+              <span className="text-xs font-bold text-[#CCD0CF]">Xu</span>
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAddShopItemOpen(true)}
+          className="ml-3 px-3.5 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_16px_rgba(204,208,207,0.2)] active:scale-95 transition cursor-pointer"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          <span>Thêm Món Mới</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const RewardShopGrid: React.FC = () => {
   const {
@@ -34,42 +85,6 @@ export const RewardShopGrid: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Shop Header Banner */}
-      <div className="rounded-[28px] p-6 bg-[#11212D] border border-[#253745] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF]">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Thương Hội Fae Fruit</span>
-          </div>
-          <h2 className="text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide">
-            Cửa Hàng Tự Thưởng Bản Thân
-          </h2>
-          <p className="text-sm text-[#9BA8AB] max-w-2xl leading-relaxed">
-            Mỗi khi hoàn thành nhiệm vụ và <strong className="text-[#CCD0CF]">Thăng Cấp Rank</strong>, bạn nhận được lượng lớn <strong className="text-amber-300">Xu Thưởng</strong>. Hãy dùng Xu để đổi lấy những phần thưởng xứng đáng ngoài đời thực!
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4 self-stretch md:self-auto justify-between md:justify-end bg-[#06141B] px-5 py-3.5 rounded-2xl border border-[#253745] shadow-xl">
-          <div className="flex items-center gap-3">
-            <CoinIcon size="xl" />
-            <div>
-              <span className="text-xs text-[#9BA8AB] block">Số dư hiện tại</span>
-              <span className="text-2xl font-extrabold text-amber-300 flex items-center gap-1.5 font-rpg">
-                <span>{coins}</span>
-                <span className="text-sm font-bold text-[#CCD0CF]">Xu</span>
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={() => setAddShopItemOpen(true)}
-            className="ml-4 px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_16px_rgba(204,208,207,0.2)] active:scale-95 transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Thêm Món Mới</span>
-          </button>
-        </div>
-      </div>
-
       {/* Shop Items Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {allShopItems.map((item) => {
@@ -80,11 +95,10 @@ export const RewardShopGrid: React.FC = () => {
           return (
             <div
               key={item.id}
-              className={`rounded-[28px] p-5 bg-[#11212D] border transition-all duration-200 shadow-md group flex flex-col justify-between gap-4 ${
-                item.isSystem
-                  ? 'border-amber-500/30 hover:border-amber-500/60'
-                  : 'border-[#253745] hover:border-[#4A5C6A]'
-              }`}
+              className={`rounded-[28px] p-5 bg-[#11212D] border transition-all duration-200 shadow-md group flex flex-col justify-between gap-4 ${item.isSystem
+                ? 'border-amber-500/30 hover:border-amber-500/60'
+                : 'border-[#253745] hover:border-[#4A5C6A]'
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] group-hover:border-[#4A5C6A] flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition overflow-hidden p-1">

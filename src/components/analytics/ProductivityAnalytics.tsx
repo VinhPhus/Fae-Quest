@@ -31,6 +31,99 @@ interface RadarStat {
   icon: React.ReactNode;
 }
 
+export const ProductivityAnalyticsHeader: React.FC = () => {
+  const { tasks, completedTotal, streakDays, exp } = useFaeQuestStore();
+
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter((t) => t.completed).length;
+  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  return (
+    <div className="space-y-3">
+      {/* Header Banner */}
+      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#253745] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] mb-1 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+            <span>SƠ ĐỒ LỤC GIÁC NĂNG LỰC & CHỈ SỐ HIỆU SUẤT</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black text-white font-rpg tracking-wide">
+            Phân Tích Năng Suất Cá Nhân
+          </h2>
+          <p className="text-xs text-[#9BA8AB] mt-1 max-w-2xl leading-relaxed hidden sm:block">
+            Theo dõi tiến độ hoàn thành các mục tiêu rèn luyện và duy trì cân bằng 6 trụ cột năng lực Thợ Săn.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#06141B] border border-[#253745] shrink-0 shadow-inner">
+          <div className="text-right">
+            <span className="text-[10px] text-[#9BA8AB] uppercase font-bold block">Chuỗi Kỷ Luật</span>
+            <span className="text-sm font-extrabold text-orange-300">{streakDays} Ngày Liên Tiếp</span>
+          </div>
+          <div className="w-8 h-8 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 font-black text-sm shadow">
+            🔥
+          </div>
+        </div>
+      </div>
+
+      {/* TẦNG 1: 4 Thẻ KPI Tóm Tắt (Summary Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Card 1: Chuỗi Kỷ Luật */}
+        <div className="rounded-2xl p-3 sm:p-3.5 bg-[#11212D] border border-[#253745] flex items-center gap-3 shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0 shadow-inner">
+            <Flame className="w-5 h-5 fill-orange-400" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] text-[#9BA8AB] block font-semibold">Chuỗi Kỷ Luật</span>
+            <span className="text-base font-black text-orange-300 truncate block">
+              {streakDays} Ngày
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: Tỷ Lệ Hoàn Thành */}
+        <div className="rounded-2xl p-3 sm:p-3.5 bg-[#11212D] border border-[#253745] flex items-center gap-3 shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] text-[#9BA8AB] block font-semibold">Tỷ Lệ Hoàn Thành</span>
+            <span className="text-base font-black text-emerald-300 truncate block">
+              {completionRate}% ({completedTasks}/{totalTasks})
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Tổng EXP Tích Lũy */}
+        <div className="rounded-2xl p-3 sm:p-3.5 bg-[#11212D] border border-[#253745] flex items-center gap-3 shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-300 shrink-0 shadow-inner">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] text-[#9BA8AB] block font-semibold">Tổng EXP</span>
+            <span className="text-base font-black text-cyan-300 truncate block">
+              {exp.toLocaleString()} EXP
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Tổng Đã Hoàn Tất */}
+        <div className="rounded-2xl p-3 sm:p-3.5 bg-[#11212D] border border-[#253745] flex items-center gap-3 shadow-md">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0 shadow-inner">
+            <Award className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] text-[#9BA8AB] block font-semibold">Đã Hoàn Tất</span>
+            <span className="text-base font-black text-amber-300 truncate block">
+              {completedTotal} Việc
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ProductivityAnalytics: React.FC = () => {
   const { tasks, completedTotal, streakDays, exp, focusSessionsCompleted } = useFaeQuestStore();
 
@@ -340,93 +433,6 @@ export const ProductivityAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header Banner */}
-      <div className="rounded-3xl p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#253745] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] mb-2 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-            <span>SƠ ĐỒ LỤC GIÁC NĂNG LỰC & CHỈ SỐ HIỆU SUẤT</span>
-          </div>
-          <h2 className="text-2xl font-black text-white font-rpg tracking-wide">
-            Phân Tích Năng Suất Cá Nhân
-          </h2>
-          <p className="text-xs sm:text-sm text-[#9BA8AB] mt-1 max-w-2xl leading-relaxed">
-            Theo dõi tiến độ hoàn thành các mục tiêu rèn luyện và duy trì cân bằng 6 trụ cột năng lực Thợ Săn theo thang điểm 5.0.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-[#06141B] border border-[#253745] shrink-0 shadow-inner">
-          <div className="text-right">
-            <span className="text-[10px] text-[#9BA8AB] uppercase font-bold block">Tổng Chiến Lực</span>
-            <span className="text-sm font-extrabold text-white">Rank {powerRank.rank} ({avgScore} / 5.0)</span>
-          </div>
-          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center font-black text-base shadow ${powerRank.badgeClass}`}>
-            {powerRank.rank}
-          </div>
-        </div>
-      </div>
-
-      {/* TẦNG 1: 4 Thẻ KPI Tóm Tắt (Summary Cards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Chuỗi Kỷ Luật */}
-        <div className="rounded-2xl p-4 bg-[#11212D] border border-[#253745] hover:border-orange-500/40 transition-all flex items-center gap-3.5 shadow-md group">
-          <div className="w-12 h-12 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0 shadow-inner group-hover:scale-105 transition">
-            <Flame className="w-6 h-6 fill-orange-400" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-[#9BA8AB] block font-semibold">Chuỗi Kỷ Luật</span>
-            <span className="text-lg sm:text-xl font-black text-orange-300 truncate block">
-              {streakDays} Ngày Liên Tiếp
-            </span>
-            <span className="text-[10px] text-[#9BA8AB]/70 truncate block">Ý chí bền bỉ mỗi ngày</span>
-          </div>
-        </div>
-
-        {/* Card 2: Tỷ Lệ Hoàn Thành */}
-        <div className="rounded-2xl p-4 bg-[#11212D] border border-[#253745] hover:border-emerald-500/40 transition-all flex items-center gap-3.5 shadow-md group">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner group-hover:scale-105 transition">
-            <CheckCircle className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-[#9BA8AB] block font-semibold">Tỷ Lệ Hoàn Thành</span>
-            <span className="text-lg sm:text-xl font-black text-emerald-300 truncate block">
-              {completionRate}% Mục Tiêu
-            </span>
-            <span className="text-[10px] text-[#9BA8AB]/70 truncate block">
-              {completedTasks}/{totalTasks} việc hoàn tất
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Tổng EXP Tích Lũy */}
-        <div className="rounded-2xl p-4 bg-[#11212D] border border-[#253745] hover:border-cyan-500/40 transition-all flex items-center gap-3.5 shadow-md group">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-300 shrink-0 shadow-inner group-hover:scale-105 transition">
-            <TrendingUp className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-[#9BA8AB] block font-semibold">Tổng EXP Tích Lũy</span>
-            <span className="text-lg sm:text-xl font-black text-cyan-300 truncate block">
-              {exp.toLocaleString()} EXP
-            </span>
-            <span className="text-[10px] text-[#9BA8AB]/70 truncate block">Kinh nghiệm chiến trường</span>
-          </div>
-        </div>
-
-        {/* Card 4: Tổng Đã Hoàn Tất */}
-        <div className="rounded-2xl p-4 bg-[#11212D] border border-[#253745] hover:border-amber-500/40 transition-all flex items-center gap-3.5 shadow-md group">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0 shadow-inner group-hover:scale-105 transition">
-            <Award className="w-6 h-6" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-[#9BA8AB] block font-semibold">Tổng Đã Hoàn Tất</span>
-            <span className="text-lg sm:text-xl font-black text-amber-300 truncate block">
-              {completedTotal} Nhiệm Vụ
-            </span>
-            <span className="text-[10px] text-[#9BA8AB]/70 truncate block">Chiến tích toàn hành trình</span>
-          </div>
-        </div>
-      </div>
-
       {/* TẦNG 2: BENTO GRID 2 CỘT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* CỘT TRÁI (6/12): Card "🕸️ SƠ ĐỒ LỤC GIÁC NĂNG LỰC (THANG ĐIỂM 5)" */}

@@ -10,18 +10,14 @@ import { DailyFocusWidget } from './components/bento/DailyFocusWidget';
 import { HunterStatisticsWidget } from './components/bento/HunterStatisticsWidget';
 import { RightMiniLeaderboardStrip } from './components/bento/RightMiniLeaderboardStrip';
 import { CreateQuestDrawer } from './components/modals/CreateQuestDrawer';
-import { PlayerStatusCard } from './components/hero/PlayerStatusCard';
-import { AddQuestForm } from './components/quests/AddQuestForm';
-import { QuestFilterBar } from './components/quests/QuestFilterBar';
-import { QuestList } from './components/quests/QuestList';
-import { SystemQuestsView } from './components/system-quests/SystemQuestsView';
+import { SystemQuestsHeader, SystemQuestsView } from './components/system-quests/SystemQuestsView';
 import { PomodoroTimerModal } from './components/quests/PomodoroTimerModal';
-import { RewardShopGrid } from './components/shop/RewardShopGrid';
+import { RewardShopHeader, RewardShopGrid } from './components/shop/RewardShopGrid';
 import { AddShopItemModal } from './components/shop/AddShopItemModal';
-import { InventoryList } from './components/shop/InventoryList';
-import { LeaderboardTable } from './components/leaderboard/LeaderboardTable';
+import { InventoryHeader, InventoryList } from './components/shop/InventoryList';
+import { LeaderboardHeader, LeaderboardTable } from './components/leaderboard/LeaderboardTable';
 import { AddRivalModal } from './components/leaderboard/AddRivalModal';
-import { ProductivityAnalytics } from './components/analytics/ProductivityAnalytics';
+import { ProductivityAnalyticsHeader, ProductivityAnalytics } from './components/analytics/ProductivityAnalytics';
 import { RankUpModal } from './components/modals/RankUpModal';
 import { RankRoadmapModal } from './components/modals/RankRoadmapModal';
 import { RenameModal } from './components/modals/RenameModal';
@@ -30,7 +26,7 @@ import { SettingsModal } from './components/modals/SettingsModal';
 import { HuntersOathModal } from './components/modals/HuntersOathModal';
 import { UserInboxModal } from './components/modals/UserInboxModal';
 import { AdminWarningModal } from './components/modals/AdminWarningModal';
-import { AdminPortalView } from './components/admin/AdminPortalView';
+import { AdminPortalHeader, AdminPortalView } from './components/admin/AdminPortalView';
 import { BannedScreen } from './components/auth/BannedScreen';
 import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
@@ -127,98 +123,105 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="thorn-pattern antialiased min-h-screen selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row">
+    <div className="thorn-pattern antialiased min-h-screen md:h-screen md:overflow-hidden selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row bg-[#06141B]">
       {/* 1. Collapsible Left Sidebar on Desktop / Bottom Navigation on Mobile */}
       <LeftSidebar />
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 min-w-0 flex flex-col pb-24 md:pb-8">
-        <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-5">
-          {/* Top Bento Header with Greeting, Search, and Quick Actions */}
-          <TopBentoHeader />
+      <div className="flex-1 min-w-0 flex flex-col h-auto md:h-screen overflow-visible md:overflow-hidden bg-[#06141B]">
+        {/* Phân vùng 1: Top Sticky Section (Hồ Sơ & Header - Giữ cố định trên Desktop) */}
+        <header className="relative md:flex-shrink-0 md:z-20 bg-[#06141B] px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-3 md:pb-4 border-b border-[#253745]/40 md:shadow-[0_8px_30px_rgba(6,20,27,0.85)]">
+          <div className="max-w-7xl w-full mx-auto space-y-3">
+            {/* Top Bento Header with Greeting, Search, and Quick Actions */}
+            <TopBentoHeader />
 
-          {/* Tab 1: Bento Dashboard (Quests Module) */}
-          {activeTab === 'quests' && (
-            <section className="animate-in fade-in duration-200">
-              <div className="flex gap-5 sm:gap-6 items-start">
-                {/* 2-Column Bento Grid Container (~66% Center + ~34% Right) */}
-                <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-                  {/* KHU VỰC A — CỘT CHÍNH GIỮA (Left-Center Column, lg:col-span-8) */}
-                  <div className="lg:col-span-8 space-y-5 sm:space-y-6">
-                    {/* 1. Hero Banner Hồ Sơ & Bậc Rank */}
-                    <HeroBentoBanner />
+            {/* Dedicated Top Profile / Banner per Active Tab */}
+            {activeTab === 'quests' && <HeroBentoBanner />}
+            {activeTab === 'system-quests' && <SystemQuestsHeader />}
+            {activeTab === 'shop' && <RewardShopHeader />}
+            {activeTab === 'leaderboard' && <LeaderboardHeader />}
+            {activeTab === 'inventory' && <InventoryHeader />}
+            {activeTab === 'analytics' && <ProductivityAnalyticsHeader />}
+            {activeTab === 'admin' && <AdminPortalHeader />}
+          </div>
+        </header>
 
-                    {/* 2. Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
-                    <QuestBentoGrid />
+        {/* Phân vùng 2: Scrollable Content Section (Cuộn độc lập) */}
+        <main className="flex-1 overflow-visible md:overflow-y-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 scroll-smooth [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-[#06141B] [&::-webkit-scrollbar-thumb]:bg-[#253745] hover:[&::-webkit-scrollbar-thumb]:bg-[#4A5C6A] [&::-webkit-scrollbar-thumb]:rounded-full">
+          <div className="max-w-7xl w-full mx-auto space-y-5">
+            {/* Tab 1: Bento Dashboard (Quests Module) */}
+            {activeTab === 'quests' && (
+              <section className="animate-in fade-in duration-200">
+                <div className="flex gap-5 sm:gap-6 items-start">
+                  {/* 2-Column Bento Grid Container (~66% Center + ~34% Right) */}
+                  <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+                    {/* KHU VỰC A — CỘT CHÍNH GIỮA (Left-Center Column, lg:col-span-8) */}
+                    <div className="lg:col-span-8 space-y-5 sm:space-y-6">
+                      {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
+                      <QuestBentoGrid />
 
-                    {/* 3. Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
-                    <FocusDock />
+                      {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
+                      <FocusDock />
+                    </div>
+
+                    {/* KHU VỰC B — CỘT WIDGET BÊN PHẢI (Right Column, lg:col-span-4) */}
+                    <div className="lg:col-span-4 space-y-5 sm:space-y-6">
+                      {/* Widget Nhiệm Vụ Hằng Ngày / Tiêu Điểm Nhanh */}
+                      <DailyFocusWidget />
+
+                      {/* Widget Thống Kê Thợ Săn */}
+                      <HunterStatisticsWidget />
+                    </div>
                   </div>
 
-                  {/* KHU VỰC B — CỘT WIDGET BÊN PHẢI (Right Column, lg:col-span-4) */}
-                  <div className="lg:col-span-4 space-y-5 sm:space-y-6 lg:sticky lg:top-4">
-                    {/* 1. Widget Nhiệm Vụ Hằng Ngày / Tiêu Điểm Nhanh */}
-                    <DailyFocusWidget />
-
-                    {/* 2. Widget Thống Kê Thợ Săn */}
-                    <HunterStatisticsWidget />
-                  </div>
+                  {/* KHU VỰC C — DẢI MINI BXH BÊN MÉP PHẢI (Chỉ hiện trên màn hình lớn xl:flex) */}
+                  <RightMiniLeaderboardStrip />
                 </div>
+              </section>
+            )}
 
-                {/* KHU VỰC C — DẢI MINI BXH BÊN MÉP PHẢI (Chỉ hiện trên màn hình lớn xl:flex) */}
-                <RightMiniLeaderboardStrip />
-              </div>
-            </section>
-          )}
+            {/* Tab: System Quests & Titles Module */}
+            {activeTab === 'system-quests' && (
+              <section className="animate-in fade-in duration-200">
+                <SystemQuestsView />
+              </section>
+            )}
 
-          {/* On other tabs, show PlayerStatusCard for profile continuity */}
-          {activeTab !== 'quests' && (
-            <div className="mb-4">
-              <PlayerStatusCard />
-            </div>
-          )}
+            {/* Tab 2: Shop Module */}
+            {activeTab === 'shop' && (
+              <section className="animate-in fade-in duration-200">
+                <RewardShopGrid />
+              </section>
+            )}
 
-          {/* Tab: System Quests & Titles Module */}
-          {activeTab === 'system-quests' && (
-            <section className="animate-in fade-in duration-200">
-              <SystemQuestsView />
-            </section>
-          )}
+            {/* Tab 3: Leaderboard Module */}
+            {activeTab === 'leaderboard' && (
+              <section className="animate-in fade-in duration-200">
+                <LeaderboardTable />
+              </section>
+            )}
 
-          {/* Tab 2: Shop Module */}
-          {activeTab === 'shop' && (
-            <section className="animate-in fade-in duration-200">
-              <RewardShopGrid />
-            </section>
-          )}
+            {/* Tab 4: Inventory Module */}
+            {activeTab === 'inventory' && (
+              <section className="animate-in fade-in duration-200">
+                <InventoryList />
+              </section>
+            )}
 
-          {/* Tab 3: Leaderboard Module */}
-          {activeTab === 'leaderboard' && (
-            <section className="animate-in fade-in duration-200">
-              <LeaderboardTable />
-            </section>
-          )}
+            {/* Tab 5: Analytics Module */}
+            {activeTab === 'analytics' && (
+              <section className="animate-in fade-in duration-200">
+                <ProductivityAnalytics />
+              </section>
+            )}
 
-          {/* Tab 4: Inventory Module */}
-          {activeTab === 'inventory' && (
-            <section className="animate-in fade-in duration-200">
-              <InventoryList />
-            </section>
-          )}
-
-          {/* Tab 5: Analytics Module */}
-          {activeTab === 'analytics' && (
-            <section className="animate-in fade-in duration-200">
-              <ProductivityAnalytics />
-            </section>
-          )}
-
-          {/* Tab: Admin Live-Ops Portal */}
-          {activeTab === 'admin' && (
-            <section className="animate-in fade-in duration-200">
-              <AdminPortalView />
-            </section>
-          )}
+            {/* Tab: Admin Live-Ops Portal */}
+            {activeTab === 'admin' && (
+              <section className="animate-in fade-in duration-200">
+                <AdminPortalView />
+              </section>
+            )}
+          </div>
         </main>
       </div>
 

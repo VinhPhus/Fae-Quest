@@ -1,8 +1,54 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
 import { InventoryTicket } from '../../types';
 import { Backpack, Ticket } from 'lucide-react';
+
+export const InventoryHeader: React.FC = () => {
+  const { inventory, exp } = useFaeQuestStore();
+  const currentRankIdx = getRankIndexByExp(exp);
+  const currentTier = RANK_TIERS[currentRankIdx];
+
+  return (
+    <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+      <div>
+        <div className="flex flex-wrap items-center gap-2 mb-1">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[11px] font-extrabold text-[#CCD0CF]">
+            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain" />
+            <span>{currentTier.name.toUpperCase()}</span>
+          </span>
+          <span className="text-[11px] text-[#9BA8AB] font-mono">
+            {exp} EXP
+          </span>
+        </div>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-[#CCD0CF] flex items-center gap-2 font-rpg tracking-wide">
+          <Backpack className="w-5 h-5 text-[#CCD0CF]" />
+          <span>Túi Đồ Thợ Săn</span>
+        </h2>
+        <p className="text-xs text-[#9BA8AB] mt-1 leading-relaxed hidden sm:block">
+          Nơi cất giữ các vật phẩm tự thưởng bạn đã quy đổi bằng Xu Vàng. Hãy kích hoạt sử dụng trước khi vật phẩm hết hiệu lực!
+        </p>
+      </div>
+
+      {/* Capacity Pill Badge */}
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#06141B] border border-[#253745] text-xs font-bold shrink-0 shadow-inner">
+        <span className="text-[#9BA8AB]">Sức chứa:</span>
+        <span
+          className={
+            inventory.length >= 50
+              ? 'text-rose-400 font-black'
+              : inventory.length >= 40
+              ? 'text-amber-400 font-black'
+              : 'text-[#CCD0CF] font-black'
+          }
+        >
+          {inventory.length} / 50 ô
+        </span>
+      </div>
+    </div>
+  );
+};
 
 export const InventoryList: React.FC = () => {
   const { inventory, useInventoryTicket, setActiveTab } = useFaeQuestStore();
@@ -78,35 +124,6 @@ export const InventoryList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Title Banner */}
-      <div className="rounded-[28px] p-6 bg-[#11212D] border border-[#253745] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-        <div>
-          <h2 className="text-2xl font-extrabold text-[#CCD0CF] flex items-center gap-2 font-rpg tracking-wide">
-            <Backpack className="w-6 h-6 text-[#CCD0CF]" />
-            <span>Túi Đồ Thợ Săn</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-[#9BA8AB] mt-1 leading-relaxed">
-            Nơi cất giữ các vật phẩm tự thưởng bạn đã quy đổi bằng Xu Vàng. Hãy kích hoạt sử dụng trước khi vật phẩm hết hiệu lực!
-          </p>
-        </div>
-
-        {/* Capacity Pill Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#06141B] border border-[#253745] text-xs font-bold shrink-0 shadow-inner">
-          <span className="text-[#9BA8AB]">Sức chứa:</span>
-          <span
-            className={
-              inventory.length >= 50
-                ? 'text-rose-400 font-black'
-                : inventory.length >= 40
-                ? 'text-amber-400 font-black'
-                : 'text-[#CCD0CF] font-black'
-            }
-          >
-            {inventory.length} / 50 ô
-          </span>
-        </div>
-      </div>
-
       {/* Inventory Item Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {inventory.map((ticket) => (
