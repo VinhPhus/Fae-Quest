@@ -66,14 +66,16 @@ export const App: React.FC = () => {
     }
   }, [currentUser, checkDailyReset, checkSystemMilestones, cleanupExpiredInventory]);
 
-  // Periodic 30s background check for inventory item lifecycle (auto-cleanup)
+  // Periodic 30s background check for inventory item lifecycle (auto-cleanup) and midnight daily reset
   useEffect(() => {
     cleanupExpiredInventory();
+    checkDailyReset();
     const interval = setInterval(() => {
       cleanupExpiredInventory();
+      checkDailyReset();
     }, 30000);
     return () => clearInterval(interval);
-  }, [cleanupExpiredInventory]);
+  }, [cleanupExpiredInventory, checkDailyReset]);
 
   // Clean up inventory whenever switching tabs
   useEffect(() => {

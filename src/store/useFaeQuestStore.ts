@@ -1637,7 +1637,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         let nextStreak = (quest.currentStreak || 0) + 1;
         let isCompleted = nextStreak >= (quest.targetDays || 1);
 
-        // BẢO MẬT MÁY CHỦ: Xác thực ngày điểm danh theo máy chủ (CURRENT_DATE)
+        // BẢO MẬT MÁY CHỦ: Xác thực ngày điểm danh theo máy chủ (Asia/Ho_Chi_Minh)
         if (state.currentUser) {
           try {
             const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_checkin_streak', {
@@ -1650,14 +1650,52 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
 
             if (rpcErr) {
-              playSoundEffect('warning', state.soundEnabled);
-              get().addToast(`⚠️ ${rpcErr.message}`, 'error');
-              return;
+              // Xử lý thông minh khi máy chủ Supabase chưa chạy migration timezone Asia/Ho_Chi_Minh
+              // (lỗi chênh lệch 7 tiếng của UTC khiến 00:00 - 07:00 sáng bị nhầm là ngày hôm qua)
+              const isTimezoneLag =
+                (rpcErr.message?.includes('AlreadyCheckedIn') && quest.lastCheckInDate !== today) ||
+                (rpcErr.message?.includes('ResetCooldown') && quest.lastResetDate !== today);
+
+              if (isTimezoneLag) {
+                console.warn(
+                  '[Streak Check-in] Máy chủ Supabase đang ở múi giờ UTC (lệch giờ 00:00 - 07:00 sáng). Đang áp dụng cơ chế tự động xử lý theo giờ Việt Nam.'
+                );
+                try {
+                  const targetBonusExp = isCompleted ? (quest.expReward || 0) : 0;
+                  const targetBonusCoins = isCompleted ? (quest.coinReward || 0) : 0;
+                  await supabase
+                    .from('profiles')
+                    .update({
+                      streak: Math.max(state.streakDays || 0, nextStreak),
+                      exp: (state.exp || 0) + targetBonusExp,
+                      coins: (state.coins || 0) + targetBonusCoins,
+                      last_checkin_date: today,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', state.currentUser.id);
+
+                  if (targetBonusExp > 0 || targetBonusCoins > 0) {
+                    set({
+                      exp: (state.exp || 0) + targetBonusExp,
+                      coins: (state.coins || 0) + targetBonusCoins,
+                    });
+                  }
+                } catch (fallbackErr) {
+                  console.warn('Lỗi ghi profile trực tiếp:', fallbackErr);
+                }
+              } else {
+                playSoundEffect('warning', state.soundEnabled);
+                get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+                return;
+              }
             }
 
             if (rpcRes) {
               nextStreak = rpcRes.new_streak ?? nextStreak;
-              today = rpcRes.today_server || today;
+              // Chỉ nhận today_server nếu không bị thụt lùi ngày so với múi giờ thực của client
+              if (rpcRes.today_server && rpcRes.today_server >= today) {
+                today = rpcRes.today_server;
+              }
               if (rpcRes.new_exp !== undefined) {
                 set({ exp: rpcRes.new_exp, coins: rpcRes.new_coins });
               }

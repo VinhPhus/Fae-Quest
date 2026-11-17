@@ -771,8 +771,8 @@ BEGIN
     RAISE EXCEPTION 'AccountBanned: Tài khoản đang bị tạm khóa cho đến %! Lý do: %', v_profile.banned_until, COALESCE(v_profile.ban_reason, 'Vi phạm quy tắc');
   END IF;
 
-  -- 3. Kiểm tra nhật ký theo ngày máy chủ (CURRENT_DATE)
-  IF v_profile.last_task_date IS NULL OR v_profile.last_task_date < CURRENT_DATE THEN
+  -- 3. Kiểm tra nhật ký theo ngày máy chủ (múi giờ Việt Nam Asia/Ho_Chi_Minh)
+  IF v_profile.last_task_date IS NULL OR v_profile.last_task_date < (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date THEN
     v_daily_tasks := 0;
     v_daily_boss := 0;
   ELSE
@@ -850,7 +850,7 @@ BEGIN
       completed_tasks_count = COALESCE(completed_tasks_count, 0) + 1,
       daily_tasks_count = v_daily_tasks,
       daily_boss_count = v_daily_boss,
-      last_task_date = CURRENT_DATE,
+      last_task_date = (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date,
       updated_at = NOW()
   WHERE id = v_user_id
   RETURNING * INTO v_updated;

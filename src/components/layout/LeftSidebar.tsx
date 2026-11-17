@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
@@ -42,8 +42,19 @@ export const LeftSidebar: React.FC = () => {
     (i) => !i.used && (!i.expiresAt || i.expiresAt > now)
   ).length;
 
-  const d = new Date();
-  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const [todayStr, setTodayStr] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+
+  useEffect(() => {
+    const updateDate = () => {
+      const d = new Date();
+      setTodayStr(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    };
+    const timer = setInterval(updateDate, 10000);
+    return () => clearInterval(timer);
+  }, []);
   const actionableSystemQuestsCount = (systemQuests || []).filter((q) => {
     if (
       q.type === 'streak_counter' &&

@@ -43,8 +43,12 @@ export const SystemQuestsView: React.FC = () => {
   const [confirmResetQuestId, setConfirmResetQuestId] = useState<string | null>(null);
   const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'streak' | 'milestone'>('all');
 
-  const d = new Date();
-  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const getClientTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const [todayStr, setTodayStr] = useState<string>(getClientTodayStr);
 
   // Countdown to 00:00 midnight (lock reset period)
   const [countdownString, setCountdownString] = useState<string>('');
@@ -52,6 +56,9 @@ export const SystemQuestsView: React.FC = () => {
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
+      const currentToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      setTodayStr(currentToday);
+
       const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
       const diffMs = Math.max(0, midnight.getTime() - now.getTime());
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -60,7 +67,7 @@ export const SystemQuestsView: React.FC = () => {
     };
 
     updateCountdown();
-    const interval = setInterval(updateCountdown, 10000);
+    const interval = setInterval(updateCountdown, 5000);
     return () => clearInterval(interval);
   }, []);
 
