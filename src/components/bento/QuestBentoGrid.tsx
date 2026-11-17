@@ -201,8 +201,8 @@ export const QuestBentoGrid: React.FC = () => {
           </button>
         </div>
       ) : questViewMode === 'bento' ? (
-        /* Bento Grid 2 Columns (>= md) */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        /* Bento Grid 2 to 3 Columns (Desktop & Ultrawide) */
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
           {sorted.map((task) => {
             const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
             const cat = CATEGORIES[task.category] || CATEGORIES['ca-nhan'];

@@ -109,7 +109,7 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
   return (
     <aside
       onClick={() => setActiveTab('leaderboard')}
-      className="hidden xl:flex flex-col items-center py-5 px-2.5 w-16 shrink-0 rounded-[28px] bg-[#11212D] border border-[#253745] shadow-[0_12px_36px_rgba(0,0,0,0.6)] hover:border-[#4A5C6A] transition-all duration-300 cursor-pointer group"
+      className="hidden xl:flex flex-col items-center py-5 px-2 w-16 shrink-0 h-screen sticky top-0 bg-[#06141B] border-l border-[#253745] shadow-2xl hover:border-[#4A5C6A] transition-all duration-300 cursor-pointer group z-20 justify-between select-none"
       title="Nhấn để mở Bảng Xếp Hạng Đấu Trường"
     >
       {/* Top: User's Own Avatar with Real Live Rank */}

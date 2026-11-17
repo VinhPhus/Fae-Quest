@@ -149,20 +149,12 @@ export const App: React.FC = () => {
           <div className="max-w-7xl w-full mx-auto space-y-5">
             {/* Tab 1: Bento Dashboard (Quests Module) */}
             {activeTab === 'quests' && (
-              <section className="animate-in fade-in duration-200">
-                <div className="flex gap-5 sm:gap-6 items-start">
-                  {/* Cột Nhiệm Vụ Chinh Phục & Thanh Dock Đáy */}
-                  <div className="flex-1 min-w-0 space-y-5 sm:space-y-6">
-                    {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
-                    <QuestBentoGrid />
+              <section className="animate-in fade-in duration-200 space-y-5 sm:space-y-6">
+                {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
+                <QuestBentoGrid />
 
-                    {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
-                    <FocusDock />
-                  </div>
-
-                  {/* Dải Mini BXH Bên Mép Phải (Chỉ hiện trên màn hình lớn xl:flex) */}
-                  <RightMiniLeaderboardStrip />
-                </div>
+                {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
+                <FocusDock />
               </section>
             )}
 
@@ -210,6 +202,9 @@ export const App: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* 3. Khóa Cố Định Dải Mini BXH (Fixed Right Sidebar trên xl:flex) */}
+      {activeTab === 'quests' && <RightMiniLeaderboardStrip />}
 
       {/* Modals & Overlays */}
       <RankUpModal />

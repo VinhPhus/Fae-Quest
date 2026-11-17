@@ -158,17 +158,31 @@ export const HeroBentoBanner: React.FC = () => {
 
       {/* Main 2-Column Dashboard Header Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-stretch w-full">
-        {/* ================= CỘT TRÁI (lg:col-span-7): THẺ CĂN CƯỚC THỢ SĂN ================= */}
-        <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl bg-[#11212D] p-3.5 sm:p-4.5 border border-[#253745] shadow-xl relative overflow-hidden flex flex-col justify-between">
-          {/* Ambient Background Glows */}
-          <div className="absolute top-0 right-1/4 w-52 h-52 rounded-full bg-[#4A5C6A]/15 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/3 w-52 h-52 rounded-full bg-[#253745]/25 blur-3xl pointer-events-none" />
+        {/* ================= CỘT TRÁI (lg:col-span-7): THẺ CĂN CƯỚC THỢ SĂN VỚI ẢNH BÌA ================= */}
+        <div className="lg:col-span-7 rounded-2xl sm:rounded-3xl bg-[#11212D] border border-[#253745] shadow-xl relative overflow-hidden flex flex-col justify-between">
+          {/* 1. Background Ảnh Bìa (Cover Banner Dark Fantasy 120px - 140px) */}
+          <div className="absolute top-0 inset-x-0 h-32 sm:h-36 overflow-hidden pointer-events-none z-0">
+            <img
+              src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=2000&auto=format&fit=crop"
+              alt="Hunter Dark Fantasy Cover"
+              className="w-full h-full object-cover object-center opacity-50 brightness-90 scale-105"
+              style={{
+                maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+              }}
+            />
+            {/* Lớp hòa trộn gradient vào màu nền #11212D */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/30 via-[#11212D]/60 to-[#11212D]" />
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 relative z-10 w-full h-full">
-            {/* 1. Khối Avatar: Vòng Tròn Tiến Độ EXP Phát Sáng & Badge EXP đè đáy */}
-            <div className="relative shrink-0 flex flex-col items-center justify-center my-auto">
-              {/* Outer Circular Progress Container */}
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center select-none">
+          {/* Ánh sáng mờ nhẹ phía sau */}
+          <div className="absolute top-1/2 right-1/4 w-44 h-44 rounded-full bg-[#4A5C6A]/10 blur-3xl pointer-events-none" />
+
+          {/* 2. Khối Nội Dung (Flexbox Spread): Avatar (Trái) | Thông tin cốt lõi (Giữa) | Thành tích & Thao tác (Phải) */}
+          <div className="relative z-10 px-3.5 sm:px-5 pb-3.5 sm:pb-4 pt-10 sm:pt-12 flex flex-col sm:flex-row items-center sm:items-end gap-3.5 sm:gap-4 w-full h-full">
+            {/* CỘT TRÁI: Khối Avatar nhô lên đè ranh giới giữa ảnh bìa & màu trơn */}
+            <div className="relative shrink-0 flex flex-col items-center justify-center -mt-8 sm:-mt-10 z-20">
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center select-none shadow-[0_8px_25px_rgba(0,0,0,0.8)] rounded-full">
                 {/* Pure SVG Circular Progress */}
                 <svg
                   className="w-full h-full transform -rotate-90 pointer-events-none"
@@ -243,11 +257,26 @@ export const HeroBentoBanner: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. Khối Thông Tin Cá Nhân (Căn lề trái text-left) */}
-            <div className="flex-1 min-w-0 space-y-2 text-left w-full sm:w-auto my-auto">
-              {/* Hàng 1: Các Tag / Badge nhỏ (#BXH, Sao Vinh Dự, Khế Ước, Bonus Chuỗi) */}
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#06141B] border border-[#253745] text-[#CCD0CF] flex items-center gap-1 shadow-sm">
+            {/* CỘT GIỮA: Thông tin cốt lõi (Tên Thợ Săn, Tags, Danh Hiệu) */}
+            <div className="flex-1 min-w-0 space-y-1.5 text-center sm:text-left w-full sm:w-auto">
+              {/* Tên Thợ Săn */}
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <h2 className="font-rpg font-black text-xl sm:text-2xl text-[#CCD0CF] tracking-wide truncate drop-shadow-md">
+                  {playerName}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-1 rounded-lg text-[#9BA8AB] hover:text-[#CCD0CF] hover:bg-[#253745] transition cursor-pointer"
+                  title="Thay đổi ảnh đại diện"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Cụm Badge xếp ngang: #BXH, ⭐ Sao, 📜 Khế Ước */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#06141B]/90 border border-[#253745] text-[#CCD0CF] flex items-center gap-1 shadow-sm">
                   <Trophy className="w-3 h-3 text-amber-300" />
                   <span>#{playerRankPos} BXH</span>
                 </span>
@@ -260,7 +289,7 @@ export const HeroBentoBanner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setOathOpen(true)}
-                  className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] flex items-center gap-1 transition cursor-pointer"
+                  className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#06141B]/90 hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] flex items-center gap-1 transition cursor-pointer"
                   title="Xem lại Bản Khế Ước Thợ Săn"
                 >
                   <Scroll className="w-3 h-3 text-[#CCD0CF]" />
@@ -275,36 +304,12 @@ export const HeroBentoBanner: React.FC = () => {
                 )}
               </div>
 
-              {/* Hàng 2: Tên Thợ Săn (chữ to, in đậm, màu #CCD0CF) */}
-              <div className="flex items-center gap-2">
-                <h2 className="font-rpg font-black text-xl sm:text-2xl text-[#CCD0CF] tracking-wide truncate drop-shadow-md">
-                  {playerName}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-1 rounded-lg text-[#9BA8AB] hover:text-[#CCD0CF] hover:bg-[#253745] transition cursor-pointer"
-                  title="Thay đổi ảnh đại diện"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Hàng 3: Badge Bậc Danh Vọng đặt cạnh Icon & Tên Danh Hiệu đang trang bị */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl bg-[#253745] border border-[#4A5C6A] text-[11px] font-black text-[#CCD0CF] shadow-sm">
-                  <img
-                    src={currentTier.iconUrl}
-                    alt={currentTier.name}
-                    className="w-3.5 h-3.5 object-contain"
-                  />
-                  <span>{currentTier.name.toUpperCase()}</span>
-                </span>
-
+              {/* Icon & Tên Danh Hiệu đang trang bị */}
+              <div className="flex items-center justify-center sm:justify-start pt-0.5">
                 <button
                   type="button"
                   onClick={() => setActiveTab('system-quests')}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[11px] font-bold text-[#CCD0CF] shadow-sm transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl bg-[#06141B]/80 hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[11px] font-bold text-[#CCD0CF] shadow-sm transition cursor-pointer"
                   title="Mở Kho Danh Hiệu để thay đổi danh hiệu"
                 >
                   <img
@@ -315,13 +320,35 @@ export const HeroBentoBanner: React.FC = () => {
                   <span className="truncate max-w-[150px] sm:max-w-[200px]">{titleObj.name}</span>
                 </button>
               </div>
+            </div>
 
-              {/* Hàng 4: 2 Nút bấm thao tác nhanh gọn gàng */}
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {/* CỘT PHẢI: Thành tích & Thao tác (Căn lề phải ml-auto) */}
+            <div className="sm:ml-auto flex flex-col items-center sm:items-end justify-between gap-2 shrink-0 w-full sm:w-auto">
+              {/* Bậc Danh Vọng & Phần thưởng mục tiêu */}
+              <div className="flex flex-col items-center sm:items-end gap-1">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl bg-[#253745] border border-[#4A5C6A] text-[11px] font-black text-[#CCD0CF] shadow-sm">
+                  <img
+                    src={currentTier.iconUrl}
+                    alt={currentTier.name}
+                    className="w-3.5 h-3.5 object-contain"
+                  />
+                  <span>{currentTier.name.toUpperCase()}</span>
+                </span>
+                {nextTier && (
+                  <span className="text-[10px] text-[#9BA8AB] flex items-center gap-1 font-medium">
+                    <span>Lên hạng:</span>
+                    <strong className="text-[#CCD0CF] font-bold">+{nextTier.bonusCoins} Xu</strong>
+                    <CoinIcon size="xs" />
+                  </span>
+                )}
+              </div>
+
+              {/* Cụm 2 nút hành động (Chi Tiết Rank > và Đổi Danh Hiệu) */}
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setRoadmapOpen(true)}
-                  className="px-3 py-1 rounded-full bg-[#CCD0CF] hover:bg-white active:scale-95 text-[#06141B] font-extrabold text-[11px] flex items-center gap-1 shadow-[0_2px_10px_rgba(204,208,207,0.2)] transition cursor-pointer"
+                  className="px-2.5 sm:px-3 py-1 rounded-full bg-[#CCD0CF] hover:bg-white active:scale-95 text-[#06141B] font-extrabold text-[11px] flex items-center gap-1 shadow-[0_2px_10px_rgba(204,208,207,0.2)] transition cursor-pointer"
                   title="Xem Lộ Trình Chinh Phục Đỉnh Thách Đấu"
                 >
                   <span>Chi Tiết Rank</span>
@@ -331,20 +358,12 @@ export const HeroBentoBanner: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveTab('system-quests')}
-                  className="px-3 py-1 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white active:scale-95 font-bold text-[11px] flex items-center gap-1 transition cursor-pointer"
+                  className="px-2.5 sm:px-3 py-1 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white active:scale-95 font-bold text-[11px] flex items-center gap-1 transition cursor-pointer"
                   title="Xem Bộ Sưu Tập Danh Hiệu"
                 >
                   <Sparkles className="w-3 h-3 text-cyan-400" />
                   <span>Đổi Danh Hiệu</span>
                 </button>
-
-                {nextTier && (
-                  <span className="text-[10px] text-[#9BA8AB] flex items-center gap-1 ml-auto hidden sm:flex">
-                    <span>Lên hạng:</span>
-                    <strong className="text-[#CCD0CF]">+{nextTier.bonusCoins} Xu</strong>
-                    <CoinIcon size="xs" />
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -416,7 +435,7 @@ export const HeroBentoBanner: React.FC = () => {
                       toggleTask(focusTask.id, { x: rect.right, y: rect.top });
                     }}
                     className="p-1.5 rounded-lg bg-[#253745] hover:bg-[#4A5C6A] text-[#CCD0CF] hover:text-white transition cursor-pointer"
-                    title="Đánh dấu hoàn thành"
+                    title="Hoàn thành nhiệm vụ"
                   >
                     <Check className="w-3 h-3 stroke-[3]" />
                   </button>
