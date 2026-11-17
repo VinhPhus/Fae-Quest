@@ -42,7 +42,8 @@ export default {
       },
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-        rpg: ['"Cinzel"', 'serif'],
+        rpg: ['"Playfair Display"', '"Cormorant Garamond"', 'serif'],
+        cinzel: ['"Cinzel"', 'serif'],
       },
     },
   },

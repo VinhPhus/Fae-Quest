@@ -270,7 +270,7 @@ export const HuntersOathModal: React.FC = () => {
                     </h3>
                   </div>
 
-                  <p className="text-xs sm:text-sm text-[#9BA8AB] max-w-md mx-auto italic font-serif">
+                  <p className="text-xs sm:text-sm text-[#9BA8AB] max-w-md mx-auto italic font-sans font-medium">
                     "Nơi danh dự và kỷ luật rèn nên bậc Thách Đấu thực thụ"
                   </p>
                 </div>

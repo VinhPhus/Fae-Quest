@@ -165,7 +165,7 @@ export const SystemQuestsView: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <Award className="w-5 h-5 text-amber-400 shrink-0" />
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-rpg font-bold text-lg text-white">
+              <h3 className="font-rpg font-bold text-lg sm:text-xl text-white tracking-wide">
                 Bộ Sưu Tập Danh Hiệu Cá Nhân
               </h3>
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#06141B] border border-[#253745] text-cyan-400">
@@ -216,28 +216,28 @@ export const SystemQuestsView: React.FC = () => {
                 key={title.id}
                 className={`w-full sm:w-[calc(50%-8px)] lg:w-[calc(25%-12px)] shrink-0 snap-start rounded-2xl p-4 border transition-all duration-300 flex flex-col justify-between gap-3 relative group ${
                   isEquipped
-                    ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-[#CCD0CF] ring-2 ring-[#CCD0CF]/40 shadow-[0_0_20px_rgba(204,208,207,0.2)] scale-[1.01]'
+                    ? 'bg-gradient-to-b from-[#253745] via-[#11212D] to-[#06141B] border-cyan-400 ring-2 ring-cyan-400/40 shadow-[0_0_24px_rgba(34,211,238,0.2)]'
                     : isUnlocked
                       ? 'bg-[#06141B] hover:bg-[#253745]/50 border-[#253745] hover:border-[#4A5C6A] shadow-md'
-                      : 'bg-[#06141B]/50 border-[#253745]/60 opacity-60'
+                      : 'bg-[#06141B]/80 hover:bg-[#11212D]/60 border-[#253745]/80 shadow-inner'
                 }`}
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0">
+                    <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center shrink-0 rounded-xl bg-[#11212D]/60 p-1.5 border border-[#253745]/60 overflow-hidden">
                       <img
                         src={title.iconUrl}
                         alt={title.name}
                         className={`w-full h-full object-contain transition-all duration-300 drop-shadow-md ${
                           isUnlocked
                             ? 'group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(204,208,207,0.6)]'
-                            : 'grayscale opacity-40 contrast-75'
+                            : 'grayscale opacity-65 contrast-90 group-hover:opacity-90 group-hover:grayscale-0'
                         }`}
                         loading="lazy"
                       />
                       {!isUnlocked && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl backdrop-blur-[1px] border border-[#253745]">
-                          <Lock className="w-5 h-5 text-[#CCD0CF]/80 drop-shadow" />
+                        <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#06141B]/90 border border-[#4A5C6A] flex items-center justify-center shadow-md">
+                          <Lock className="w-2.5 h-2.5 text-[#CCD0CF]" />
                         </div>
                       )}
                     </div>
@@ -268,12 +268,12 @@ export const SystemQuestsView: React.FC = () => {
                     <h4 className={`text-sm font-extrabold ${title.color || 'text-white'}`}>
                       {title.name}
                     </h4>
-                    <p className="text-[11px] text-[#9BA8AB] mt-1 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] text-[#9BA8AB] mt-1 leading-relaxed line-clamp-2 min-h-[32px]">
                       {title.description}
                     </p>
                   </div>
 
-                  <p className="text-[10px] text-[#9BA8AB]/70 italic border-t border-[#253745] pt-1.5 line-clamp-1">
+                  <p className="text-[10px] text-[#9BA8AB]/70 italic border-t border-[#253745] pt-1.5 line-clamp-1" title={title.sourceText}>
                     {title.sourceText}
                   </p>
                 </div>

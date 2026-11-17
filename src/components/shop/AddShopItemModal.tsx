@@ -126,9 +126,8 @@ export const AddShopItemModal: React.FC = () => {
                   type="button"
                   key={e}
                   onClick={() => setEmoji(e)}
-                  className={`w-8 h-8 rounded-lg text-lg flex items-center justify-center transition ${
-                    emoji === e ? 'bg-fae/30 border border-fae' : 'bg-thorn-dark border border-opal/20 hover:border-opal/50'
-                  }`}
+                  className={`w-8 h-8 rounded-lg text-lg flex items-center justify-center transition ${emoji === e ? 'bg-fae/30 border border-fae' : 'bg-thorn-dark border border-opal/20 hover:border-opal/50'
+                    }`}
                 >
                   {e}
                 </button>
