@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { resolveTitleObject } from '../../constants/systemQuests';
-import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
 import {
   CLOUDINARY_UPLOAD_PRESET,
   CLOUDINARY_UPLOAD_URL,
@@ -18,8 +17,6 @@ import {
   Sparkles,
   Scroll,
   Star,
-  Play,
-  Check,
   CheckCircle2,
   Award,
 } from 'lucide-react';
@@ -35,10 +32,6 @@ export const HeroBentoBanner: React.FC = () => {
     streakDays,
     completedTotal,
     rivals,
-    tasks,
-    toggleTask,
-    activePomodoroTaskId,
-    setActivePomodoroTaskId,
     equippedTitleId,
     setRoadmapOpen,
     setOathOpen,
@@ -75,15 +68,6 @@ export const HeroBentoBanner: React.FC = () => {
 
   // Resolve equipped title
   const titleObj = resolveTitleObject(equippedTitleId);
-
-  // Pick the single most prioritized task for compact focus widget
-  const focusTask = activePomodoroTaskId
-    ? tasks.find((t) => t.id === activePomodoroTaskId)
-    : tasks.find((t) => t.isDailyRecurring && !t.completed) ||
-      tasks.find((t) => !t.completed);
-
-  const focusDiff = focusTask ? DIFFICULTIES[focusTask.difficulty] || DIFFICULTIES.medium : null;
-  const focusCat = focusTask ? CATEGORIES[focusTask.category] || CATEGORIES['ca-nhan'] : null;
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -369,159 +353,112 @@ export const HeroBentoBanner: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= CỘT PHẢI (lg:col-span-5): WIDGETS ƯU TIÊN ================= */}
-        <div className="lg:col-span-5 flex flex-col gap-2.5 sm:gap-3 justify-between">
-          {/* Widget 1: Tiêu Điểm Nhanh (Compact Mode - Tối đa 1 việc ưu tiên) */}
-          <div className="rounded-2xl bg-[#11212D] p-3 sm:p-3.5 border border-[#253745] shadow-lg flex flex-col justify-between text-left">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#253745]/60">
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-md bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
-                  <Flame className="w-3 h-3 fill-amber-300" />
-                </div>
-                <h4 className="font-rpg font-bold text-xs text-[#CCD0CF] tracking-wide">
-                  Tiêu Điểm Nhanh
-                </h4>
+        {/* ================= CỘT PHẢI (lg:col-span-5): THỐNG KÊ THỢ SĂN (EXPANDED TO FULL HEIGHT) ================= */}
+        <div className="lg:col-span-5 h-full flex flex-col justify-between bg-[#11212D] border border-[#253745] rounded-2xl sm:rounded-[28px] p-4 sm:p-5 shadow-xl relative overflow-hidden">
+          {/* Hàng trên: Tiêu đề + Nút Kho Danh Hiệu > */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#253745]/70 relative z-10">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF]">
+                <Award className="w-4 h-4" />
               </div>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#06141B] border border-[#253745] text-[#9BA8AB]">
-                {activePomodoroTaskId ? 'Đang Focus' : focusTask ? 'Ưu tiên' : 'Hoàn tất'}
-              </span>
+              <h4 className="font-rpg font-extrabold text-sm sm:text-base text-[#CCD0CF] tracking-wide">
+                Thống Kê Thợ Săn
+              </h4>
             </div>
 
-            {/* Task Item hoặc Empty State */}
-            {focusTask && focusDiff && focusCat ? (
-              <div className="mt-2 p-2 rounded-xl bg-[#06141B] border border-[#253745] flex items-center justify-between gap-2 shadow-inner">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[10px] font-bold text-[#CCD0CF] shrink-0">
-                    {focusCat.label.slice(0, 2)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#CCD0CF] truncate leading-tight">
-                      {focusTask.title}
-                    </p>
-                    <div className="flex items-center gap-1.5 text-[10px] mt-0.5 text-[#9BA8AB]">
-                      <span>+{focusDiff.exp} EXP</span>
-                      <span className="text-[#4A5C6A]">•</span>
-                      <span className="text-amber-300 font-bold flex items-center gap-0.5">
-                        +{focusDiff.coins} <CoinIcon size="xs" />
-                      </span>
-                      {focusTask.isDailyRecurring && (
-                        <>
-                          <span className="text-[#4A5C6A]">•</span>
-                          <span className="text-cyan-400 font-bold">Hằng ngày</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick actions */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setActivePomodoroTaskId(focusTask.id)}
-                    className={`p-1.5 rounded-lg border transition cursor-pointer ${
-                      activePomodoroTaskId === focusTask.id
-                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 animate-pulse'
-                        : 'bg-[#11212D] hover:bg-[#253745] border-[#253745] text-amber-300'
-                    }`}
-                    title="Bật phiên Fae Focus"
-                  >
-                    <Play className="w-3 h-3 fill-amber-300" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      toggleTask(focusTask.id, { x: rect.right, y: rect.top });
-                    }}
-                    className="p-1.5 rounded-lg bg-[#253745] hover:bg-[#4A5C6A] text-[#CCD0CF] hover:text-white transition cursor-pointer"
-                    title="Hoàn thành nhiệm vụ"
-                  >
-                    <Check className="w-3 h-3 stroke-[3]" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-2 p-2 rounded-xl bg-[#06141B] border border-[#253745] text-center">
-                <span className="text-[11px] text-[#9BA8AB]">
-                  ✨ Đã hoàn tất mọi nhiệm vụ ưu tiên hôm nay!
-                </span>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setActiveTab('system-quests')}
+              className="px-3 py-1 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white transition font-bold text-xs flex items-center gap-1 cursor-pointer shadow-sm"
+              title="Mở Đại Sảnh Thành Tựu & Kho Danh Hiệu"
+            >
+              <span>Kho Danh Hiệu</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
 
-          {/* Widget 2: Thống Kê Thợ Săn (Compact Mode - Dàn hàng ngang 3 chỉ số bên cạnh Danh hiệu) */}
-          <div className="rounded-2xl bg-[#11212D] p-3 sm:p-3.5 border border-[#253745] shadow-lg flex flex-col justify-between text-left">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#253745]/60">
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-md bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF]">
-                  <Award className="w-3 h-3" />
-                </div>
-                <h4 className="font-rpg font-bold text-xs text-[#CCD0CF] tracking-wide">
-                  Thống Kê Thợ Săn
-                </h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('system-quests')}
-                className="text-[10px] font-bold text-[#9BA8AB] hover:text-[#CCD0CF] flex items-center gap-0.5 transition cursor-pointer"
-                title="Mở Kho Danh Hiệu"
-              >
-                <span>Kho Danh Hiệu</span>
-                <ChevronRight className="w-3 h-3" />
-              </button>
+          {/* Khu vực trung tâm: Trưng bày Danh Hiệu & Sao Vinh Dự */}
+          <div
+            onClick={() => setActiveTab('system-quests')}
+            className="my-3 bg-[#06141B]/70 border border-[#253745] hover:border-[#4A5C6A] rounded-2xl p-3.5 flex items-center gap-4 cursor-pointer transition-all duration-300 shadow-inner group relative overflow-hidden"
+            title="Nhấn để mở Kho Danh Hiệu & Đổi Danh Hiệu"
+          >
+            {/* Ambient subtle glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(204,208,207,0.08)_0%,transparent_70%)] pointer-events-none group-hover:scale-125 transition-transform" />
+
+            {/* Icon danh hiệu lớn w-14 h-14 */}
+            <div className="w-14 h-14 rounded-2xl bg-[#11212D] border border-[#4A5C6A] flex items-center justify-center p-2 shrink-0 shadow-md group-hover:scale-105 transition-transform">
+              <img
+                src={titleObj.iconUrl}
+                alt={titleObj.name}
+                className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(204,208,207,0.25)]"
+              />
             </div>
 
-            {/* Icon Danh Hiệu + 3 Chỉ Số Dàn Ngang */}
-            <div className="mt-2 flex items-center gap-2">
-              {/* Icon Danh Hiệu Nhỏ Gọn */}
-              <div
-                onClick={() => setActiveTab('system-quests')}
-                className="w-10 h-10 rounded-xl bg-[#06141B] border border-[#253745] hover:border-[#4A5C6A] p-1 shrink-0 flex items-center justify-center shadow-inner cursor-pointer transition group"
-                title={`${titleObj.name} (${titleObj.rarity.toUpperCase()}) - Mở Kho Danh Hiệu`}
-              >
-                <img
-                  src={titleObj.iconUrl}
-                  alt={titleObj.name}
-                  className="w-full h-full object-contain drop-shadow group-hover:scale-110 transition-transform"
-                />
+            {/* Cột thông tin bên cạnh */}
+            <div className="flex-1 min-w-0 space-y-1 relative z-10">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#9BA8AB] block">
+                DANH HIỆU HIỆN TẠI
+              </span>
+              <h5 className="font-rpg font-bold text-base sm:text-lg text-[#CCD0CF] group-hover:text-white transition truncate">
+                {titleObj.name}
+              </h5>
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                <span
+                  className={`text-[9px] font-black tracking-widest px-2 py-0.5 rounded-full bg-[#11212D] border ${
+                    titleObj.rarity === 'legendary'
+                      ? 'border-amber-400/50 text-amber-300'
+                      : titleObj.rarity === 'epic'
+                      ? 'border-purple-400/50 text-purple-300'
+                      : titleObj.rarity === 'rare'
+                      ? 'border-sky-400/50 text-sky-300'
+                      : 'border-[#4A5C6A] text-[#9BA8AB]'
+                  }`}
+                >
+                  {titleObj.rarity.toUpperCase()}
+                </span>
+
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/15 border border-yellow-400/40 text-yellow-300 inline-flex items-center gap-1 shadow-sm">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  <span>⭐ {stars} Sao Vinh Dự</span>
+                </span>
               </div>
+            </div>
+          </div>
 
-              {/* 3 Chỉ số dàn hàng ngang */}
-              <div className="grid grid-cols-3 gap-1.5 flex-1 min-w-0">
-                {/* 1. Xu Vàng */}
-                <div className="py-1 px-1.5 rounded-xl bg-[#06141B] border border-[#253745] text-center flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-1">
-                    <CoinIcon size="xs" />
-                    <span className="font-mono font-black text-xs text-[#CCD0CF] truncate">
-                      {coins}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-[#9BA8AB] leading-none mt-0.5">Xu Vàng</span>
-                </div>
-
-                {/* 2. Chuỗi Ngày */}
-                <div className="py-1 px-1.5 rounded-xl bg-[#06141B] border border-[#253745] text-center flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
-                    <span className="font-mono font-black text-xs text-amber-300 truncate">
-                      {streakDays}N
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-[#9BA8AB] leading-none mt-0.5">Chuỗi Ngày</span>
-                </div>
-
-                {/* 3. Task Xong */}
-                <div className="py-1 px-1.5 rounded-xl bg-[#06141B] border border-[#253745] text-center flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span className="font-mono font-black text-xs text-emerald-300 truncate">
-                      {completedTotal}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-[#9BA8AB] leading-none mt-0.5">Đã Xong</span>
-                </div>
+          {/* Hàng dưới cùng: 3 ô chỉ số (Xu Vàng, Chuỗi Ngày, Đã Xong) grid-cols-3 gap-3 */}
+          <div className="grid grid-cols-3 gap-3 relative z-10">
+            {/* 1. Xu Vàng */}
+            <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-amber-400/50 transition flex flex-col items-center justify-center text-center shadow-inner">
+              <div className="flex items-center gap-1.5">
+                <CoinIcon size="sm" />
+                <span className="font-mono font-black text-sm sm:text-base text-[#CCD0CF] truncate">
+                  {coins.toLocaleString()}
+                </span>
               </div>
+              <span className="text-[10px] text-[#9BA8AB] font-bold mt-1">Xu Vàng</span>
+            </div>
+
+            {/* 2. Chuỗi Ngày */}
+            <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-amber-400/50 transition flex flex-col items-center justify-center text-center shadow-inner">
+              <div className="flex items-center gap-1.5">
+                <Flame className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
+                <span className="font-mono font-black text-sm sm:text-base text-amber-300 truncate">
+                  {streakDays}N
+                </span>
+              </div>
+              <span className="text-[10px] text-[#9BA8AB] font-bold mt-1">Chuỗi Kỷ Luật</span>
+            </div>
+
+            {/* 3. Đã Xong */}
+            <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-emerald-400/50 transition flex flex-col items-center justify-center text-center shadow-inner">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="font-mono font-black text-sm sm:text-base text-emerald-300 truncate">
+                  {completedTotal.toLocaleString()}
+                </span>
+              </div>
+              <span className="text-[10px] text-[#9BA8AB] font-bold mt-1">Nhiệm Vụ Xong</span>
             </div>
           </div>
         </div>

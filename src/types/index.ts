@@ -5,6 +5,7 @@ export type RankId = 'dong' | 'bac' | 'vang' | 'luc-bao' | 'cao-thu' | 'dai-cao-
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   category: TaskCategory;
   difficulty: TaskDifficulty;
   completed: boolean;

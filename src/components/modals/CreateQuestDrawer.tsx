@@ -9,6 +9,7 @@ export const CreateQuestDrawer: React.FC = () => {
   const { isCreateQuestOpen, setCreateQuestOpen, addTask } = useFaeQuestStore();
 
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TaskCategory>('hoc-tap');
   const [difficulty, setDifficulty] = useState<TaskDifficulty>('medium');
   const [isDailyRecurring, setIsDailyRecurring] = useState(false);
@@ -21,8 +22,9 @@ export const CreateQuestDrawer: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    addTask(title, category, difficulty, isDailyRecurring, focusDuration);
+    addTask(title, category, difficulty, isDailyRecurring, focusDuration, description);
     setTitle('');
+    setDescription('');
     setFocusDuration(null);
     setCustomFocus('25');
     setIsDailyRecurring(false);
@@ -82,6 +84,26 @@ export const CreateQuestDrawer: React.FC = () => {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="VD: Đọc 20 trang sách, Giải 3 bài LeetCode, Chạy bộ 3km..."
               className="w-full px-4 py-3 rounded-2xl bg-[#06141B] border border-[#253745] text-sm text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] focus:ring-1 focus:ring-[#4A5C6A] transition shadow-inner"
+            />
+          </div>
+
+          {/* 1.5 Description Textarea (Tùy chọn) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#CCD0CF]">
+                Mô Tả Chi Tiết / Ghi Chú (Tùy chọn)
+              </label>
+              <span className="text-[10px] text-[#9BA8AB]">
+                {description.length}/220
+              </span>
+            </div>
+            <textarea
+              rows={2}
+              maxLength={220}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="VD: Chuẩn bị tài liệu trước 15p, hoàn thành xong chương 3..."
+              className="w-full px-4 py-2.5 rounded-2xl bg-[#06141B] border border-[#253745] text-sm text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#9BA8AB] focus:ring-1 focus:ring-[#9BA8AB] transition shadow-inner resize-none"
             />
           </div>
 

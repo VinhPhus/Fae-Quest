@@ -153,7 +153,7 @@ interface FaeQuestState {
   setActiveTab: (tab: ActiveTab) => void;
   setCategoryFilter: (cat: string) => void;
   setStatusFilter: (status: string) => void;
-  addTask: (title: string, category: TaskCategory, difficulty: TaskDifficulty, isDailyRecurring?: boolean, focusDuration?: number | null) => void;
+  addTask: (title: string, category: TaskCategory, difficulty: TaskDifficulty, isDailyRecurring?: boolean, focusDuration?: number | null, description?: string) => void;
   updateTaskFocusDuration: (taskId: string, duration: number) => void;
   toggleTask: (id: string, coords?: { x: number; y: number }, forceSkipAgeCheck?: boolean) => Promise<void> | void;
   confirmEarlyTaskCompletion: () => void;
@@ -968,7 +968,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       setStatusFilter: (status: string) => set({ activeStatusFilter: status }),
 
-      addTask: (title, category, difficulty, isDailyRecurring = false, focusDuration = null) => {
+      addTask: (title, category, difficulty, isDailyRecurring = false, focusDuration = null, description = '') => {
         const trimmed = title.trim();
         if (!trimmed) return;
 
@@ -977,6 +977,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const newTask: Task = {
           id: 'task_' + Date.now(),
           title: trimmed,
+          description: description?.trim() || undefined,
           category,
           difficulty,
           completed: false,

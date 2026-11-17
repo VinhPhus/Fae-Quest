@@ -12,6 +12,7 @@ import {
   List,
   Plus,
   Swords,
+  Timer,
 } from 'lucide-react';
 import { TaskCategory } from '../../types';
 
@@ -210,12 +211,12 @@ export const QuestBentoGrid: React.FC = () => {
             return (
               <div
                 key={task.id}
-                className={`rounded-[24px] p-4 sm:p-5 bg-[#11212D] hover:bg-[#253745]/60 transition-all duration-300 shadow-[0_8px_24px_rgba(0,0,0,0.5)] hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(204,208,207,0.15)] border border-[#253745] flex flex-col justify-between gap-3.5 relative overflow-hidden group ${
+                className={`rounded-[24px] p-4 sm:p-5 bg-[#11212D] hover:bg-[#253745]/60 transition-all duration-300 shadow-[0_8px_24px_rgba(0,0,0,0.5)] hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(204,208,207,0.15)] border border-[#253745] flex flex-col justify-between min-h-[168px] relative overflow-hidden group ${
                   task.completed ? 'opacity-60 bg-[#06141B]/80' : ''
                 }`}
               >
-                {/* Top Row: Category + Difficulty + Reward Badges */}
-                <div className="flex items-center justify-between gap-2">
+                {/* Phần trên thẻ: Category + Difficulty + Focus Duration + Reward Badges */}
+                <div className="flex items-center justify-between gap-2 shrink-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${cat.badgeBg}`}
@@ -231,6 +232,12 @@ export const QuestBentoGrid: React.FC = () => {
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#06141B] text-[#9BA8AB] border border-[#253745] flex items-center gap-0.5">
                         <Repeat className="w-2.5 h-2.5 text-[#CCD0CF]" />
                         <span>Hằng ngày</span>
+                      </span>
+                    )}
+                    {Boolean(task.focusDuration) && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#06141B] text-amber-300 border border-amber-400/40 flex items-center gap-1 shadow-sm">
+                        <Timer className="w-2.5 h-2.5 text-amber-300" />
+                        <span>⏱ {task.focusDuration}p</span>
                       </span>
                     )}
                   </div>
@@ -254,10 +261,10 @@ export const QuestBentoGrid: React.FC = () => {
                   )}
                 </div>
 
-                {/* Center: Large Task Title */}
-                <div className="py-1">
+                {/* Phần giữa thẻ (Nội dung chính): Tiêu đề & Mô tả nhiệm vụ */}
+                <div className="py-2 flex-1 flex flex-col justify-center">
                   <h4
-                    className={`text-sm sm:text-base font-bold leading-snug break-words ${
+                    className={`text-base md:text-lg font-bold leading-snug break-words ${
                       task.completed
                         ? 'line-through text-[#9BA8AB]'
                         : 'text-[#CCD0CF] group-hover:text-white transition'
@@ -265,10 +272,26 @@ export const QuestBentoGrid: React.FC = () => {
                   >
                     {task.title}
                   </h4>
+
+                  {task.description ? (
+                    <p className="text-sm text-[#9BA8AB] leading-relaxed line-clamp-2 mt-1.5">
+                      {task.description}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-[#9BA8AB]/60 italic mt-1 line-clamp-1">
+                      {task.difficulty === 'boss'
+                        ? 'Chiến dịch đại thử thách đòi hỏi sự tập trung cao độ'
+                        : task.difficulty === 'hard'
+                        ? 'Thử thách nâng cao rèn luyện ý chí thép'
+                        : task.difficulty === 'easy'
+                        ? 'Mục tiêu khởi động nhẹ nhàng xây dựng thói quen'
+                        : 'Mục tiêu rèn luyện kỷ luật cá nhân'}
+                    </p>
+                  )}
                 </div>
 
-                {/* Bottom Row: Action Cluster */}
-                <div className="flex items-center justify-between pt-2 border-t border-[#253745] gap-2">
+                {/* Phần đáy thẻ: Phân cách & Thao tác */}
+                <div className="flex items-center justify-between border-t border-[#253745]/70 pt-3 mt-3 gap-2 shrink-0">
                   {task.completed ? (
                     <span className="text-[11px] text-[#9BA8AB] italic select-none">
                       Nhiệm vụ đã hoàn tất
@@ -280,16 +303,16 @@ export const QuestBentoGrid: React.FC = () => {
                         const rect = e.currentTarget.getBoundingClientRect();
                         toggleTask(task.id, { x: rect.right + 10, y: rect.top });
                       }}
-                      className="h-8 px-3 rounded-full bg-[#06141B] border border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                      className="h-8 px-3 rounded-full bg-[#06141B] border border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF] font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95"
                       title="Nhấn để hoàn thành & nhận EXP"
                     >
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
                       <span>Hoàn thành</span>
                     </button>
                   )}
 
                   <div className="flex items-center gap-2 ml-auto">
-                    {/* Play Focus Circular / Pill Button - only when !task.completed */}
+                    {/* Play Focus Button */}
                     {!task.completed && Boolean(task.focusDuration) && (
                       <button
                         type="button"
@@ -298,7 +321,7 @@ export const QuestBentoGrid: React.FC = () => {
                         title={`Bật Đồng Hồ Focus (${task.focusDuration} phút)`}
                       >
                         <Play className="w-3 h-3 fill-[#06141B]" />
-                        <span>{task.focusDuration}p</span>
+                        <span>Focus</span>
                       </button>
                     )}
 
@@ -358,6 +381,11 @@ export const QuestBentoGrid: React.FC = () => {
                     >
                       {task.title}
                     </p>
+                    {task.description && (
+                      <p className="text-[11px] text-[#9BA8AB] truncate">
+                        {task.description}
+                      </p>
+                    )}
                     <div className="flex items-center gap-1.5 text-[10px]">
                       <span className="text-[#CCD0CF] font-semibold">{cat.label}</span>
                       <span className="text-[#9BA8AB]">•</span>
