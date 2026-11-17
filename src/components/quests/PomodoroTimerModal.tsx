@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { DIFFICULTIES } from '../../constants/categories';
 import { CoinIcon } from '../ui/CoinIcon';
-import { Timer, Play, Pause, RotateCcw, X, Check, Lock, Sparkles, Info } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, X, Check, Lock, Sparkles, Info, Headphones, CloudRain, Flame, Wind, VolumeX } from 'lucide-react';
+import { startFocusAmbient, stopFocusAmbient, playSound, AmbientType } from '../../utils/soundEngine';
 
 const FOCUS_PRESETS = [10, 15, 25, 45, 60];
 
@@ -14,6 +15,10 @@ export const PomodoroTimerModal: React.FC = () => {
     streakDays,
     completePomodoro,
     updateTaskFocusDuration,
+    soundEnabled,
+    soundVolume = 75,
+    focusAmbient = 'rain',
+    setFocusAmbient,
   } = useFaeQuestStore();
 
   const task = tasks.find((t) => t.id === activePomodoroTaskId);
@@ -36,6 +41,22 @@ export const PomodoroTimerModal: React.FC = () => {
     }
   }, [activePomodoroTaskId, task?.id]);
 
+  // Ambient soundscape effect synced with timer execution
+  useEffect(() => {
+    if (isRunning && soundEnabled && focusAmbient !== 'off') {
+      startFocusAmbient(focusAmbient, soundVolume);
+    } else {
+      stopFocusAmbient(0.8);
+    }
+  }, [isRunning, focusAmbient, soundEnabled, soundVolume]);
+
+  // Cleanup ambient on modal close or unmount
+  useEffect(() => {
+    return () => {
+      stopFocusAmbient(0.4);
+    };
+  }, []);
+
   // Timer interval effect
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -45,6 +66,8 @@ export const PomodoroTimerModal: React.FC = () => {
       }, 1000);
     } else if (isRunning && timeLeft === 0) {
       setIsRunning(false);
+      stopFocusAmbient(0.4);
+      playSound('quest_easy', soundEnabled);
       if (task) {
         completePomodoro(task.id, targetMinutes, targetMinutes);
       }
@@ -52,7 +75,7 @@ export const PomodoroTimerModal: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, timeLeft, task, targetMinutes, completePomodoro]);
+  }, [isRunning, timeLeft, task, targetMinutes, completePomodoro, soundEnabled]);
 
   if (!activePomodoroTaskId || !task) return null;
 
@@ -115,7 +138,10 @@ export const PomodoroTimerModal: React.FC = () => {
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-fae/20 rounded-full blur-3xl pointer-events-none" />
 
         <button
-          onClick={() => setActivePomodoroTaskId(null)}
+          onClick={() => {
+            stopFocusAmbient(0.4);
+            setActivePomodoroTaskId(null);
+          }}
           className="absolute top-4 right-4 text-parchment/40 hover:text-parchment p-1 transition z-10"
           title="Đóng đồng hồ"
         >
@@ -282,6 +308,47 @@ export const PomodoroTimerModal: React.FC = () => {
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Ambient Soundscape Quick Bar */}
+        <div className="relative z-10 my-3 p-2.5 rounded-2xl bg-[#06141B] border border-[#253745] space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] text-[#CCD0CF] px-1">
+            <span className="flex items-center gap-1.5 font-bold">
+              <Headphones className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Âm Nền Tập Trung (Continuous Ambient):</span>
+            </span>
+            {isRunning && focusAmbient !== 'off' && (
+              <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Đang phát</span>
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { id: 'off', label: 'Tắt', icon: '🔇' },
+              { id: 'rain', label: 'Mưa Cổ', icon: '🌧️' },
+              { id: 'hearth', label: 'Lửa Trại', icon: '🔥' },
+              { id: 'abyss', label: 'Hư Không', icon: '🌌' },
+            ].map((amb) => {
+              const isSelected = focusAmbient === amb.id;
+              return (
+                <button
+                  key={amb.id}
+                  type="button"
+                  onClick={() => setFocusAmbient(amb.id as AmbientType)}
+                  className={`py-1.5 px-1 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1 border cursor-pointer ${isSelected
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50 shadow-sm'
+                    : 'bg-[#11212D] text-[#9BA8AB] hover:text-[#CCD0CF] border-[#253745]'
+                    }`}
+                >
+                  <span className="text-xs">{amb.icon}</span>
+                  <span className="truncate">{amb.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

@@ -40,6 +40,7 @@ import {
   resolveTitleObject,
 } from '../constants/systemQuests';
 import { playSoundEffect } from '../utils/soundEffects';
+import { playSound, setMasterVolume, AmbientType } from '../utils/soundEngine';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import {
   syncProfileAndStateToCloud,
@@ -62,6 +63,8 @@ interface FaeQuestState {
   streakDays: number;
   lastActiveDate: string;
   soundEnabled: boolean;
+  soundVolume: number;
+  focusAmbient: AmbientType;
   dailyCompletedCount: number;
   dailyBossCompletedCount: number;
   tasks: Task[];
@@ -159,6 +162,8 @@ interface FaeQuestState {
   openRivalModal: (data: RivalProfileData) => void;
   closeRivalModal: () => void;
   toggleSound: () => void;
+  setSoundVolume: (volume: number) => void;
+  setFocusAmbient: (ambient: AmbientType) => void;
   setActiveTab: (tab: ActiveTab) => void;
   setCategoryFilter: (cat: string) => void;
   setStatusFilter: (status: string) => void;
@@ -245,6 +250,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       streakDays: 0,
       lastActiveDate: getTodayString(),
       soundEnabled: true,
+      soundVolume: 75,
+      focusAmbient: 'rain',
       dailyCompletedCount: 0,
       dailyBossCompletedCount: 0,
       tasks: INITIAL_TASKS,
@@ -821,6 +828,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const rewardItems = msg.reward_items || [];
         const itemsCount = rewardItems.reduce((acc, it) => acc + (it.count || 1), 0);
         if (state.inventory.length + itemsCount > 50) {
+          playSound('error_block', state.soundEnabled);
           get().addToast('⚠️ Túi Đồ đã đầy (tối đa 50 ô). Hãy dùng bớt vật phẩm trong Túi Đồ trước khi nhận thưởng!', 'error');
           return { success: false, error: 'Túi Đồ đã đầy (tối đa 50 ô)' };
         }
@@ -868,7 +876,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             ),
           }));
 
-          playSoundEffect('rankup', get().soundEnabled);
+          playSound('coin_purchase', get().soundEnabled);
           get().addToast('🎁 Nhận toàn bộ phần thưởng thành công! Vật phẩm đã được chuyển vào Túi Đồ.', 'success');
           debouncedAutoSync(get());
           return { success: true };
@@ -974,17 +982,35 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       toggleSound: () => {
         const next = !get().soundEnabled;
         set({ soundEnabled: next });
+        setMasterVolume(get().soundVolume || 75, next);
         get().addToast(next ? 'Đã bật hiệu ứng âm thanh RPG' : 'Đã tắt âm thanh', 'info');
       },
 
+      setSoundVolume: (volume: number) => {
+        const clean = Math.max(0, Math.min(100, Math.round(volume)));
+        set({ soundVolume: clean });
+        setMasterVolume(clean, get().soundEnabled);
+      },
+
+      setFocusAmbient: (ambient: AmbientType) => {
+        set({ focusAmbient: ambient });
+      },
+
       setActiveTab: (tab: ActiveTab) => {
+        playSound('ui_click', get().soundEnabled);
         set({ activeTab: tab });
         get().cleanupExpiredInventory();
       },
 
-      setCategoryFilter: (cat: string) => set({ activeCategoryFilter: cat }),
+      setCategoryFilter: (cat: string) => {
+        playSound('ui_click', get().soundEnabled);
+        set({ activeCategoryFilter: cat });
+      },
 
-      setStatusFilter: (status: string) => set({ activeStatusFilter: status }),
+      setStatusFilter: (status: string) => {
+        playSound('ui_click', get().soundEnabled);
+        set({ activeStatusFilter: status });
+      },
 
       addTask: (title, category, difficulty, isDailyRecurring = false, focusDuration = null, description = '') => {
         const trimmed = title.trim();
@@ -1011,8 +1037,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           tasks: [newTask, ...state.tasks],
         }));
 
-        playSoundEffect('complete', get().soundEnabled);
-        get().addToast('Đã khắc nhiệm vụ mới lên bảng!', 'success');
+        playSound('quest_create', get().soundEnabled);
+        get().addToast('Đã khắc lệnh nhiệm vụ mới lên bảng!', 'success');
         debouncedAutoSync(get());
       },
 
@@ -1167,6 +1193,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         get().checkSystemMilestones();
 
+        const diffSoundMap: Record<string, 'quest_easy' | 'quest_medium' | 'quest_hard' | 'quest_boss'> = {
+          easy: 'quest_easy',
+          medium: 'quest_medium',
+          hard: 'quest_hard',
+          boss: 'quest_boss',
+        };
+        const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
+
         if (newRankTier) {
           triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
           try {
@@ -1177,10 +1211,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
             });
           } catch (e) { }
-          playSoundEffect('rankup', state.soundEnabled);
+          playSound('rank_up', state.soundEnabled);
           set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
         } else {
-          playSoundEffect('complete', state.soundEnabled);
+          playSound(questSound, state.soundEnabled);
           get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
         }
         debouncedAutoSync(get());
@@ -1314,6 +1348,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 16);
 
+        const diffSoundMap: Record<string, 'quest_easy' | 'quest_medium' | 'quest_hard' | 'quest_boss'> = {
+          easy: 'quest_easy',
+          medium: 'quest_medium',
+          hard: 'quest_hard',
+          boss: 'quest_boss',
+        };
+        const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
+
         if (newRankTier) {
           try {
             confetti({
@@ -1323,10 +1365,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
             });
           } catch (e) { }
-          playSoundEffect('rankup', state.soundEnabled);
+          playSound('rank_up', state.soundEnabled);
           set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
         } else {
-          playSoundEffect('complete', state.soundEnabled);
+          playSound(questSound, state.soundEnabled);
         }
 
         get().addToast(
@@ -1360,12 +1402,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         // Giới hạn sức chứa tối đa 50 vật phẩm
         if (state.inventory.length >= MAX_INVENTORY_SLOTS) {
-          playSoundEffect('warning', state.soundEnabled);
+          playSound('error_block', state.soundEnabled);
           get().addToast('🎒 Túi Đồ đã đầy (50/50)! Hãy sử dụng bớt vật phẩm trước khi đổi thêm.', 'error');
           return;
         }
 
         if (state.coins < item.cost) {
+          playSound('error_block', state.soundEnabled);
           get().addToast(`Bạn cần thêm ${item.cost - state.coins} Xu nữa để mua "${item.title}"!`, 'error');
           return;
         }
@@ -1381,7 +1424,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
 
             if (rpcErr) {
-              playSoundEffect('warning', state.soundEnabled);
+              playSound('error_block', state.soundEnabled);
               get().addToast(`⚠️ Giao dịch thất bại: ${rpcErr.message}`, 'error');
               return;
             }
@@ -1436,7 +1479,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           inventory: [newTicket, ...prev.inventory],
         }));
 
-        playSoundEffect('coin', state.soundEnabled);
+        playSound('coin_purchase', state.soundEnabled);
         get().addToast('🎒 Đã thêm vật phẩm vào Túi Đồ!', 'success');
         debouncedAutoSync(get());
       },
@@ -1469,7 +1512,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         if (!target) return;
 
         // 1. Kích hoạt hiệu ứng âm thanh sử dụng vật phẩm / potion phép thuật
-        playSoundEffect('potion', state.soundEnabled);
+        playSound('item_use', state.soundEnabled);
 
         // 2. Xóa vật phẩm khỏi mảng inventory ngay lập tức
         set((prev) => ({
@@ -1516,7 +1559,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         });
 
         set({ rivals: updated });
-        playSoundEffect('complete', state.soundEnabled);
+        playSound('streak_flame', state.soundEnabled);
         get().addToast('Các đối thủ vừa hoàn thành nhiệm vụ và gia tăng EXP!', 'info');
       },
 
@@ -1585,7 +1628,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setResetOpen: (open: boolean) => set({ isResetOpen: open }),
       setSettingsOpen: (open: boolean) => set({ isSettingsOpen: open }),
       setChangeCoverOpen: (open: boolean) => set({ isChangeCoverOpen: open }),
-      openRivalModal: (data: RivalProfileData) => set({ selectedRivalForModal: data, isRivalModalOpen: true }),
+      openRivalModal: (data: RivalProfileData) => {
+        playSound('ui_click', get().soundEnabled);
+        set({ selectedRivalForModal: data, isRivalModalOpen: true });
+      },
       closeRivalModal: () => set({ isRivalModalOpen: false, selectedRivalForModal: null }),
       setOathOpen: (open: boolean) => set({ isOathOpen: open }),
       setSearchQuery: (query: string) => set({ searchQuery: query }),
@@ -1596,7 +1642,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           localStorage.setItem('faequest_oath_accepted', 'true');
         }
         set({ isOathOpen: false });
-        playSoundEffect('complete', get().soundEnabled);
+        playSound('scroll_open', get().soundEnabled);
         get().addToast('Chào mừng Thợ Săn! Khế ước danh dự đã được thiết lập.', 'success');
       },
       setConfirmEarlyTask: (data) => set({ confirmEarlyTask: data }),
@@ -1746,11 +1792,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
 
         set({ systemQuests: updatedQuests, unlockedTitleIds: unlockedTitles });
-        playSoundEffect('complete', state.soundEnabled);
+        playSound('streak_flame', state.soundEnabled);
         triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 6);
 
         if (isCompleted) {
-          playSoundEffect('rankup', state.soundEnabled);
+          playSound('rank_up', state.soundEnabled);
           get().addToast(`🔥 XUẤT SẮC! Hoàn thành chuỗi ${quest.targetDays} ngày của "${quest.title}"! Hãy nhận thưởng!`, 'success');
         } else {
           get().addToast(`🔥 Điểm danh thành công ngày ${nextStreak}/${quest.targetDays}! Giữ vững ngọn lửa kỷ luật!`, 'success');
@@ -1848,7 +1894,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .eq('id', targetUserId)
             .then(() => {});
         }
-        playSoundEffect('click', state.soundEnabled);
+        playSound('scroll_open', state.soundEnabled);
         get().addToast(`Đã trang bị danh hiệu "${titleInfo?.name || titleId}"!`, 'success');
         debouncedAutoSync(get());
       },
@@ -2360,7 +2406,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().fetchUserMessages();
             get().fetchSystemShopItems();
             get().fetchSystemAchievements();
-            playSoundEffect('rankup', get().soundEnabled);
+            playSound('coin_purchase', get().soundEnabled);
             get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
             return { success: true };
           } else {
@@ -2399,7 +2445,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               get().fetchUserMessages();
               get().fetchSystemShopItems();
               get().fetchSystemAchievements();
-              playSoundEffect('rankup', get().soundEnabled);
+              playSound('coin_purchase', get().soundEnabled);
               get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
               return { success: true };
             }
@@ -2671,6 +2717,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       name: 'faequest_ui_preferences',
       partialize: (state) => ({
         soundEnabled: state.soundEnabled,
+        soundVolume: state.soundVolume ?? 75,
+        focusAmbient: state.focusAmbient ?? 'rain',
         language: state.language || 'vi',
         isSidebarCollapsed: state.isSidebarCollapsed,
       }),

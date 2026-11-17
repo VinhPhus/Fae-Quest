@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { playSoundEffect } from '../../utils/soundEffects';
+import { playSound, AmbientType } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
   Settings,
@@ -25,6 +26,12 @@ import {
   RefreshCw,
   LogOut,
   ShieldCheck,
+  Headphones,
+  Sliders,
+  Swords,
+  Flame,
+  CloudRain,
+  Radio,
 } from 'lucide-react';
 
 export const SettingsModal: React.FC = () => {
@@ -33,6 +40,10 @@ export const SettingsModal: React.FC = () => {
     setSettingsOpen,
     soundEnabled,
     toggleSound,
+    soundVolume = 75,
+    setSoundVolume,
+    focusAmbient = 'rain',
+    setFocusAmbient,
     playerName,
     setPlayerName,
     setResetOpen,
@@ -371,59 +382,177 @@ export const SettingsModal: React.FC = () => {
                 </form>
               </div>
 
-              {/* Sound & Audio Effects */}
-              <div className="space-y-3 pt-2 border-t border-parchment/10">
-                <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
-                  <Volume2 className="w-4 h-4 text-fae" />
-                  <span>Hiệu Ứng Âm Thanh</span>
-                </label>
-
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-thorn-dark/80 border border-opal/30">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-semibold text-parchment">
-                      Âm thanh hoàn thành & Thăng Rank
-                    </p>
-                    <p className="text-xs text-parchment/60">
-                      Tự động tạo âm thanh huyền bí khi tích chọn nhiệm vụ, nhận Xu và lên cấp.
-                    </p>
-                  </div>
-
+              {/* Sound & Audio Effects - Obsidian & Steel Audio Engine */}
+              <div className="space-y-4 pt-3 border-t border-parchment/10">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
+                    <Volume2 className="w-4 h-4 text-cyan-400" />
+                    <span>Bộ Xử Lý Âm Thanh Obsidian & Steel (Tone.js)</span>
+                  </label>
                   <button
                     onClick={toggleSound}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${soundEnabled
-                      ? 'bg-fae text-thorn-dark shadow-md'
-                      : 'bg-thorn text-parchment/50 border border-parchment/20'
+                    className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${soundEnabled
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 shadow-sm'
+                      : 'bg-[#06141B] text-[#9BA8AB] border border-[#253745]'
                       }`}
                   >
                     {soundEnabled ? (
                       <>
-                        <Volume2 className="w-4 h-4" />
+                        <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
                         <span>Đang Bật</span>
                       </>
                     ) : (
                       <>
-                        <VolumeX className="w-4 h-4" />
+                        <VolumeX className="w-3.5 h-3.5 text-[#9BA8AB]" />
                         <span>Đang Tắt</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => playSoundEffect('complete', true)}
-                    className="px-3 py-1.5 rounded-lg bg-thorn-dark border border-opal/30 text-xs text-opal-light hover:text-parchment transition"
-                  >
-                    🔊 Nghe thử âm thanh Task
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => playSoundEffect('rankup', true)}
-                    className="px-3 py-1.5 rounded-lg bg-thorn-dark border border-fae/30 text-xs text-fae hover:text-parchment transition"
-                  >
-                    🎺 Nghe thử âm thanh Thăng Rank
-                  </button>
+                {/* Master Volume Slider */}
+                <div className="p-4 rounded-2xl bg-[#06141B] border border-[#253745] space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#CCD0CF] flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Âm Lượng Tổng Thể:</span>
+                    </span>
+                    <span className="font-mono font-bold text-cyan-300 px-2 py-0.5 rounded-md bg-[#11212D] border border-[#253745]">
+                      {soundVolume}%
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <VolumeX className="w-4 h-4 text-[#4A5C6A] shrink-0" />
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={soundVolume}
+                      onChange={(e) => setSoundVolume(Number(e.target.value))}
+                      className="flex-1 h-2 bg-[#11212D] rounded-lg appearance-none cursor-pointer accent-cyan-400 border border-[#253745]"
+                    />
+                    <Volume2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                  </div>
+                </div>
+
+                {/* Ambient Focus Sound Default */}
+                <div className="p-4 rounded-2xl bg-[#06141B] border border-[#253745] space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#CCD0CF] flex items-center gap-1.5">
+                      <Headphones className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Âm Nền Mặc Định Cho Fae Focus:</span>
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    {[
+                      { id: 'rain', label: 'Mưa Thành Cổ', icon: '🌧️' },
+                      { id: 'hearth', label: 'Lửa Trại Lò Rèn', icon: '🔥' },
+                      { id: 'abyss', label: 'Gió Hư Không', icon: '🌌' },
+                      { id: 'off', label: 'Tắt Âm Nền', icon: '🔇' },
+                    ].map((amb) => {
+                      const isSelected = focusAmbient === amb.id;
+                      return (
+                        <button
+                          key={amb.id}
+                          type="button"
+                          onClick={() => setFocusAmbient(amb.id as AmbientType)}
+                          className={`px-2.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${isSelected
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 shadow-md'
+                            : 'bg-[#11212D] text-[#9BA8AB] hover:text-[#CCD0CF] border-[#253745]'
+                            }`}
+                        >
+                          <span>{amb.icon}</span>
+                          <span className="truncate">{amb.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Hunter Soundboard */}
+                <div className="p-4 rounded-2xl bg-[#06141B] border border-[#253745] space-y-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Radio className="w-4 h-4 text-cyan-400" />
+                      <h4 className="font-rpg font-bold text-xs uppercase tracking-wide text-[#CCD0CF]">
+                        🔊 Bảng Thử Âm Thanh Thợ Săn (Soundboard)
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-[#9BA8AB]">
+                      Bấm để trải nghiệm các hiệu ứng âm thanh tổng hợp bằng Tone.js chuẩn Obsidian & Steel:
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => playSound('quest_medium', true)}
+                      className="p-2.5 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-cyan-400/50 text-left transition active:scale-95 cursor-pointer shadow-sm group"
+                      title="Kiếm Thép (Nhiệm Vụ Vừa)"
+                    >
+                      <div className="text-base group-hover:scale-110 transition">⚔️</div>
+                      <div className="font-bold text-xs text-[#CCD0CF] mt-1">Kiếm Thép</div>
+                      <div className="text-[10px] text-[#9BA8AB]">Chém gươm & hợp âm thép</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => playSound('quest_boss', true)}
+                      className="p-2.5 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-rose-400/50 text-left transition active:scale-95 cursor-pointer shadow-sm group"
+                      title="Hạ Trùm Cuối (Chiêng trận trầm hùng)"
+                    >
+                      <div className="text-base group-hover:scale-110 transition">👹</div>
+                      <div className="font-bold text-xs text-rose-300 mt-1">Hạ Trùm Cuối</div>
+                      <div className="text-[10px] text-[#9BA8AB]">Chiêng trận & kèn khải hoàn</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => playSound('rank_up', true)}
+                      className="p-2.5 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-amber-400/50 text-left transition active:scale-95 cursor-pointer shadow-sm group"
+                      title="Thăng Rank (Kèn hoàng gia)"
+                    >
+                      <div className="text-base group-hover:scale-110 transition">👑</div>
+                      <div className="font-bold text-xs text-amber-300 mt-1">Thăng Rank</div>
+                      <div className="text-[10px] text-[#9BA8AB]">Kèn lệnh & chuông ngân</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => playSound('coin_purchase', true)}
+                      className="p-2.5 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-yellow-400/50 text-left transition active:scale-95 cursor-pointer shadow-sm group"
+                      title="Túi Xu Vàng (Mua sắm & nhận thư)"
+                    >
+                      <div className="text-base group-hover:scale-110 transition">💰</div>
+                      <div className="font-bold text-xs text-yellow-300 mt-1">Túi Xu Vàng</div>
+                      <div className="text-[10px] text-[#9BA8AB]">Xóc túi xu leng keng</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => playSound('item_use', true)}
+                      className="p-2.5 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-emerald-400/50 text-left transition active:scale-95 cursor-pointer shadow-sm group"
+                      title="Thuốc Phép (Kích hoạt túi đồ)"
+                    >
+                      <div className="text-base group-hover:scale-110 transition">🧪</div>
+                      <div className="font-bold text-xs text-emerald-300 mt-1">Thuốc Phép</div>
+                      <div className="text-[10px] text-[#9BA8AB]">Sủi bọt & chuông ma pháp</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => playSound('streak_flame', true)}
+                      className="p-2.5 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#253745] hover:border-orange-400/50 text-left transition active:scale-95 cursor-pointer shadow-sm group"
+                      title="Ngọn Đuốc (Điểm danh chuỗi kỷ luật)"
+                    >
+                      <div className="text-base group-hover:scale-110 transition">🔥</div>
+                      <div className="font-bold text-xs text-orange-300 mt-1">Ngọn Đuốc</div>
+                      <div className="text-[10px] text-[#9BA8AB]">Đuốc bùng cháy & âm trầm</div>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
