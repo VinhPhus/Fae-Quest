@@ -30,7 +30,7 @@ export const AdminShopTab: React.FC = () => {
   // Form states
   const [name, setName] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [cost, setCost] = useState<number>(100);
+  const [cost, setCost] = useState<number | ''>(100);
   const [icon, setIcon] = useState<string>('👑');
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
@@ -80,16 +80,13 @@ export const AdminShopTab: React.FC = () => {
       addToast('Vui lòng nhập tên vật phẩm', 'error');
       return;
     }
-    if (cost <= 0) {
-      addToast('Giá vật phẩm phải lớn hơn 0 Xu', 'error');
-      return;
-    }
+    const finalCost = typeof cost === 'number' && cost > 0 ? cost : 1;
 
     if (editingItem) {
       const success = await updateSystemShopItem(editingItem.id, {
         name: name.trim(),
         description: description.trim(),
-        cost,
+        cost: finalCost,
         icon,
       });
       if (success) {
@@ -100,7 +97,7 @@ export const AdminShopTab: React.FC = () => {
       const success = await addSystemShopItem({
         name: name.trim(),
         description: description.trim(),
-        cost,
+        cost: finalCost,
         icon,
         is_system: true,
       });
@@ -196,7 +193,20 @@ export const AdminShopTab: React.FC = () => {
                     type="number"
                     min={1}
                     value={cost}
-                    onChange={(e) => setCost(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') {
+                        setCost('');
+                      } else {
+                        const parsed = parseInt(val, 10);
+                        setCost(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (cost === '' || cost < 1) {
+                        setCost(1);
+                      }
+                    }}
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#06141B] border border-[#253745] text-xs sm:text-sm text-amber-300 font-bold focus:outline-none focus:border-[#4A5C6A]"
                     required
                   />

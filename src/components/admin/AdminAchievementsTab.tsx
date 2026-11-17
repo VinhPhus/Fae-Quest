@@ -42,9 +42,9 @@ export const AdminAchievementsTab: React.FC = () => {
   const [achievementType, setAchievementType] = useState<
     'streak_counter' | 'milestone_tasks' | 'milestone_exp' | 'milestone_focus'
   >('streak_counter');
-  const [targetValue, setTargetValue] = useState<number>(14);
-  const [rewardExp, setRewardExp] = useState<number>(200);
-  const [rewardCoins, setRewardCoins] = useState<number>(50);
+  const [targetValue, setTargetValue] = useState<number | ''>(14);
+  const [rewardExp, setRewardExp] = useState<number | ''>(200);
+  const [rewardCoins, setRewardCoins] = useState<number | ''>(50);
   const [grantedTitleName, setGrantedTitleName] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
 
@@ -121,10 +121,14 @@ export const AdminAchievementsTab: React.FC = () => {
       addToast('Vui lòng nhập tên thành tựu', 'error');
       return;
     }
-    if (targetValue <= 0) {
+    if (typeof targetValue !== 'number' || targetValue <= 0) {
       addToast('Mục tiêu cần đạt phải lớn hơn 0', 'error');
       return;
     }
+
+    const finalTarget = typeof targetValue === 'number' && targetValue >= 1 ? targetValue : 1;
+    const finalExp = typeof rewardExp === 'number' && rewardExp >= 0 ? rewardExp : 0;
+    const finalCoins = typeof rewardCoins === 'number' && rewardCoins >= 0 ? rewardCoins : 0;
 
     if (editingAchievement) {
       const success = await updateSystemAchievement(editingAchievement.id, {
@@ -134,9 +138,9 @@ export const AdminAchievementsTab: React.FC = () => {
         category: category.trim() || 'Chung',
         rarity,
         achievement_type: achievementType,
-        target_value: targetValue,
-        reward_exp: rewardExp,
-        reward_coins: rewardCoins,
+        target_value: finalTarget,
+        reward_exp: finalExp,
+        reward_coins: finalCoins,
         granted_title_name: grantedTitleName.trim() || title.trim(),
       });
 
@@ -152,9 +156,9 @@ export const AdminAchievementsTab: React.FC = () => {
         category: category.trim() || 'Chung',
         rarity,
         achievement_type: achievementType,
-        target_value: targetValue,
-        reward_exp: rewardExp,
-        reward_coins: rewardCoins,
+        target_value: finalTarget,
+        reward_exp: finalExp,
+        reward_coins: finalCoins,
         granted_title_name: grantedTitleName.trim() || title.trim(),
       });
 
@@ -374,7 +378,17 @@ export const AdminAchievementsTab: React.FC = () => {
                     type="number"
                     min={1}
                     value={targetValue}
-                    onChange={(e) => setTargetValue(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') setTargetValue('');
+                      else {
+                        const parsed = parseInt(val, 10);
+                        setTargetValue(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (targetValue === '' || targetValue < 1) setTargetValue(1);
+                    }}
                     className="w-full px-3 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs text-white font-bold"
                     required
                   />
@@ -388,7 +402,17 @@ export const AdminAchievementsTab: React.FC = () => {
                     type="number"
                     min={0}
                     value={rewardExp}
-                    onChange={(e) => setRewardExp(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') setRewardExp('');
+                      else {
+                        const parsed = parseInt(val, 10);
+                        setRewardExp(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rewardExp === '' || rewardExp < 0) setRewardExp(0);
+                    }}
                     className="w-full px-3 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs text-cyan-400 font-bold"
                   />
                 </div>
@@ -401,7 +425,17 @@ export const AdminAchievementsTab: React.FC = () => {
                     type="number"
                     min={0}
                     value={rewardCoins}
-                    onChange={(e) => setRewardCoins(Math.max(0, parseInt(e.target.value) || 0))}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '') setRewardCoins('');
+                      else {
+                        const parsed = parseInt(val, 10);
+                        setRewardCoins(isNaN(parsed) ? '' : parsed);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (rewardCoins === '' || rewardCoins < 0) setRewardCoins(0);
+                    }}
                     className="w-full px-3 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs text-amber-300 font-bold"
                   />
                 </div>

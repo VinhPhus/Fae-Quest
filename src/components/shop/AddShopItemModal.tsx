@@ -8,7 +8,7 @@ export const AddShopItemModal: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [cost, setCost] = useState(25);
+  const [cost, setCost] = useState<number | ''>(25);
   const [emoji, setEmoji] = useState('🎁');
 
   const popularEmojis = ['🎁', '🍜', '🧋', '🎮', '🎬', '🛍️', '🏖️', '🍕', '💆', '🍦', '☕', '🎧'];
@@ -19,7 +19,8 @@ export const AddShopItemModal: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    addShopItem(title, desc, cost, emoji);
+    const finalCost = typeof cost === 'number' && cost >= 1 ? cost : 1;
+    addShopItem(title, desc, finalCost, emoji);
     setTitle('');
     setDesc('');
     setCost(25);
@@ -83,7 +84,20 @@ export const AddShopItemModal: React.FC = () => {
                 min="1"
                 max="9999"
                 value={cost}
-                onChange={(e) => setCost(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setCost('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setCost(isNaN(parsed) ? '' : parsed);
+                  }
+                }}
+                onBlur={() => {
+                  if (cost === '' || cost < 1) {
+                    setCost(1);
+                  }
+                }}
                 required
                 className="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 text-sm font-bold text-fae focus:border-fae focus:outline-none"
               />

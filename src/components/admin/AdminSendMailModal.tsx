@@ -43,14 +43,14 @@ export const AdminSendMailModal: React.FC<Props> = ({
 
   // Rewards state
   const [isRewardsOpen, setIsRewardsOpen] = useState<boolean>(defaultType === 'gift');
-  const [rewardExp, setRewardExp] = useState<number>(0);
-  const [rewardCoins, setRewardCoins] = useState<number>(0);
-  const [rewardStars, setRewardStars] = useState<number>(0);
+  const [rewardExp, setRewardExp] = useState<number | ''>(0);
+  const [rewardCoins, setRewardCoins] = useState<number | ''>(0);
+  const [rewardStars, setRewardStars] = useState<number | ''>(0);
   const [rewardItems, setRewardItems] = useState<MailRewardItem[]>([]);
 
   // Item selector state
   const [selectedItemId, setSelectedItemId] = useState<string>('');
-  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const [selectedQuantity, setSelectedQuantity] = useState<number | ''>(1);
 
   useEffect(() => {
     fetchSystemShopItems();
@@ -106,7 +106,7 @@ export const AdminSendMailModal: React.FC<Props> = ({
     const item = systemShopItems.find((s) => s.id === selectedItemId);
     if (!item) return;
 
-    const qty = Math.max(1, selectedQuantity || 1);
+    const qty = Math.max(1, typeof selectedQuantity === 'number' ? selectedQuantity : 1);
     setRewardItems((prev) => {
       const existing = prev.find((p) => p.id === item.id);
       if (existing) {
@@ -133,8 +133,11 @@ export const AdminSendMailModal: React.FC<Props> = ({
     setRewardItems((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const expNum = typeof rewardExp === 'number' ? rewardExp : 0;
+  const coinsNum = typeof rewardCoins === 'number' ? rewardCoins : 0;
+  const starsNum = typeof rewardStars === 'number' ? rewardStars : 0;
   const totalItemsCount = rewardItems.reduce((acc, it) => acc + (it.count || 1), 0);
-  const hasRewards = rewardExp > 0 || rewardCoins > 0 || rewardStars > 0 || rewardItems.length > 0;
+  const hasRewards = expNum > 0 || coinsNum > 0 || starsNum > 0 || rewardItems.length > 0;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,9 +153,9 @@ export const AdminSendMailModal: React.FC<Props> = ({
         subject.trim(),
         content.trim(),
         messageType,
-        rewardExp,
-        rewardCoins,
-        rewardStars,
+        expNum,
+        coinsNum,
+        starsNum,
         rewardItems
       );
       if (success) {
@@ -335,7 +338,17 @@ export const AdminSendMailModal: React.FC<Props> = ({
                       type="number"
                       min={0}
                       value={rewardExp}
-                      onChange={(e) => setRewardExp(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') setRewardExp('');
+                        else {
+                          const parsed = parseInt(val, 10);
+                          setRewardExp(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (rewardExp === '' || rewardExp < 0) setRewardExp(0);
+                      }}
                       className="w-full px-2.5 py-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-xs font-mono font-bold text-[#CCD0CF] focus:outline-none focus:border-cyan-500/50"
                       placeholder="0"
                     />
@@ -344,7 +357,7 @@ export const AdminSendMailModal: React.FC<Props> = ({
                         <button
                           key={v}
                           type="button"
-                          onClick={() => setRewardExp((prev) => prev + v)}
+                          onClick={() => setRewardExp((prev) => (typeof prev === 'number' ? prev + v : v))}
                           className="flex-1 py-0.5 text-[10px] font-semibold bg-[#253745] hover:bg-[#4A5C6A] text-[#CCD0CF] rounded transition cursor-pointer"
                         >
                           +{v}
@@ -365,7 +378,17 @@ export const AdminSendMailModal: React.FC<Props> = ({
                       type="number"
                       min={0}
                       value={rewardCoins}
-                      onChange={(e) => setRewardCoins(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') setRewardCoins('');
+                        else {
+                          const parsed = parseInt(val, 10);
+                          setRewardCoins(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (rewardCoins === '' || rewardCoins < 0) setRewardCoins(0);
+                      }}
                       className="w-full px-2.5 py-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-xs font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-500/50"
                       placeholder="0"
                     />
@@ -374,7 +397,7 @@ export const AdminSendMailModal: React.FC<Props> = ({
                         <button
                           key={v}
                           type="button"
-                          onClick={() => setRewardCoins((prev) => prev + v)}
+                          onClick={() => setRewardCoins((prev) => (typeof prev === 'number' ? prev + v : v))}
                           className="flex-1 py-0.5 text-[10px] font-semibold bg-[#253745] hover:bg-[#4A5C6A] text-amber-300 rounded transition cursor-pointer"
                         >
                           +{v}
@@ -395,7 +418,17 @@ export const AdminSendMailModal: React.FC<Props> = ({
                       type="number"
                       min={0}
                       value={rewardStars}
-                      onChange={(e) => setRewardStars(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') setRewardStars('');
+                        else {
+                          const parsed = parseInt(val, 10);
+                          setRewardStars(isNaN(parsed) ? '' : parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (rewardStars === '' || rewardStars < 0) setRewardStars(0);
+                      }}
                       className="w-full px-2.5 py-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-xs font-mono font-bold text-yellow-300 focus:outline-none focus:border-yellow-500/50"
                       placeholder="0"
                     />
@@ -404,7 +437,7 @@ export const AdminSendMailModal: React.FC<Props> = ({
                         <button
                           key={v}
                           type="button"
-                          onClick={() => setRewardStars((prev) => prev + v)}
+                          onClick={() => setRewardStars((prev) => (typeof prev === 'number' ? prev + v : v))}
                           className="flex-1 py-0.5 text-[10px] font-semibold bg-[#253745] hover:bg-[#4A5C6A] text-yellow-300 rounded transition cursor-pointer"
                         >
                           +{v}
@@ -447,7 +480,18 @@ export const AdminSendMailModal: React.FC<Props> = ({
                           min={1}
                           max={10}
                           value={selectedQuantity}
-                          onChange={(e) => setSelectedQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '') setSelectedQuantity('');
+                            else {
+                              const parsed = parseInt(val, 10);
+                              setSelectedQuantity(isNaN(parsed) ? '' : parsed);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (selectedQuantity === '' || selectedQuantity < 1) setSelectedQuantity(1);
+                            else if (selectedQuantity > 10) setSelectedQuantity(10);
+                          }}
                           className="w-16 px-2.5 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs font-mono text-center text-[#CCD0CF] focus:outline-none focus:border-[#4A5C6A]"
                           title="Số lượng"
                         />
@@ -498,9 +542,9 @@ export const AdminSendMailModal: React.FC<Props> = ({
               <div className="truncate">
                 <span className="font-bold">📦 Gói quà đính kèm: </span>
                 <span className="font-mono text-white">
-                  {rewardExp > 0 && `+${rewardExp} EXP • `}
-                  {rewardCoins > 0 && `+${rewardCoins} Xu • `}
-                  {rewardStars > 0 && `+${rewardStars} Sao • `}
+                  {expNum > 0 && `+${expNum} EXP • `}
+                  {coinsNum > 0 && `+${coinsNum} Xu • `}
+                  {starsNum > 0 && `+${starsNum} Sao • `}
                   {totalItemsCount > 0 ? `${totalItemsCount} Vật phẩm` : ''}
                 </span>
               </div>

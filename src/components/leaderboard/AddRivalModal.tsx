@@ -7,7 +7,7 @@ export const AddRivalModal: React.FC = () => {
 
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
-  const [exp, setExp] = useState(350);
+  const [exp, setExp] = useState<number | ''>(350);
   const [avatar, setAvatar] = useState('⚔️');
 
   const avatarPresets = ['⚔️', '🦊', '🐺', '🦁', '🦄', '🐉', '🦅', '👑', '🧙‍♂️', '🥷', '🧝‍♀️', '⚡'];
@@ -18,7 +18,8 @@ export const AddRivalModal: React.FC = () => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    addRival(name, title || 'Chiến Binh Ẩn Danh', exp, avatar);
+    const finalExp = typeof exp === 'number' && exp >= 0 ? exp : 0;
+    addRival(name, title || 'Chiến Binh Ẩn Danh', finalExp, avatar);
     setName('');
     setTitle('');
     setExp(350);
@@ -80,7 +81,17 @@ export const AddRivalModal: React.FC = () => {
                 min="0"
                 max="99999"
                 value={exp}
-                onChange={(e) => setExp(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') setExp('');
+                  else {
+                    const parsed = parseInt(val, 10);
+                    setExp(isNaN(parsed) ? '' : parsed);
+                  }
+                }}
+                onBlur={() => {
+                  if (exp === '' || exp < 0) setExp(0);
+                }}
                 required
                 className="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 text-sm font-bold text-fae focus:border-fae focus:outline-none"
               />
