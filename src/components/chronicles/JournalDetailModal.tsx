@@ -76,13 +76,13 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+      <div className="fixed inset-0 z-50 bg-[#06141B]/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="max-w-[650px] w-full bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative overflow-hidden my-auto space-y-5"
+          className="max-w-[650px] w-full max-h-[90vh] overflow-y-auto bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto space-y-5 scroll-smooth no-scrollbar"
         >
           {/* Header */}
           <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#253745]">

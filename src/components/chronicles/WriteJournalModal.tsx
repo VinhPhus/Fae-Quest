@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { JournalMood } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
+import { WheelDatePicker } from './WheelDatePicker';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
 import { playSound } from '../../utils/soundEngine';
 import {
@@ -19,7 +20,7 @@ const MOOD_OPTIONS: { mood: JournalMood; emoji: string; label: string; activeCol
   { mood: 'Tuyệt vời', emoji: '🤩', label: 'Tuyệt vời', activeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' },
   { mood: 'Tốt', emoji: '😊', label: 'Tốt', activeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50' },
   { mood: 'Bình thường', emoji: '😐', label: 'Bình thường', activeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/50' },
-  { mood: 'Căng thẳng', emoji: '😫', label: 'Căng thẳng', activeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/50' },
+  { mood: 'Căng thẳng', emoji: '😫', label: 'Stress', activeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/50' },
   { mood: 'Tệ', emoji: '😞', label: 'Tệ', activeColor: 'bg-rose-500/20 text-rose-300 border-rose-500/50' },
 ];
 
@@ -139,13 +140,13 @@ export const WriteJournalModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+      <div className="fixed inset-0 z-50 bg-[#06141B]/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.93, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 16 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="max-w-[700px] w-full bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative overflow-hidden my-auto"
+          className="max-w-[700px] w-full max-h-[90vh] overflow-y-auto bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto scroll-smooth no-scrollbar"
         >
           {/* Subtle Ambient Light Glow */}
           <div className="absolute top-0 right-1/4 w-72 h-32 bg-[#4A5C6A]/10 rounded-full blur-3xl pointer-events-none" />
@@ -181,22 +182,11 @@ export const WriteJournalModal: React.FC = () => {
           </div>
 
           <div className="space-y-4 pt-4">
-            {/* ================= HÀNG 1: NGÀY & TÂM TRẠNG (MOOD) ================= */}
+            {/* ================= HÀNG 1: NGÀY (IOS WHEEL PICKER) & TÂM TRẠNG (MOOD) ================= */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[#06141B]/70 border border-[#253745]">
-              {/* Ngày */}
+              {/* iOS Wheel Date Picker */}
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#11212D] border border-[#253745] flex items-center justify-center text-[#CCD0CF] shrink-0">
-                  <Calendar className="w-4 h-4 text-cyan-400" />
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-[#9BA8AB] tracking-wider">Ngày ghi nhật ký</div>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="bg-transparent text-sm font-semibold text-[#CCD0CF] focus:outline-none cursor-pointer"
-                  />
-                </div>
+                <WheelDatePicker value={date} onChange={setDate} />
               </div>
 
               {/* Bộ chọn Tâm Trạng (Mood Selector) */}
