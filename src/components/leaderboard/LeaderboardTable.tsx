@@ -4,6 +4,7 @@ import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { SYSTEM_TITLES, resolveTitleObject } from '../../constants/systemQuests';
 import { RivalTargetBanner } from './RivalTargetBanner';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
+import { DARK_FANTASY_COVERS } from '../modals/ChangeCoverModal';
 import { Trophy, RefreshCw, UserPlus, Swords, Globe, Bot, ShieldCheck } from 'lucide-react';
 
 export const LeaderboardHeader: React.FC = () => {
@@ -163,14 +164,14 @@ export const LeaderboardTable: React.FC = () => {
     ? otherCommunityCombatants
     : [myCombatant, ...otherCommunityCombatants];
 
-  // 3. Đối thủ AI dự phòng
-  const aiCombatants = rivals.map((r) => ({
+  // 3. Đối thủ AI dự phòng (Gán ảnh bìa Dark Fantasy phân biệt rõ ràng, không lẫn lộn)
+  const aiCombatants = rivals.map((r, i) => ({
     id: r.id,
     name: r.name,
     title: r.title,
     exp: r.exp,
     avatar: r.avatar,
-    coverUrl: null,
+    coverUrl: DARK_FANTASY_COVERS[i % DARK_FANTASY_COVERS.length]?.url || null,
     streak: Math.max(1, Math.floor(r.exp / 150)),
     completedTasks: Math.max(1, Math.floor(r.exp / 35)),
     equippedTitle: r.title,
@@ -244,7 +245,7 @@ export const LeaderboardTable: React.FC = () => {
 
             const isAvatarUrl =
               typeof c.avatar === 'string' &&
-              (c.avatar.startsWith('http') || c.avatar.startsWith('/'));
+              (c.avatar.startsWith('http') || c.avatar.startsWith('/') || c.avatar.startsWith('data:'));
 
             return (
               <div

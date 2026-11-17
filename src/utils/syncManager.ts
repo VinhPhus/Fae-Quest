@@ -98,6 +98,7 @@ export const syncProfileAndStateToCloud = async (
         id: hunterId,
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
+        cover_url: state.coverUrl || null,
         exp: state.exp || 0,
         coins: state.coins || 25,
         stars: state.stars || 0,
@@ -115,6 +116,7 @@ export const syncProfileAndStateToCloud = async (
           id: hunterId,
           username: state.playerName || 'Thợ Săn Fae',
           avatar_url: state.avatarUrl || null,
+          cover_url: state.coverUrl || null,
           exp: state.exp || 0,
           coins: state.coins || 25,
           rank_id: 'dong',
@@ -128,6 +130,7 @@ export const syncProfileAndStateToCloud = async (
       const { error: updErr } = await supabase.from('profiles').update({
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
+        cover_url: state.coverUrl || null,
         equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
         exp: state.exp || 0,
         coins: state.coins || 0,
@@ -142,6 +145,7 @@ export const syncProfileAndStateToCloud = async (
         await supabase.from('profiles').update({
           username: state.playerName || 'Thợ Săn Fae',
           avatar_url: state.avatarUrl || null,
+          cover_url: state.coverUrl || null,
           equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
           updated_at: new Date().toISOString(),
         }).eq('id', hunterId);

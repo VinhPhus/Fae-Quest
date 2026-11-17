@@ -156,8 +156,8 @@ interface FaeQuestState {
   adminSetUserRole: (targetUserId: string, newRole: UserRole) => Promise<boolean>;
   setLanguage: (lang: string) => void;
   setPlayerName: (name: string) => void;
-  setAvatarUrl: (url: string) => void;
-  setCoverUrl: (url: string) => void;
+  setAvatarUrl: (url: string) => Promise<void>;
+  setCoverUrl: (url: string) => Promise<void>;
   setChangeCoverOpen: (open: boolean) => void;
   openRivalModal: (data: RivalProfileData) => void;
   closeRivalModal: () => void;
@@ -969,14 +969,48 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
-      setAvatarUrl: (url: string) => {
+      setAvatarUrl: async (url: string) => {
         set({ avatarUrl: url });
-        debouncedAutoSync(get());
+        const targetUserId = get().currentUser?.id || get().hunterId;
+        if (targetUserId) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({
+                avatar_url: url || null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', targetUserId);
+          } catch (e) {
+            console.error('Lỗi cập nhật avatar_url lên profiles:', e);
+          }
+        }
+        await get().syncToCloud(true);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
+        }
       },
 
-      setCoverUrl: (url: string) => {
+      setCoverUrl: async (url: string) => {
         set({ coverUrl: url });
-        debouncedAutoSync(get());
+        const targetUserId = get().currentUser?.id || get().hunterId;
+        if (targetUserId) {
+          try {
+            await supabase
+              .from('profiles')
+              .update({
+                cover_url: url || null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', targetUserId);
+          } catch (e) {
+            console.error('Lỗi cập nhật cover_url lên profiles:', e);
+          }
+        }
+        await get().syncToCloud(true);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
+        }
       },
 
       toggleSound: () => {
@@ -2186,7 +2220,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isOathOpen: false,
                 playerName: s.playerName || hunterName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
-                coverUrl: s.coverUrl || '',
+                coverUrl: s.coverUrl || profile?.cover_url || '',
                 exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
                 coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
                 stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
@@ -2243,6 +2277,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isOathOpen: isAdmin ? false : true,
                 playerName: hunterName,
                 avatarUrl: profile?.avatar_url || '',
+                coverUrl: profile?.cover_url || '',
                 exp: profile?.exp || 0,
                 coins: profile?.coins || 25,
                 stars: profile?.stars || 0,
@@ -2573,7 +2608,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               isOathOpen: false,
               playerName: s.playerName || hunterName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
-              coverUrl: s.coverUrl || '',
+              coverUrl: s.coverUrl || profile?.cover_url || '',
               exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
               coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
               stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
@@ -2629,6 +2664,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               isOathOpen: isAdmin ? false : true,
               playerName: hunterName,
               avatarUrl: profile?.avatar_url || '',
+              coverUrl: profile?.cover_url || '',
               exp: profile?.exp || 0,
               coins: profile?.coins || 25,
               stars: profile?.stars || 0,

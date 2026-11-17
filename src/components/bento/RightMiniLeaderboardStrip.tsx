@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
+import { DARK_FANTASY_COVERS } from '../modals/ChangeCoverModal';
 import { Trophy, ChevronRight } from 'lucide-react';
 import { EASING_SPRING } from '../../constants/motion';
 
@@ -24,7 +25,7 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
   } = useFaeQuestStore();
   const [communityProfiles, setCommunityProfiles] = useState<HunterProfileCloud[]>([]);
 
-  // Tải dữ liệu BXH thật từ Supabase
+  // Tải dữ liệu BXH thật từ Supabase & Lắng nghe sự kiện Realtime
   useEffect(() => {
     let isMounted = true;
     const loadLeaderboardData = async () => {
@@ -38,8 +39,15 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       }
     };
     loadLeaderboardData();
+
+    const handleReload = () => {
+      if (isMounted) loadLeaderboardData();
+    };
+    window.addEventListener('faequest:reload_leaderboard', handleReload);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('faequest:reload_leaderboard', handleReload);
     };
   }, [exp]);
 
@@ -57,9 +65,10 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
     isPlayer: true,
   };
 
-  // 2. Thợ săn thật từ bảng profiles Supabase (loại trừ tài khoản hiện tại để tránh trùng)
+  // 2. Thợ săn thật từ bảng profiles Supabase (loại trừ tài khoản hiện tại để tránh trùng/lẫn lộn)
+  const myIdentifier = hunterId;
   const otherCommunity = communityProfiles
-    .filter((p) => p.id !== hunterId)
+    .filter((p) => p.id !== myIdentifier)
     .map((p) => ({
       id: p.id,
       name: p.username || 'Thợ Săn Ẩn Danh',
@@ -73,8 +82,8 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       isPlayer: false,
     }));
 
-  // 3. Dự phòng đối thủ AI nếu chưa đủ 5 người chơi
-  const aiCombatants = rivals.map((r) => ({
+  // 3. Dự phòng đối thủ AI nếu chưa đủ 5 người chơi (Gán ảnh bìa Dark Fantasy sống động, phân biệt rõ ràng)
+  const aiCombatants = rivals.map((r, i) => ({
     id: r.id,
     name: r.name,
     exp: r.exp,
@@ -83,7 +92,7 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       (r.avatar.startsWith('http') || r.avatar.startsWith('/') || r.avatar.startsWith('data:'))
         ? r.avatar
         : null,
-    coverUrl: null,
+    coverUrl: DARK_FANTASY_COVERS[i % DARK_FANTASY_COVERS.length]?.url || null,
     streak: Math.max(1, Math.floor(r.exp / 150)),
     completedTasks: Math.max(1, Math.floor(r.exp / 35)),
     equippedTitle: r.title,

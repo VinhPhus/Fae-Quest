@@ -127,6 +127,22 @@ export const useRealtimeSync = (): void => {
       }
     );
 
+    // 5. Lắng nghe thay đổi toàn cầu trên profiles (Ảnh bìa, Avatar, Danh hiệu, EXP, Thứ hạng)
+    // Giúp mọi người chơi thấy ngay ảnh bìa và hồ sơ mới theo thời gian thực (Real-time) mà không cần F5
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+      },
+      (payload) => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard', { detail: payload }));
+        }
+      }
+    );
+
     channel.subscribe();
 
     return () => {

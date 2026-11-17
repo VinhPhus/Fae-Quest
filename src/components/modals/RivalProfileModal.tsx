@@ -27,6 +27,7 @@ export const RivalProfileModal: React.FC = () => {
     closeRivalModal,
     playerName,
     avatarUrl,
+    coverUrl,
     exp: myExp,
     streakDays: myStreak,
     completedTotal: myTasks,
@@ -49,7 +50,9 @@ export const RivalProfileModal: React.FC = () => {
       (t) => t.name === rival.equippedTitle || t.id === rival.equippedTitle
     ) || resolveTitleObject(rival.equippedTitle);
 
-  const coverImage = rival.coverUrl && rival.coverUrl.trim() ? rival.coverUrl : DEFAULT_COVER_URL;
+  const coverImage = rival.isPlayer
+    ? (coverUrl && coverUrl.trim() ? coverUrl : DEFAULT_COVER_URL)
+    : (rival.coverUrl && rival.coverUrl.trim() ? rival.coverUrl : DEFAULT_COVER_URL);
 
   // Comparison deltas
   const expDiff = myExp - rival.exp;
@@ -163,7 +166,7 @@ export const RivalProfileModal: React.FC = () => {
           <div className="flex items-end justify-between -mt-10 px-2 relative z-10">
             <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-[#253745] via-[#4A5C6A] to-[#CCD0CF] ring-4 ring-[#11212D] shadow-xl relative group">
               <div className="w-full h-full rounded-full overflow-hidden bg-[#06141B]">
-                {renderAvatar(rival.name, rival.avatarUrl)}
+                {renderAvatar(rival.name, (rival.isPlayer ? avatarUrl : rival.avatarUrl) || (rival as any).avatar)}
               </div>
               {/* Rank Icon Badge on Avatar */}
               <div

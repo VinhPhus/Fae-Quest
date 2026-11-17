@@ -5,7 +5,7 @@ import {
   CLOUDINARY_UPLOAD_PRESET,
   CLOUDINARY_UPLOAD_URL,
 } from '../../constants/cloudinary';
-import { compressImageToDataUrl } from '../../utils/imageCompressor';
+import { compressCoverImageToDataUrl } from '../../utils/imageCompressor';
 import { MODAL_BACKDROP_VARIANTS, MODAL_PANEL_VARIANTS } from '../../constants/motion';
 import {
   X,
@@ -71,12 +71,12 @@ export const ChangeCoverModal: React.FC = () => {
 
   const currentCover = coverUrl || DEFAULT_COVER_URL;
 
-  const handleSelectPreset = (url: string, title: string) => {
-    setCoverUrl(url);
-    addToast(`Đã chọn ảnh bìa: "${title}"`, 'success');
+  const handleSelectPreset = async (url: string, title: string) => {
+    await setCoverUrl(url);
+    addToast(`Đã chọn ảnh bìa: "${title}" (Đã đồng bộ thời gian thực)`, 'success');
   };
 
-  const handleApplyCustomUrl = (e: React.FormEvent) => {
+  const handleApplyCustomUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = customUrl.trim();
     if (!trimmed) return;
@@ -86,7 +86,7 @@ export const ChangeCoverModal: React.FC = () => {
       return;
     }
 
-    setCoverUrl(trimmed);
+    await setCoverUrl(trimmed);
     setCustomUrl('');
     addToast('Đã cập nhật ảnh bìa từ liên kết URL thành công!', 'success');
   };
@@ -96,8 +96,8 @@ export const ChangeCoverModal: React.FC = () => {
     if (!file) return;
     e.target.value = '';
 
-    if (file.size > 8 * 1024 * 1024) {
-      addToast('Dung lượng ảnh tối đa 8MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+    if (file.size > 12 * 1024 * 1024) {
+      addToast('Dung lượng ảnh tối đa 12MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
       return;
     }
     if (!file.type.startsWith('image/')) {
@@ -107,52 +107,50 @@ export const ChangeCoverModal: React.FC = () => {
 
     try {
       setIsUploading(true);
-      addToast('Đang tối ưu và tải ảnh bìa lên...', 'info');
+      addToast('Đang tối ưu ảnh bìa tỉ lệ ngang và đồng bộ...', 'info');
 
-      const localDataUrl = await compressImageToDataUrl(file).catch(() => null);
+      // Nén ảnh bìa ngang chất lượng cao HD (~1400px, 60KB - 80KB)
+      const localDataUrl = await compressCoverImageToDataUrl(file, 1400, 600).catch(() => null);
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      let uploadedUrl: string | null = null;
 
-      const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        if (localDataUrl) {
-          setCoverUrl(localDataUrl);
-          addToast('Đã lưu ảnh bìa trực tiếp trên thiết bị!', 'info');
-        } else {
-          addToast('Tải ảnh bìa thất bại!', 'error');
-        }
-        return;
-      }
-
-      const data = await response.json();
-      if (data.secure_url) {
-        setCoverUrl(data.secure_url);
-        addToast('Cập nhật ảnh bìa lên đám mây thành công!', 'success');
-      } else if (localDataUrl) {
-        setCoverUrl(localDataUrl);
-        addToast('Đã lưu ảnh bìa vào hệ thống!', 'success');
-      }
-    } catch {
       try {
-        const localDataUrl = await compressImageToDataUrl(file);
-        setCoverUrl(localDataUrl);
-        addToast('Đã lưu ảnh bìa trực tiếp trên thiết bị!', 'info');
-      } catch {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.secure_url) {
+            uploadedUrl = data.secure_url;
+          }
+        }
+      } catch (cloudErr) {
+        console.warn('Cloudinary upload bypassed/failed, falling back to local HD data URL:', cloudErr);
+      }
+
+      const finalUrl = uploadedUrl || localDataUrl;
+
+      if (finalUrl) {
+        await setCoverUrl(finalUrl);
+        addToast('Cập nhật ảnh bìa Real-time thành công! Người chơi khác sẽ thấy ngay lập tức.', 'success');
+      } else {
         addToast('Không thể xử lý hình ảnh. Vui lòng thử lại!', 'error');
       }
+    } catch {
+      addToast('Không thể xử lý hình ảnh. Vui lòng thử lại!', 'error');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleResetDefault = () => {
-    setCoverUrl('');
+  const handleResetDefault = async () => {
+    await setCoverUrl('');
     addToast('Đã khôi phục ảnh bìa mặc định!', 'info');
   };
 
