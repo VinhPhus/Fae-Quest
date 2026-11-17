@@ -3,7 +3,6 @@ import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
-  Sword,
   CheckSquare,
   ShoppingBag,
   Trophy,
@@ -136,8 +135,12 @@ export const LeftSidebar: React.FC = () => {
             title={isSidebarCollapsed ? 'FaeQuest RPG Todo V2.0' : undefined}
           >
             {/* Logo Emblem Icon */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#CCD0CF] to-[#253745] flex items-center justify-center shadow-lg border border-[#4A5C6A] shrink-0">
-              <Sword className="w-5 h-5 text-[#06141B]" />
+            <div className="w-10 h-10 rounded-xl bg-[#06141B] overflow-hidden flex items-center justify-center shadow-lg border border-[#4A5C6A] shrink-0 relative group">
+              <img
+                src="/assets/logo.png"
+                alt="FaeQuest Logo"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+              />
             </div>
 
             {/* Smooth Fade + Slide Brand Text */}
@@ -332,8 +335,12 @@ export const LeftSidebar: React.FC = () => {
       <header className="md:hidden sticky top-0 z-30 bg-[#11212D]/95 backdrop-blur-md border-b border-[#253745] px-3.5 py-2.5 flex items-center justify-between">
         {/* Left: Brand Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#CCD0CF] to-[#253745] flex items-center justify-center text-[#06141B] shadow border border-[#4A5C6A] shrink-0">
-            <Sword className="w-4 h-4 text-[#06141B]" />
+          <div className="w-8 h-8 rounded-lg bg-[#06141B] overflow-hidden flex items-center justify-center shadow border border-[#4A5C6A] shrink-0">
+            <img
+              src="/assets/logo.png"
+              alt="FaeQuest Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <h1 className="font-rpg font-extrabold text-sm tracking-wider text-[#CCD0CF]">

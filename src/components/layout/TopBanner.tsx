@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { Sword, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 export const TopBanner: React.FC = () => {
   const { setSettingsOpen } = useFaeQuestStore();
@@ -24,8 +24,12 @@ export const TopBanner: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3">
           {/* Emblem Icon */}
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fae to-bargain flex items-center justify-center shadow-lg border border-parchment/30">
-            <Sword className="w-5 h-5 text-parchment" />
+          <div className="w-10 h-10 rounded-xl bg-[#06141B] overflow-hidden flex items-center justify-center shadow-lg border border-[#4A5C6A]">
+            <img
+              src="/assets/logo.png"
+              alt="FaeQuest Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">

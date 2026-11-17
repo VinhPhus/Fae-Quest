@@ -36,7 +36,6 @@ import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
-import { Sword } from 'lucide-react';
 
 export const App: React.FC = () => {
   useRealtimeSync();
@@ -87,8 +86,12 @@ export const App: React.FC = () => {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-thorn-dark thorn-pattern p-4">
         <div className="relative flex flex-col items-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-fae to-bargain border-2 border-fae flex items-center justify-center text-parchment shadow-[0_0_30px_rgba(217,119,82,0.6)] rank-pulse-fx">
-            <Sword className="w-8 h-8 text-parchment" />
+          <div className="w-20 h-20 rounded-2xl bg-[#06141B] overflow-hidden border-2 border-[#4A5C6A] flex items-center justify-center shadow-[0_0_35px_rgba(204,208,207,0.35)] rank-pulse-fx relative">
+            <img
+              src="/assets/logo.png"
+              alt="FaeQuest Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex items-center gap-2 text-sm font-bold text-parchment tracking-wide">
             <div className="w-4 h-4 border-2 border-fae border-t-transparent rounded-full animate-spin" />

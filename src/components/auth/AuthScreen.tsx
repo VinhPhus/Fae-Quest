@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
-  Sword,
   Lock,
   Mail,
   User,
@@ -99,8 +98,12 @@ export const AuthScreen: React.FC = () => {
               {/* Bottom Branding & Slogan Overlay */}
               <div className="absolute bottom-3 sm:bottom-6 left-3.5 sm:left-6 right-3.5 sm:right-6 z-10">
                 <div className="flex items-center gap-2 sm:gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#253745] border border-[#4A5C6A] flex items-center justify-center shadow-lg shrink-0">
-                    <Sword className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#CCD0CF]" />
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[#06141B] overflow-hidden border border-[#4A5C6A] flex items-center justify-center shadow-lg shrink-0">
+                    <img
+                      src="/assets/logo.png"
+                      alt="FaeQuest Logo"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <span className="font-rpg font-extrabold text-xl sm:text-2xl text-[#CCD0CF] tracking-wider drop-shadow-md">
                     Fae<span className="text-white">Quest</span>
