@@ -11,7 +11,6 @@ import {
   Calendar,
   Image as ImageIcon,
   Feather,
-  Sparkles,
 } from 'lucide-react';
 
 const MOOD_STYLES: Record<JournalMood, { dot: string; label: string; text: string; bg: string }> = {
@@ -107,7 +106,7 @@ export const ChroniclesHeader: React.FC = () => {
 };
 
 /**
- * Main Chronicles View: Masonry Grid Layout
+ * Main Chronicles View: Artful Magazine / Portfolio Masonry Grid Layout
  */
 export const ChroniclesView: React.FC = () => {
   const { journals, setWriteJournalOpen } = useFaeQuestStore();
@@ -143,7 +142,69 @@ export const ChroniclesView: React.FC = () => {
           {journals.map((entry) => {
             const moodStyle = MOOD_STYLES[entry.mood] || MOOD_STYLES['Bình thường'];
             const plainText = stripHtmlToText(entry.content);
+            const hasImages = Array.isArray(entry.images) && entry.images.length > 0;
 
+            if (hasImages) {
+              /* ================= 1. THẺ CÓ ẢNH (HERO IMAGE MAGAZINE LAYOUT) ================= */
+              return (
+                <motion.div
+                  key={entry.id}
+                  layout
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  onClick={() => {
+                    playSound('ui_click');
+                    setSelectedJournal(entry);
+                  }}
+                  className="break-inside-avoid mb-4 rounded-[24px] bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] hover:-translate-y-1 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-[0_12px_32px_rgba(0,0,0,0.75)] group relative overflow-hidden flex flex-col"
+                >
+                  {/* Phần 1: Hero Image (Chiếm 40-50% chiều cao thẻ) */}
+                  <div className="relative w-full h-44 sm:h-48 overflow-hidden rounded-t-[24px] bg-[#06141B]">
+                    <img
+                      src={entry.images[0]}
+                      alt="Hero Journal"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                    />
+                    {/* Gradient chuyển mờ xuống phần thân thẻ */}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#11212D] via-[#11212D]/40 to-transparent pointer-events-none" />
+
+                    {/* Badge đếm số lượng ảnh nếu có nhiều hơn 1 ảnh */}
+                    {entry.images.length > 1 && (
+                      <div className="absolute bottom-2.5 right-2.5 px-2.5 py-1 rounded-full bg-[#06141B]/80 backdrop-blur-md text-[11px] font-extrabold text-[#CCD0CF] border border-white/10 flex items-center gap-1.5 shadow-lg">
+                        <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>+{entry.images.length - 1} ảnh</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Phần 2: Nội dung văn bản (Chiếm 50-60% còn lại) */}
+                  <div className="p-4 sm:p-5 bg-[#11212D] rounded-b-[24px] space-y-2.5">
+                    {/* Hàng 1 (Ngày & Tâm Trạng) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#CCD0CF]">
+                        <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>{formatCardDate(entry.date)}</span>
+                      </div>
+
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${moodStyle.bg} ${moodStyle.text}`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${moodStyle.dot}`} />
+                        <span>{moodStyle.label}</span>
+                      </div>
+                    </div>
+
+                    {/* Hàng 2 (Trích đoạn) */}
+                    <p className="text-xs sm:text-sm text-[#9BA8AB] group-hover:text-[#CCD0CF] transition-colors leading-relaxed line-clamp-3">
+                      {plainText || '*(Ảnh đính kèm)*'}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            }
+
+            /* ================= 2. THẺ KHÔNG CÓ ẢNH (TEXT-ONLY CARD) ================= */
             return (
               <motion.div
                 key={entry.id}
@@ -155,16 +216,15 @@ export const ChroniclesView: React.FC = () => {
                   playSound('ui_click');
                   setSelectedJournal(entry);
                 }}
-                className="break-inside-avoid mb-4 rounded-[24px] p-5 bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] hover:-translate-y-1 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-[0_12px_30px_rgba(0,0,0,0.6)] group relative overflow-hidden"
+                className="break-inside-avoid mb-4 rounded-[24px] p-5 bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] hover:-translate-y-1 transition-all duration-200 cursor-pointer shadow-lg hover:shadow-[0_12px_32px_rgba(0,0,0,0.75)] group relative overflow-hidden flex flex-col justify-between"
               >
-                {/* Top Corner Mood Indicator */}
-                <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#253745]/60">
+                {/* Hàng 1 (Ngày & Tâm Trạng) */}
+                <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#253745]/60 relative z-10">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-[#CCD0CF]">
                     <Calendar className="w-3.5 h-3.5 text-cyan-400" />
                     <span>{formatCardDate(entry.date)}</span>
                   </div>
 
-                  {/* Mood Pill with Colored Dot */}
                   <div
                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${moodStyle.bg} ${moodStyle.text}`}
                   >
@@ -173,43 +233,17 @@ export const ChroniclesView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Excerpt Content (Line-clamp 4) */}
-                <div className="py-3">
-                  <p className="text-xs sm:text-sm text-[#9BA8AB] group-hover:text-[#CCD0CF] transition-colors leading-relaxed line-clamp-4">
-                    {plainText || (entry.images?.length ? '*(Ảnh đính kèm)*' : '*(Không có nội dung)*')}
+                {/* Nội dung trích dẫn dài hơn */}
+                <div className="py-3.5 relative z-10">
+                  <p className="text-xs sm:text-sm text-[#9BA8AB] group-hover:text-[#CCD0CF] transition-colors leading-relaxed line-clamp-5">
+                    {plainText || '*(Không có nội dung)*'}
                   </p>
                 </div>
 
-                {/* Bottom Gallery Thumbnail Grid (if images) */}
-                {entry.images && entry.images.length > 0 && (
-                  <div className="pt-2 border-t border-[#253745]/40 flex items-center gap-2 overflow-hidden">
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      {entry.images.slice(0, 3).map((imgUrl, idx) => (
-                        <div
-                          key={idx}
-                          className="w-12 h-12 rounded-xl overflow-hidden border border-[#253745] bg-[#06141B] shrink-0"
-                        >
-                          <img
-                            src={imgUrl}
-                            alt="Mini preview"
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    {entry.images.length > 3 && (
-                      <span className="text-[11px] font-bold text-[#9BA8AB] px-1.5 py-0.5 rounded-md bg-[#06141B] border border-[#253745]">
-                        +{entry.images.length - 3}
-                      </span>
-                    )}
-
-                    <div className="ml-auto text-[11px] text-[#4A5C6A] flex items-center gap-1">
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      <span>{entry.images.length} ảnh</span>
-                    </div>
-                  </div>
-                )}
+                {/* Icon bút lông mờ nhạt ở góc phải dưới cùng để trang trí */}
+                <div className="absolute -bottom-2 -right-2 text-[#253745]/30 group-hover:text-[#4A5C6A]/40 transition-colors pointer-events-none select-none">
+                  <Feather className="w-16 h-16 transform -rotate-12" />
+                </div>
               </motion.div>
             );
           })}

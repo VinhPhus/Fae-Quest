@@ -235,30 +235,48 @@ export const WriteJournalModal: React.FC = () => {
               />
             </div>
 
-            {/* ================= HÀNG 3: ĐÍNH KÈM ẢNH & LƯU ================= */}
-            {/* Ảnh đã tải lên */}
+            {/* ================= HÀNG 3: BỘ SƯU TẬP ẢNH ĐÍNH KÈM (CAROUSEL VUỐT NGANG) ================= */}
             {images.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto py-1 px-0.5 no-scrollbar">
-                {images.map((imgUrl, idx) => (
-                  <div
-                    key={idx}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden relative group border border-[#253745] shrink-0 bg-[#06141B]"
-                  >
-                    <img
-                      src={imgUrl}
-                      alt={`Đính kèm ${idx + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(idx)}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-rose-600/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
-                      title="Xóa ảnh này"
+              <div className="space-y-2 p-3 rounded-2xl bg-[#06141B]/70 border border-[#253745]">
+                <div className="flex items-center justify-between text-xs text-[#9BA8AB] px-1">
+                  <span className="font-bold flex items-center gap-1.5 text-[#CCD0CF]">
+                    <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Bộ Sưu Tập Đính Kèm ({images.length} ảnh)</span>
+                  </span>
+                  <span className="text-[11px] text-[#4A5C6A] italic">Vuốt ngang để xem toàn bộ</span>
+                </div>
+
+                <div className="flex items-center gap-3 overflow-x-auto py-1 px-0.5 no-scrollbar snap-x scroll-smooth">
+                  {images.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="w-36 h-28 sm:w-44 sm:h-32 rounded-2xl overflow-hidden relative group border border-[#253745] hover:border-[#4A5C6A] shrink-0 bg-[#06141B] shadow-md snap-start transition-all"
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                      <img
+                        src={imgUrl}
+                        alt={`Ảnh đính kèm ${idx + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
+
+                      {/* Thứ tự ảnh badge */}
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[#06141B]/80 backdrop-blur-md text-[10px] font-bold text-[#CCD0CF] border border-white/10">
+                        #{idx + 1}
+                      </span>
+
+                      {/* Nút xóa ảnh */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-rose-600/90 text-white flex items-center justify-center opacity-90 group-hover:opacity-100 hover:scale-110 transition-all cursor-pointer shadow-lg"
+                        title="Xóa ảnh này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
