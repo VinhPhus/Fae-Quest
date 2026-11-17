@@ -98,7 +98,6 @@ export const syncProfileAndStateToCloud = async (
         id: hunterId,
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
-        cover_url: state.coverUrl || null,
         exp: state.exp || 0,
         coins: state.coins || 25,
         stars: state.stars || 0,
@@ -111,7 +110,7 @@ export const syncProfileAndStateToCloud = async (
       });
 
       if (insErr) {
-        // Fallback insert nếu bảng profiles chưa có cột role/stars/cover_url
+        // Fallback insert nếu bảng profiles chưa có cột role/stars
         await supabase.from('profiles').insert({
           id: hunterId,
           username: state.playerName || 'Thợ Săn Fae',
@@ -126,10 +125,9 @@ export const syncProfileAndStateToCloud = async (
         });
       }
     } else {
-      await supabase.from('profiles').update({
+      const { error: updErr } = await supabase.from('profiles').update({
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
-        cover_url: state.coverUrl || null,
         equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
         exp: state.exp || 0,
         coins: state.coins || 0,
@@ -138,6 +136,16 @@ export const syncProfileAndStateToCloud = async (
         completed_tasks_count: state.completedTotal || 0,
         updated_at: new Date().toISOString(),
       }).eq('id', hunterId);
+
+      if (updErr) {
+        // Fallback update cơ bản nếu một số cột tùy chọn chưa có
+        await supabase.from('profiles').update({
+          username: state.playerName || 'Thợ Săn Fae',
+          avatar_url: state.avatarUrl || null,
+          equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
+          updated_at: new Date().toISOString(),
+        }).eq('id', hunterId);
+      }
     }
 
     // 2. Upsert public.user_states (Lưu snapshot nhiệm vụ, shop, kho đồ của chính user)
@@ -172,8 +180,7 @@ export const fetchCommunityLeaderboard = async (
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url, cover_url, equipped_title, streak, completed_tasks_count, exp, stars, role, updated_at')
-      .neq('role', 'admin')
+      .select('*')
       .order('exp', { ascending: false })
       .limit(limit);
 

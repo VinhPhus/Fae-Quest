@@ -11,6 +11,7 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user' CH
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS ban_reason TEXT DEFAULT NULL;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS stars INT DEFAULT 0;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS cover_url TEXT DEFAULT NULL;
 
 -- Index hỗ trợ tìm kiếm nhanh theo role và trạng thái ban
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
