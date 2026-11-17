@@ -108,7 +108,7 @@ export const LeftSidebar: React.FC = () => {
     },
     {
       id: 'chronicles',
-      label: 'Nhật Ký (Chronicles)',
+      label: 'Nhật Ký',
       mobileLabel: 'Nhật Ký',
       icon: <BookOpen className="w-5 h-5 shrink-0" />,
     },
