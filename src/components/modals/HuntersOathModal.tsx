@@ -210,7 +210,7 @@ export const HuntersOathModal: React.FC = () => {
             <div className="mt-8 text-center space-y-1.5 transition-transform duration-300 group-hover:scale-105">
               <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#11212D] border border-[#4A5C6A] shadow-lg">
                 <span className="text-xs sm:text-sm font-extrabold tracking-wider text-[#CCD0CF] uppercase">
-                  📜 NHẤN VÀO CUỘN KHẾ ƯỚC ĐỂ KHAI MỞ ✨
+                  📜 NHẤN VÀO CUỘN KHẾ ƯỚC ĐỂ KHAI MỞ
                 </span>
               </div>
               <p className="text-xs text-[#9BA8AB] italic">
@@ -284,7 +284,7 @@ export const HuntersOathModal: React.FC = () => {
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-xs sm:text-sm font-extrabold text-[#CCD0CF] flex items-center gap-1.5">
-                        <span>⚔️ Danh Dự Thực Chiến</span>
+                        <span> Danh Dự Thực Chiến</span>
                       </h4>
                       <p className="text-xs text-[#9BA8AB] leading-relaxed">
                         Chỉ tích hoàn thành khi bạn đã thực sự làm xong công việc đó ngoài đời thực. Gian lận điểm EXP chỉ đánh lừa chính bản thân bạn.
@@ -299,10 +299,10 @@ export const HuntersOathModal: React.FC = () => {
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-xs sm:text-sm font-extrabold text-[#CCD0CF] flex items-center gap-1.5">
-                        <span>⚖️ Phân Định Công Tâm</span>
+                        <span> Phân Định Công Tâm</span>
                       </h4>
                       <p className="text-xs text-[#9BA8AB] leading-relaxed">
-                        Chọn đúng độ khó tương xứng với công sức bỏ ra. Không lạm dụng mức độ Khó / Trùm Cuối cho những việc nhỏ nhặt.
+                        Nhiệm vụ được thực hiện một cách công bằng, chủ yếu tự dựa vào ý thức, tinh thần của người chơi thì FaeQuest mới có ý nghĩa
                       </p>
                     </div>
                   </div>
@@ -314,7 +314,7 @@ export const HuntersOathModal: React.FC = () => {
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <h4 className="text-xs sm:text-sm font-extrabold text-[#CCD0CF] flex items-center gap-1.5">
-                        <span>🛡️ Kỷ Luật Tự Thưởng</span>
+                        <span> Kỷ Luật Tự Thưởng</span>
                       </h4>
                       <p className="text-xs text-[#9BA8AB] leading-relaxed">
                         Mỗi đồng Xu Vàng là mồ hôi và sự kiên trì. Hãy chi tiêu xứng đáng trong Cửa Hàng Tự Thưởng.
