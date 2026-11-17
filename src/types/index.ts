@@ -71,6 +71,20 @@ export interface Rival {
   avatar: string;
 }
 
+export interface RivalProfileData {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  coverUrl?: string | null;
+  exp: number;
+  streak: number;
+  completedTasks: number;
+  equippedTitle?: string;
+  stars?: number;
+  rankPos?: number;
+  isPlayer?: boolean;
+}
+
 export interface FloatingRewardItem {
   id: string;
   x: number;

@@ -20,13 +20,13 @@ export const TRANSITION_NORMAL = {
 };
 
 export const TRANSITION_SPRING = {
-  type: 'spring' as const,
+  type: 'spring',
   stiffness: 380,
   damping: 30,
 };
 
 export const TRANSITION_BOUNCE = {
-  type: 'spring' as const,
+  type: 'spring',
   stiffness: 500,
   damping: 25,
 };
@@ -89,7 +89,7 @@ export const MODAL_PANEL_VARIANTS: Variants = {
 };
 
 // Staggered list container
-export const STAGGER_CONTAINER: Variants = {
+export const STAGGER_CONTAINER = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -101,7 +101,7 @@ export const STAGGER_CONTAINER: Variants = {
 };
 
 // Item in staggered list
-export const STAGGER_ITEM: Variants = {
+export const STAGGER_ITEM = {
   hidden: { opacity: 0, y: 14 },
   visible: {
     opacity: 1,
@@ -112,3 +112,4 @@ export const STAGGER_ITEM: Variants = {
     },
   },
 };
+

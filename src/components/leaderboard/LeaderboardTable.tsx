@@ -83,7 +83,11 @@ export const LeaderboardTable: React.FC = () => {
   const {
     playerName,
     avatarUrl,
+    coverUrl,
     exp,
+    streakDays,
+    completedTotal,
+    stars,
     rivals,
     equippedTitleId,
     hunterId,
@@ -91,6 +95,7 @@ export const LeaderboardTable: React.FC = () => {
     setAddRivalOpen,
     syncToCloud,
     userRole,
+    openRivalModal,
   } = useFaeQuestStore();
 
   const [communityProfiles, setCommunityProfiles] = useState<HunterProfileCloud[]>([]);
@@ -123,6 +128,11 @@ export const LeaderboardTable: React.FC = () => {
     title: playerTitle,
     exp,
     avatar: avatarUrl || '🛡️',
+    coverUrl: coverUrl || null,
+    streak: streakDays,
+    completedTasks: completedTotal,
+    equippedTitle: equippedTitleId,
+    stars: stars || 0,
     isPlayer: true,
     isCommunity: true,
   };
@@ -138,6 +148,11 @@ export const LeaderboardTable: React.FC = () => {
         title: matchingTitle.name,
         exp: p.exp,
         avatar: p.avatar_url || '⚔️',
+        coverUrl: p.cover_url || null,
+        streak: p.streak || 0,
+        completedTasks: p.completed_tasks_count || 0,
+        equippedTitle: p.equipped_title,
+        stars: p.stars || 0,
         isPlayer: false,
         isCommunity: true,
       };
@@ -155,6 +170,11 @@ export const LeaderboardTable: React.FC = () => {
     title: r.title,
     exp: r.exp,
     avatar: r.avatar,
+    coverUrl: null,
+    streak: Math.max(1, Math.floor(r.exp / 150)),
+    completedTasks: Math.max(1, Math.floor(r.exp / 35)),
+    equippedTitle: r.title,
+    stars: Math.floor(r.exp / 1000),
     isPlayer: false,
     isCommunity: false,
   }));
@@ -169,9 +189,22 @@ export const LeaderboardTable: React.FC = () => {
   const allCombatants = combined.sort((a, b) => b.exp - a.exp);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Helper Banner */}
+      <div className="flex items-center justify-between text-xs text-[#9BA8AB] px-1">
+        <span className="flex items-center gap-1.5">
+          <span>💡</span>
+          <span>Bấm vào Thợ Săn để soi thẻ hồ sơ & so sánh chỉ số</span>
+        </span>
+        {lastRefreshed && (
+          <span className="text-[11px] font-mono text-[#4A5C6A]">
+            Cập nhật lúc: {lastRefreshed}
+          </span>
+        )}
+      </div>
+
       {/* Leaderboard List */}
-      <div className="rpg-card rounded-2xl sm:rounded-3xl overflow-hidden border border-opal/30 shadow-2xl">
+      <div className="rpg-card rounded-2xl sm:rounded-3xl overflow-hidden border border-[#253745] shadow-2xl bg-[#11212D]">
         <div className="px-3.5 sm:px-6 py-3 sm:py-4 bg-thorn-dark/90 border-b border-parchment/10 flex items-center justify-between sm:grid sm:grid-cols-12 text-xs font-bold uppercase tracking-wider text-parchment/60">
           <div className="hidden sm:block sm:col-span-1">Hạng</div>
           <div className="flex-1 sm:col-span-5">Thợ Săn</div>
@@ -216,9 +249,25 @@ export const LeaderboardTable: React.FC = () => {
             return (
               <div
                 key={c.id}
-                className={`px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between sm:grid sm:grid-cols-12 gap-2 sm:gap-0 transition ${c.isPlayer
-                  ? 'bg-gradient-to-r from-bargain via-bargain-light/40 to-transparent border-l-4 border-l-fae'
-                  : 'hover:bg-thorn-dark/40'
+                onClick={() => {
+                  openRivalModal({
+                    id: c.id,
+                    name: c.name,
+                    avatarUrl: isAvatarUrl ? c.avatar : null,
+                    coverUrl: c.coverUrl,
+                    exp: c.exp,
+                    streak: c.streak,
+                    completedTasks: c.completedTasks,
+                    equippedTitle: c.equippedTitle || c.title,
+                    stars: c.stars,
+                    rankPos,
+                    isPlayer: c.isPlayer,
+                  });
+                }}
+                title="Bấm vào Thợ Săn để soi thẻ hồ sơ"
+                className={`px-3.5 sm:px-6 py-3 sm:py-4 flex items-center justify-between sm:grid sm:grid-cols-12 gap-2 sm:gap-0 transition-colors duration-200 cursor-pointer ${c.isPlayer
+                  ? 'bg-[#253745]/60 hover:bg-[#253745]/90 border-l-4 border-l-[#CCD0CF]'
+                  : 'hover:bg-[#253745]/40'
                   }`}
               >
                 {/* Desktop: Rank Pos (1 col) */}

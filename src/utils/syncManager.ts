@@ -6,6 +6,7 @@ export interface HunterProfileCloud {
   id: string;
   username: string;
   avatar_url: string | null;
+  cover_url?: string | null;
   exp: number;
   coins: number;
   stars?: number;
@@ -97,10 +98,11 @@ export const syncProfileAndStateToCloud = async (
         id: hunterId,
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
+        cover_url: state.coverUrl || null,
         exp: state.exp || 0,
         coins: state.coins || 25,
         stars: state.stars || 0,
-        rank_id: 'dong',
+        rank_id: tier?.id || 'dong',
         equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
         streak: state.streakDays || 0,
         completed_tasks_count: state.completedTotal || 0,
@@ -109,7 +111,7 @@ export const syncProfileAndStateToCloud = async (
       });
 
       if (insErr) {
-        // Fallback insert nếu bảng profiles chưa có cột role/stars
+        // Fallback insert nếu bảng profiles chưa có cột role/stars/cover_url
         await supabase.from('profiles').insert({
           id: hunterId,
           username: state.playerName || 'Thợ Săn Fae',
@@ -127,7 +129,13 @@ export const syncProfileAndStateToCloud = async (
       await supabase.from('profiles').update({
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
+        cover_url: state.coverUrl || null,
         equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
+        exp: state.exp || 0,
+        coins: state.coins || 0,
+        stars: state.stars || 0,
+        streak: state.streakDays || 0,
+        completed_tasks_count: state.completedTotal || 0,
         updated_at: new Date().toISOString(),
       }).eq('id', hunterId);
     }
@@ -164,7 +172,7 @@ export const fetchCommunityLeaderboard = async (
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, username, avatar_url, cover_url, equipped_title, streak, completed_tasks_count, exp, stars, role, updated_at')
       .neq('role', 'admin')
       .order('exp', { ascending: false })
       .limit(limit);

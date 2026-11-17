@@ -26,6 +26,7 @@ import { HuntersOathModal } from './components/modals/HuntersOathModal';
 import { UserInboxModal } from './components/modals/UserInboxModal';
 import { AdminWarningModal } from './components/modals/AdminWarningModal';
 import { ChangeCoverModal } from './components/modals/ChangeCoverModal';
+import { RivalProfileModal } from './components/modals/RivalProfileModal';
 import { AdminPortalHeader, AdminPortalView } from './components/admin/AdminPortalView';
 import { BannedScreen } from './components/auth/BannedScreen';
 import { Toast } from './components/ui/Toast';
@@ -243,6 +244,7 @@ export const App: React.FC = () => {
       <UserInboxModal />
       <AdminWarningModal />
       <ChangeCoverModal />
+      <RivalProfileModal />
 
       {/* Interactive FX */}
       <FloatingReward />

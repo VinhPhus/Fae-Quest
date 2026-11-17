@@ -7,7 +7,21 @@ import { Trophy, ChevronRight } from 'lucide-react';
 import { EASING_SPRING } from '../../constants/motion';
 
 export const RightMiniLeaderboardStrip: React.FC = () => {
-  const { playerName, avatarUrl, exp, rivals, hunterId, setActiveTab, userRole } = useFaeQuestStore();
+  const {
+    playerName,
+    avatarUrl,
+    coverUrl,
+    exp,
+    streakDays,
+    completedTotal,
+    stars,
+    equippedTitleId,
+    rivals,
+    hunterId,
+    setActiveTab,
+    userRole,
+    openRivalModal,
+  } = useFaeQuestStore();
   const [communityProfiles, setCommunityProfiles] = useState<HunterProfileCloud[]>([]);
 
   // Tải dữ liệu BXH thật từ Supabase
@@ -35,6 +49,11 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
     name: playerName,
     exp,
     avatar: avatarUrl || null,
+    coverUrl: coverUrl || null,
+    streak: streakDays,
+    completedTasks: completedTotal,
+    equippedTitle: equippedTitleId,
+    stars: stars || 0,
     isPlayer: true,
   };
 
@@ -46,6 +65,11 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       name: p.username || 'Thợ Săn Ẩn Danh',
       exp: p.exp || 0,
       avatar: p.avatar_url || null,
+      coverUrl: p.cover_url || null,
+      streak: p.streak || 0,
+      completedTasks: p.completed_tasks_count || 0,
+      equippedTitle: p.equipped_title,
+      stars: p.stars || 0,
       isPlayer: false,
     }));
 
@@ -59,6 +83,11 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       (r.avatar.startsWith('http') || r.avatar.startsWith('/') || r.avatar.startsWith('data:'))
         ? r.avatar
         : null,
+    coverUrl: null,
+    streak: Math.max(1, Math.floor(r.exp / 150)),
+    completedTasks: Math.max(1, Math.floor(r.exp / 35)),
+    equippedTitle: r.title,
+    stars: Math.floor(r.exp / 1000),
     isPlayer: false,
   }));
 
@@ -113,12 +142,28 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       initial={{ x: 20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.35, delay: 0.15, ease: EASING_SPRING }}
-      onClick={() => setActiveTab('leaderboard')}
-      className="hidden xl:flex flex-col items-center py-5 px-2 w-16 shrink-0 h-screen sticky top-0 bg-[#06141B] border-l border-[#253745] shadow-2xl hover:border-[#4A5C6A] transition-colors duration-300 cursor-pointer group z-20 justify-between select-none"
-      title="Nhấn để mở Bảng Xếp Hạng Đấu Trường"
+      className="hidden xl:flex flex-col items-center py-5 px-2 w-16 shrink-0 h-screen sticky top-0 bg-[#06141B] border-l border-[#253745] shadow-2xl z-20 justify-between select-none"
     >
       {/* Top: User's Own Avatar with Real Live Rank */}
-      <div className="relative group/user flex flex-col items-center">
+      <div
+        onClick={() => {
+          openRivalModal({
+            id: myCombatant.id,
+            name: myCombatant.name,
+            avatarUrl: myCombatant.avatar,
+            coverUrl: myCombatant.coverUrl,
+            exp: myCombatant.exp,
+            streak: myCombatant.streak,
+            completedTasks: myCombatant.completedTasks,
+            equippedTitle: myCombatant.equippedTitle,
+            stars: myCombatant.stars,
+            rankPos: userRole === 'admin' ? 0 : myRank,
+            isPlayer: true,
+          });
+        }}
+        className="relative group/user flex flex-col items-center cursor-pointer"
+        title="Nhấn để xem thẻ hồ sơ của bạn"
+      >
         {/* Tooltip for User */}
         <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-3 py-1.5 rounded-xl bg-[#06141B] border border-[#4A5C6A] shadow-[0_8px_24px_rgba(0,0,0,0.85)] opacity-0 group-hover/user:opacity-100 scale-95 group-hover/user:scale-100 pointer-events-none transition-all duration-200 z-50 whitespace-nowrap flex items-center gap-2">
           {userRole === 'admin' ? (
@@ -141,7 +186,7 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
           <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-[#06141B] border-t border-r border-[#4A5C6A] rotate-45" />
         </div>
 
-        <div className="w-11 h-11 rounded-full p-0.5 bg-gradient-to-tr from-[#CCD0CF] via-[#4A5C6A] to-[#253745] shadow-lg shadow-black/40 group-hover:scale-105 transition relative">
+        <div className="w-11 h-11 rounded-full p-0.5 bg-gradient-to-tr from-[#CCD0CF] via-[#4A5C6A] to-[#253745] shadow-lg shadow-black/40 group-hover/user:scale-105 transition relative">
           {renderAvatar(playerName, avatarUrl)}
           {/* Live Rank Badge on Avatar or Admin Badge */}
           {userRole === 'admin' ? (
@@ -164,9 +209,9 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       <div className="w-8 h-px bg-[#253745] my-3" />
 
       {/* Header Mini Label */}
-      <div className="flex flex-col items-center text-[#9BA8AB] group-hover:text-[#CCD0CF] transition mb-2">
-        <Trophy className="w-3.5 h-3.5" />
-        <span className="text-[8px] font-bold uppercase tracking-tighter mt-0.5">TOP</span>
+      <div className="flex flex-col items-center text-[#9BA8AB] transition mb-2">
+        <Trophy className="w-3.5 h-3.5 text-amber-400" />
+        <span className="text-[8px] font-bold uppercase tracking-tighter mt-0.5">TOP 5</span>
       </div>
 
       {/* Top 5 Combatants Vertical Stack */}
@@ -178,7 +223,23 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
           return (
             <div
               key={c.id}
-              className="relative group/item flex flex-col items-center"
+              onClick={() => {
+                openRivalModal({
+                  id: c.id,
+                  name: c.name,
+                  avatarUrl: c.avatar,
+                  coverUrl: c.coverUrl,
+                  exp: c.exp,
+                  streak: c.streak,
+                  completedTasks: c.completedTasks,
+                  equippedTitle: c.equippedTitle,
+                  stars: c.stars,
+                  rankPos: index + 1,
+                  isPlayer: c.isPlayer,
+                });
+              }}
+              className="relative group/item flex flex-col items-center cursor-pointer"
+              title={`Bấm để soi thẻ hồ sơ: ${c.name}`}
             >
               {/* Sleek Tooltip on Hover */}
               <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 px-3 py-1.5 rounded-xl bg-[#06141B] border border-[#4A5C6A] shadow-[0_8px_24px_rgba(0,0,0,0.85)] opacity-0 group-hover/item:opacity-100 scale-95 group-hover/item:scale-100 pointer-events-none transition-all duration-200 z-50 whitespace-nowrap flex items-center gap-2">
@@ -220,10 +281,17 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
         })}
       </div>
 
-      {/* Bottom Arrow Hint */}
-      <div className="pt-2 text-[#9BA8AB] group-hover:text-[#CCD0CF] transition flex flex-col items-center">
-        <ChevronRight className="w-4 h-4" />
-      </div>
+      {/* Bottom Arrow Button: Chuyển sang toàn trang Đấu Trường BXH */}
+      <button
+        type="button"
+        onClick={() => setActiveTab('leaderboard')}
+        className="pt-2 text-[#9BA8AB] hover:text-[#CCD0CF] transition flex flex-col items-center cursor-pointer group/btn"
+        title="Mở toàn bộ Đấu Trường BXH"
+      >
+        <div className="w-8 h-8 rounded-full bg-[#11212D] border border-[#253745] group-hover/btn:border-[#4A5C6A] group-hover/btn:bg-[#253745] flex items-center justify-center transition shadow">
+          <ChevronRight className="w-4 h-4 text-[#CCD0CF]" />
+        </div>
+      </button>
     </motion.aside>
   );
 };

@@ -20,6 +20,7 @@ import {
   SystemAchievement,
   UserMessage,
   MailRewardItem,
+  RivalProfileData,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -110,6 +111,8 @@ interface FaeQuestState {
   activePomodoroTaskId: string | null;
   isOathOpen: boolean;
   isChangeCoverOpen: boolean;
+  selectedRivalForModal: RivalProfileData | null;
+  isRivalModalOpen: boolean;
   confirmEarlyTask: { task: Task; coords?: { x: number; y: number } } | null;
   lastCompletedTimestamp: number;
   floatingRewards: FloatingRewardItem[];
@@ -153,6 +156,8 @@ interface FaeQuestState {
   setAvatarUrl: (url: string) => void;
   setCoverUrl: (url: string) => void;
   setChangeCoverOpen: (open: boolean) => void;
+  openRivalModal: (data: RivalProfileData) => void;
+  closeRivalModal: () => void;
   toggleSound: () => void;
   setActiveTab: (tab: ActiveTab) => void;
   setCategoryFilter: (cat: string) => void;
@@ -279,6 +284,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isResetOpen: false,
       isSettingsOpen: false,
       isChangeCoverOpen: false,
+      selectedRivalForModal: null,
+      isRivalModalOpen: false,
       isOathOpen: typeof window !== 'undefined' ? localStorage.getItem('faequest_oath_accepted') !== 'true' : false,
       confirmEarlyTask: null,
       lastCompletedTimestamp: 0,
@@ -1578,6 +1585,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setResetOpen: (open: boolean) => set({ isResetOpen: open }),
       setSettingsOpen: (open: boolean) => set({ isSettingsOpen: open }),
       setChangeCoverOpen: (open: boolean) => set({ isChangeCoverOpen: open }),
+      openRivalModal: (data: RivalProfileData) => set({ selectedRivalForModal: data, isRivalModalOpen: true }),
+      closeRivalModal: () => set({ isRivalModalOpen: false, selectedRivalForModal: null }),
       setOathOpen: (open: boolean) => set({ isOathOpen: open }),
       setSearchQuery: (query: string) => set({ searchQuery: query }),
       setCreateQuestOpen: (open: boolean) => set({ isCreateQuestOpen: open }),
@@ -1828,11 +1837,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
         const titleInfo = resolveTitleObject(titleId);
         set({ equippedTitleId: titleId });
-        if (state.currentUser) {
+        const targetUserId = state.currentUser?.id || state.hunterId;
+        if (targetUserId) {
           supabase
             .from('profiles')
-            .update({ equipped_title: titleId })
-            .eq('id', state.currentUser.id)
+            .update({
+              equipped_title: titleId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', targetUserId)
             .then(() => {});
         }
         playSoundEffect('click', state.soundEnabled);
