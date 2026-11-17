@@ -6,8 +6,6 @@ import { TopBentoHeader } from './components/layout/TopBentoHeader';
 import { HeroBentoBanner } from './components/bento/HeroBentoBanner';
 import { QuestBentoGrid } from './components/bento/QuestBentoGrid';
 import { FocusDock } from './components/bento/FocusDock';
-import { DailyFocusWidget } from './components/bento/DailyFocusWidget';
-import { HunterStatisticsWidget } from './components/bento/HunterStatisticsWidget';
 import { RightMiniLeaderboardStrip } from './components/bento/RightMiniLeaderboardStrip';
 import { CreateQuestDrawer } from './components/modals/CreateQuestDrawer';
 import { SystemQuestsHeader, SystemQuestsView } from './components/system-quests/SystemQuestsView';
@@ -153,28 +151,16 @@ export const App: React.FC = () => {
             {activeTab === 'quests' && (
               <section className="animate-in fade-in duration-200">
                 <div className="flex gap-5 sm:gap-6 items-start">
-                  {/* 2-Column Bento Grid Container (~66% Center + ~34% Right) */}
-                  <div className="flex-1 min-w-0 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-                    {/* KHU VỰC A — CỘT CHÍNH GIỮA (Left-Center Column, lg:col-span-8) */}
-                    <div className="lg:col-span-8 space-y-5 sm:space-y-6">
-                      {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
-                      <QuestBentoGrid />
+                  {/* Cột Nhiệm Vụ Chinh Phục & Thanh Dock Đáy */}
+                  <div className="flex-1 min-w-0 space-y-5 sm:space-y-6">
+                    {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
+                    <QuestBentoGrid />
 
-                      {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
-                      <FocusDock />
-                    </div>
-
-                    {/* KHU VỰC B — CỘT WIDGET BÊN PHẢI (Right Column, lg:col-span-4) */}
-                    <div className="lg:col-span-4 space-y-5 sm:space-y-6">
-                      {/* Widget Nhiệm Vụ Hằng Ngày / Tiêu Điểm Nhanh */}
-                      <DailyFocusWidget />
-
-                      {/* Widget Thống Kê Thợ Săn */}
-                      <HunterStatisticsWidget />
-                    </div>
+                    {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
+                    <FocusDock />
                   </div>
 
-                  {/* KHU VỰC C — DẢI MINI BXH BÊN MÉP PHẢI (Chỉ hiện trên màn hình lớn xl:flex) */}
+                  {/* Dải Mini BXH Bên Mép Phải (Chỉ hiện trên màn hình lớn xl:flex) */}
                   <RightMiniLeaderboardStrip />
                 </div>
               </section>
