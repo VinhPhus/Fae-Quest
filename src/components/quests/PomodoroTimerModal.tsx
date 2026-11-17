@@ -41,21 +41,47 @@ export const PomodoroTimerModal: React.FC = () => {
     }
   }, [activePomodoroTaskId, task?.id]);
 
+  // Stop sound and reset running state immediately whenever activePomodoroTaskId is closed or cleared
+  useEffect(() => {
+    if (!activePomodoroTaskId) {
+      setIsRunning(false);
+      stopFocusAmbient(0);
+    }
+  }, [activePomodoroTaskId]);
+
   // Ambient soundscape effect synced with timer execution
   useEffect(() => {
-    if (isRunning && soundEnabled && focusAmbient !== 'off') {
+    if (activePomodoroTaskId && isRunning && soundEnabled && focusAmbient !== 'off') {
       startFocusAmbient(focusAmbient, soundVolume);
     } else {
-      stopFocusAmbient(0.8);
+      stopFocusAmbient(0.3);
     }
-  }, [isRunning, focusAmbient, soundEnabled, soundVolume]);
+  }, [isRunning, focusAmbient, soundEnabled, soundVolume, activePomodoroTaskId]);
 
   // Cleanup ambient on modal close or unmount
   useEffect(() => {
     return () => {
-      stopFocusAmbient(0.4);
+      stopFocusAmbient(0);
     };
   }, []);
+
+  const handleClose = () => {
+    setIsRunning(false);
+    stopFocusAmbient(0);
+    setActivePomodoroTaskId(null);
+  };
+
+  // Keyboard shortcut: Escape to close
+  useEffect(() => {
+    if (!activePomodoroTaskId) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePomodoroTaskId]);
 
   // Timer interval effect
   useEffect(() => {
@@ -66,7 +92,7 @@ export const PomodoroTimerModal: React.FC = () => {
       }, 1000);
     } else if (isRunning && timeLeft === 0) {
       setIsRunning(false);
-      stopFocusAmbient(0.4);
+      stopFocusAmbient(0);
       playSound('quest_easy', soundEnabled);
       if (task) {
         completePomodoro(task.id, targetMinutes, targetMinutes);
@@ -132,16 +158,19 @@ export const PomodoroTimerModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-4 sm:p-7 text-center relative border border-fae/50 shadow-2xl animate-in zoom-in-95 duration-200 custom-scrollbar">
+    <div
+      onClick={handleClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-4 sm:p-7 text-center relative border border-fae/50 shadow-2xl animate-in zoom-in-95 duration-200 custom-scrollbar cursor-default"
+      >
         {/* Ambient Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-fae/20 rounded-full blur-3xl pointer-events-none" />
 
         <button
-          onClick={() => {
-            stopFocusAmbient(0.4);
-            setActivePomodoroTaskId(null);
-          }}
+          onClick={handleClose}
           className="absolute top-4 right-4 text-parchment/40 hover:text-parchment p-1 transition z-10"
           title="Đóng đồng hồ"
         >
@@ -368,6 +397,7 @@ export const PomodoroTimerModal: React.FC = () => {
             <button
               onClick={() => {
                 setIsRunning(false);
+                stopFocusAmbient(0.3);
                 setTimeLeft(targetMinutes * 60);
               }}
               className="p-3 rounded-xl bg-thorn-dark/90 hover:bg-thorn border border-opal/40 text-parchment/70 hover:text-parchment transition shadow"
@@ -379,7 +409,9 @@ export const PomodoroTimerModal: React.FC = () => {
             {/* Finished Early Button with Anti-Cheat 50% Rule */}
             <button
               onClick={() => {
-                if (canFinishEarly) {
+                if (canFinishEarly && task) {
+                  setIsRunning(false);
+                  stopFocusAmbient(0);
                   completePomodoro(task.id, elapsedMinutes, targetMinutes);
                 }
               }}

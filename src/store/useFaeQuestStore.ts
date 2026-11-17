@@ -41,7 +41,7 @@ import {
   resolveTitleObject,
 } from '../constants/systemQuests';
 import { playSoundEffect } from '../utils/soundEffects';
-import { playSound, setMasterVolume, AmbientType } from '../utils/soundEngine';
+import { playSound, setMasterVolume, stopFocusAmbient, AmbientType } from '../utils/soundEngine';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import {
   syncProfileAndStateToCloud,
@@ -1517,6 +1517,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           newStreak = state.streakDays + 1;
         }
 
+        stopFocusAmbient(0);
+
         set((prev) => ({
           exp: newExp,
           coins: finalCoins,
@@ -1831,7 +1833,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
       setSidebarCollapsed: (collapsed: boolean) => set({ isSidebarCollapsed: collapsed }),
       setAddShopItemOpen: (open: boolean) => set({ isAddShopItemOpen: open }),
-      setActivePomodoroTaskId: (id: string | null) => set({ activePomodoroTaskId: id }),
+      setActivePomodoroTaskId: (id: string | null) => {
+        if (!id) {
+          stopFocusAmbient(0);
+        }
+        set({ activePomodoroTaskId: id });
+      },
 
       resetAllData: () => {
         set({

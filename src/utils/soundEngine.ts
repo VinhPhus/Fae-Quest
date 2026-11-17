@@ -529,6 +529,8 @@ interface AmbientController {
   intervalId?: NodeJS.Timeout | null;
 }
 
+let ambientSessionToken = 0;
+
 const ambientState: AmbientController = {
   currentType: 'off',
   nodes: {},
@@ -536,41 +538,76 @@ const ambientState: AmbientController = {
 };
 
 /**
- * Stop active ambient soundscape smoothly with fade out
+ * Stop active ambient soundscape immediately or smoothly with fade out.
+ * Guaranteed to clean up all Web Audio nodes and prevent orphaned background sound.
  */
-export function stopFocusAmbient(fadeDuration = 0.8): void {
+export function stopFocusAmbient(fadeDuration = 0.5): void {
   if (typeof window === 'undefined') return;
+
+  // Invalidate any in-flight ambient starts
+  ambientSessionToken++;
+  ambientState.currentType = 'off';
 
   if (ambientState.intervalId) {
     clearInterval(ambientState.intervalId);
     ambientState.intervalId = null;
   }
 
-  const { gain, noise, filter, osc1, osc2 } = ambientState.nodes;
-  if (gain) {
-    try {
-      gain.gain.rampTo(0, fadeDuration);
-    } catch (e) {
-      // ignore ramp error
-    }
-  }
+  // Atomically detach existing nodes so any future start won't be wiped out
+  const nodesToClean = { ...ambientState.nodes };
+  ambientState.nodes = {};
 
-  setTimeout(() => {
+  const disposeNodes = () => {
     try {
-      noise?.stop();
-      noise?.dispose();
-      filter?.dispose();
-      osc1?.stop();
-      osc1?.dispose();
-      osc2?.stop();
-      osc2?.dispose();
-      gain?.dispose();
+      nodesToClean.noise?.stop();
+      nodesToClean.noise?.disconnect();
+      nodesToClean.noise?.dispose();
+    } catch (e) {}
+
+    try {
+      nodesToClean.osc1?.stop();
+      nodesToClean.osc1?.disconnect();
+      nodesToClean.osc1?.dispose();
+    } catch (e) {}
+
+    try {
+      nodesToClean.osc2?.stop();
+      nodesToClean.osc2?.disconnect();
+      nodesToClean.osc2?.dispose();
+    } catch (e) {}
+
+    try {
+      nodesToClean.filter?.disconnect();
+      nodesToClean.filter?.dispose();
+    } catch (e) {}
+
+    try {
+      nodesToClean.gain?.disconnect();
+      nodesToClean.gain?.dispose();
+    } catch (e) {}
+  };
+
+  if (fadeDuration <= 0.05) {
+    // Immediate silence & cleanup without delay
+    try {
+      if (nodesToClean.gain) {
+        nodesToClean.gain.gain.setValueAtTime(0, Tone.now());
+      }
+    } catch (e) {}
+    disposeNodes();
+  } else {
+    // Smooth fade out
+    try {
+      if (nodesToClean.gain) {
+        nodesToClean.gain.gain.rampTo(0, fadeDuration);
+      }
     } catch (e) {
-      // cleanup safety
+      try {
+        nodesToClean.gain?.gain.setValueAtTime(0, Tone.now());
+      } catch (err) {}
     }
-    ambientState.nodes = {};
-    ambientState.currentType = 'off';
-  }, (fadeDuration + 0.1) * 1000);
+    setTimeout(disposeNodes, (fadeDuration + 0.05) * 1000);
+  }
 }
 
 /**
@@ -579,7 +616,7 @@ export function stopFocusAmbient(fadeDuration = 0.8): void {
 export async function startFocusAmbient(
   type: AmbientType,
   volumePercent = 70,
-  fadeDuration = 1.2
+  fadeDuration = 0.8
 ): Promise<void> {
   if (typeof window === 'undefined') return;
   if (type === 'off') {
@@ -587,18 +624,23 @@ export async function startFocusAmbient(
     return;
   }
 
-  // If already playing the same ambient, do nothing
+  // If already playing the same ambient and active nodes exist, keep playing
   if (ambientState.currentType === type && ambientState.nodes.gain) {
     return;
   }
 
-  // Stop previous ambient first
-  stopFocusAmbient(0.3);
+  // Cleanly stop any existing ambient sound immediately
+  stopFocusAmbient(0.05);
+
+  ambientSessionToken++;
+  const thisSession = ambientSessionToken;
+  ambientState.currentType = type;
 
   const isReady = await ensureToneRunning();
-  if (!isReady) return;
-
-  ambientState.currentType = type;
+  // Check if session was cancelled or superseded while awaiting Tone.start()
+  if (!isReady || ambientSessionToken !== thisSession || ambientState.currentType !== type) {
+    return;
+  }
 
   // Master Gain for Ambient with initial 0 for smooth fade-in
   const ambientGain = new Tone.Gain(0).toDestination();
@@ -616,6 +658,19 @@ export async function startFocusAmbient(
       const noise = new Tone.Noise('pink').connect(filter);
       noise.start();
 
+      if (ambientSessionToken !== thisSession || ambientState.currentType !== type) {
+        try {
+          noise.stop();
+          noise.disconnect();
+          noise.dispose();
+          filter.disconnect();
+          filter.dispose();
+          ambientGain.disconnect();
+          ambientGain.dispose();
+        } catch (e) {}
+        return;
+      }
+
       ambientState.nodes = { noise, filter, gain: ambientGain };
       ambientGain.gain.rampTo(targetGain, fadeDuration);
     } else if (type === 'hearth') {
@@ -629,12 +684,25 @@ export async function startFocusAmbient(
       const noise = new Tone.Noise('brown').connect(filter);
       noise.start();
 
+      if (ambientSessionToken !== thisSession || ambientState.currentType !== type) {
+        try {
+          noise.stop();
+          noise.disconnect();
+          noise.dispose();
+          filter.disconnect();
+          filter.dispose();
+          ambientGain.disconnect();
+          ambientGain.dispose();
+        } catch (e) {}
+        return;
+      }
+
       ambientState.nodes = { noise, filter, gain: ambientGain };
       ambientGain.gain.rampTo(targetGain * 1.2, fadeDuration);
 
       // Random gentle hearth spark crackles
       ambientState.intervalId = setInterval(() => {
-        if (ambientState.currentType !== 'hearth') return;
+        if (ambientSessionToken !== thisSession || ambientState.currentType !== 'hearth') return;
         if (Math.random() > 0.45) {
           const crackle = new Tone.NoiseSynth({
             noise: { type: 'white' },
@@ -642,7 +710,12 @@ export async function startFocusAmbient(
           }).connect(ambientGain);
           crackle.volume.value = -16;
           crackle.triggerAttackRelease('64n');
-          setTimeout(() => crackle.dispose(), 100);
+          setTimeout(() => {
+            try {
+              crackle.disconnect();
+              crackle.dispose();
+            } catch (e) {}
+          }, 100);
         }
       }, 700);
     } else if (type === 'abyss') {
@@ -657,6 +730,22 @@ export async function startFocusAmbient(
 
       osc1.start();
       osc2.start();
+
+      if (ambientSessionToken !== thisSession || ambientState.currentType !== type) {
+        try {
+          osc1.stop();
+          osc1.disconnect();
+          osc1.dispose();
+          osc2.stop();
+          osc2.disconnect();
+          osc2.dispose();
+          filter.disconnect();
+          filter.dispose();
+          ambientGain.disconnect();
+          ambientGain.dispose();
+        } catch (e) {}
+        return;
+      }
 
       ambientState.nodes = { osc1, osc2, filter, gain: ambientGain };
       ambientGain.gain.rampTo(targetGain * 0.9, fadeDuration);
