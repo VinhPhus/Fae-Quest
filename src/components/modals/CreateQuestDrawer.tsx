@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { TaskCategory, TaskDifficulty } from '../../types';
 import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
 import { CoinIcon } from '../ui/CoinIcon';
 import { X, PlusCircle, Repeat, Timer } from 'lucide-react';
+import { MODAL_BACKDROP_VARIANTS, MODAL_PANEL_VARIANTS } from '../../constants/motion';
 
 export const CreateQuestDrawer: React.FC = () => {
   const { isCreateQuestOpen, setCreateQuestOpen, addTask } = useFaeQuestStore();
@@ -15,8 +17,6 @@ export const CreateQuestDrawer: React.FC = () => {
   const [isDailyRecurring, setIsDailyRecurring] = useState(false);
   const [focusDuration, setFocusDuration] = useState<number | null>(null);
   const [customFocus, setCustomFocus] = useState<string>('25');
-
-  if (!isCreateQuestOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,15 +36,25 @@ export const CreateQuestDrawer: React.FC = () => {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={handleClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+    <AnimatePresence>
+      {isCreateQuestOpen && (
+        <motion.div
+          variants={MODAL_BACKDROP_VARIANTS}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md"
+          onClick={handleClose}
+        >
+          <motion.div
+            variants={MODAL_PANEL_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-lg rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
         <div className="p-5 sm:p-6 border-b border-[#253745] flex items-center justify-between bg-[#06141B]/70 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center shadow-lg shadow-black/40">
@@ -282,15 +292,18 @@ export const CreateQuestDrawer: React.FC = () => {
           </div>
 
           {/* Primary CTA Submit Button */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full py-3.5 rounded-2xl bg-[#CCD0CF] hover:bg-white font-extrabold text-sm text-[#06141B] flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(204,208,207,0.25)] active:scale-[0.99] transition cursor-pointer"
+            className="w-full py-3.5 rounded-2xl bg-[#CCD0CF] hover:bg-white font-extrabold text-sm text-[#06141B] flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(204,208,207,0.25)] transition cursor-pointer"
           >
             <PlusCircle className="w-5 h-5 text-[#06141B]" />
             <span>Ghi Vào Bảng Nhiệm Vụ</span>
-          </button>
+          </motion.button>
         </form>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import {
   CLOUDINARY_UPLOAD_PRESET,
   CLOUDINARY_UPLOAD_URL,
 } from '../../constants/cloudinary';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
+import { MODAL_BACKDROP_VARIANTS, MODAL_PANEL_VARIANTS } from '../../constants/motion';
 import {
   X,
   Camera,
@@ -66,8 +68,6 @@ export const ChangeCoverModal: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [customUrl, setCustomUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-
-  if (!isChangeCoverOpen) return null;
 
   const currentCover = coverUrl || DEFAULT_COVER_URL;
 
@@ -157,15 +157,25 @@ export const ChangeCoverModal: React.FC = () => {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={() => setChangeCoverOpen(false)}
-    >
-      <div
-        className="w-full max-w-2xl rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Hidden file input */}
+    <AnimatePresence>
+      {isChangeCoverOpen && (
+        <motion.div
+          variants={MODAL_BACKDROP_VARIANTS}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+          onClick={() => setChangeCoverOpen(false)}
+        >
+          <motion.div
+            variants={MODAL_PANEL_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="w-full max-w-2xl rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -360,15 +370,18 @@ export const ChangeCoverModal: React.FC = () => {
 
         {/* Footer */}
         <div className="p-4 sm:p-5 border-t border-[#253745] flex items-center justify-end gap-3 bg-[#06141B]/70 shrink-0">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             type="button"
             onClick={() => setChangeCoverOpen(false)}
             className="px-5 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs shadow-md transition cursor-pointer"
           >
             Hoàn Tất
-          </button>
+          </motion.button>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

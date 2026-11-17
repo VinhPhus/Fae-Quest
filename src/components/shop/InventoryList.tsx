@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
 import { InventoryTicket } from '../../types';
 import { Backpack, Ticket } from 'lucide-react';
+import { EASING_SPRING } from '../../constants/motion';
 
 export const InventoryHeader: React.FC = () => {
   const { inventory, exp } = useFaeQuestStore();
@@ -52,6 +54,15 @@ export const InventoryHeader: React.FC = () => {
 
 export const InventoryList: React.FC = () => {
   const { inventory, useInventoryTicket, setActiveTab } = useFaeQuestStore();
+  const [usingTicketId, setUsingTicketId] = useState<string | null>(null);
+
+  const handleUseTicket = (id: string) => {
+    setUsingTicketId(id);
+    setTimeout(() => {
+      useInventoryTicket(id);
+      setUsingTicketId(null);
+    }, 250);
+  };
 
   const formatItemTimeStatus = (item: InventoryTicket) => {
     const now = Date.now();
@@ -125,48 +136,68 @@ export const InventoryList: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Inventory Item Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {inventory.map((ticket) => (
-          <div
-            key={ticket.id}
-            className="rounded-[24px] p-5 bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] flex items-center justify-between gap-4 transition-all duration-200 shadow-md group"
-          >
-            {/* Left: Emoji & Information */}
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] group-hover:border-[#4A5C6A] flex items-center justify-center text-3xl shrink-0 shadow-inner group-hover:scale-105 transition">
-                {ticket.emoji}
-              </div>
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm sm:text-base font-bold text-[#CCD0CF] truncate">
-                    {ticket.title}
-                  </h4>
-                  <span className="text-[11px] text-amber-300 font-bold inline-flex items-center gap-0.5 shrink-0">
-                    <span>({ticket.cost}</span>
-                    <CoinIcon size="xs" />
-                    <span>)</span>
-                  </span>
+      <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <AnimatePresence>
+          {inventory.map((ticket) => {
+            const isUsing = usingTicketId === ticket.id;
+            return (
+              <motion.div
+                layout
+                key={ticket.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={
+                  isUsing
+                    ? {
+                        scale: 1.04,
+                        opacity: 0,
+                        filter: 'drop-shadow(0 0 16px rgba(204,208,207,0.8))',
+                      }
+                    : { opacity: 1, scale: 1, filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))' }
+                }
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.28, ease: EASING_SPRING }}
+                className="rounded-[24px] p-5 bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] flex items-center justify-between gap-4 transition-colors duration-200 shadow-md group"
+              >
+                {/* Left: Emoji & Information */}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] group-hover:border-[#4A5C6A] flex items-center justify-center text-3xl shrink-0 shadow-inner group-hover:scale-105 transition overflow-hidden">
+                    {ticket.emoji}
+                  </div>
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm sm:text-base font-bold text-[#CCD0CF] truncate">
+                        {ticket.title}
+                      </h4>
+                      <span className="text-[11px] text-amber-300 font-bold inline-flex items-center gap-0.5 shrink-0">
+                        <span>({ticket.cost}</span>
+                        <CoinIcon size="xs" />
+                        <span>)</span>
+                      </span>
+                    </div>
+
+                    <div>{formatItemTimeStatus(ticket)}</div>
+                  </div>
                 </div>
 
-                <div>{formatItemTimeStatus(ticket)}</div>
-              </div>
-            </div>
-
-            {/* Right Action Button: Use Immediately */}
-            <div className="shrink-0">
-              <button
-                type="button"
-                onClick={() => useInventoryTicket(ticket.id)}
-                className="px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs shadow-[0_4px_16px_rgba(204,208,207,0.2)] flex items-center gap-1.5 hover:scale-105 active:scale-95 transition cursor-pointer"
-                title="Kích hoạt và sử dụng phần thưởng ngay"
-              >
-                <Ticket className="w-4 h-4 text-[#06141B]" />
-                <span>Sử Dụng Ngay</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+                {/* Right Action Button: Use Immediately */}
+                <div className="shrink-0">
+                  <motion.button
+                    whileTap={{ scale: 0.94 }}
+                    type="button"
+                    disabled={isUsing}
+                    onClick={() => handleUseTicket(ticket.id)}
+                    className="px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs shadow-[0_4px_16px_rgba(204,208,207,0.2)] flex items-center gap-1.5 hover:scale-105 transition cursor-pointer disabled:opacity-50"
+                    title="Kích hoạt và sử dụng phần thưởng ngay"
+                  >
+                    <Ticket className="w-4 h-4 text-[#06141B]" />
+                    <span>Sử Dụng Ngay</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 };

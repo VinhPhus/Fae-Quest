@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import {
   getAllUnifiedTitles,
@@ -8,6 +9,7 @@ import {
 } from '../../constants/systemQuests';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
+import { EASING_SPRING } from '../../constants/motion';
 import {
   Scroll,
   Flame,
@@ -279,18 +281,25 @@ export const SystemQuestsView: React.FC = () => {
                 {/* Actions */}
                 <div className="pt-1">
                   {isEquipped ? (
-                    <span className="w-full py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-xs font-bold text-cyan-300 flex items-center justify-center gap-1.5 shadow">
+                    <motion.span
+                      layout
+                      initial={{ scale: 0.95 }}
+                      animate={{ scale: 1 }}
+                      className="w-full py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/50 text-xs font-bold text-cyan-300 flex items-center justify-center gap-1.5 shadow"
+                    >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Đang Trang Bị</span>
-                    </span>
+                    </motion.span>
                   ) : isUnlocked ? (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.94 }}
+                      whileHover={{ scale: 1.02 }}
                       type="button"
                       onClick={() => equipTitle(title.id)}
-                      className="w-full py-1.5 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs transition shadow active:scale-95 cursor-pointer"
+                      className="w-full py-1.5 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs transition-colors shadow cursor-pointer"
                     >
                       Trang Bị Ngay
-                    </button>
+                    </motion.button>
                   ) : (
                     <span className="w-full py-1.5 rounded-xl bg-[#06141B] border border-[#253745] text-xs font-semibold text-[#9BA8AB]/50 flex items-center justify-center gap-1.5">
                       <Lock className="w-3.5 h-3.5" />
@@ -306,34 +315,36 @@ export const SystemQuestsView: React.FC = () => {
 
       {/* 3. Filter tabs for System Quests */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTabFilter('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${activeTabFilter === 'all'
-              ? 'bg-fae text-thorn-dark border-fae shadow-md'
-              : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
-              }`}
-          >
-            Tất Cả Thử Thách ({systemQuests.length})
-          </button>
-          <button
-            onClick={() => setActiveTabFilter('streak')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${activeTabFilter === 'streak'
-              ? 'bg-fae text-thorn-dark border-fae shadow-md'
-              : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
-              }`}
-          >
-            Bộ Đếm Ngày ({streakQuests.length})
-          </button>
-          <button
-            onClick={() => setActiveTabFilter('milestone')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition border ${activeTabFilter === 'milestone'
-              ? 'bg-fae text-thorn-dark border-fae shadow-md'
-              : 'bg-thorn-dark text-parchment/70 border-opal/30 hover:text-parchment'
-              }`}
-          >
-            Cột Mốc Thành Tựu ({milestoneQuests.length})
-          </button>
+        <div className="flex items-center gap-2 p-1 rounded-2xl bg-[#06141B] border border-[#253745] relative">
+          {(
+            [
+              { id: 'all', label: `Tất Cả Thử Thách (${systemQuests.length})` },
+              { id: 'streak', label: `Bộ Đếm Ngày (${streakQuests.length})` },
+              { id: 'milestone', label: `Cột Mốc Thành Tựu (${milestoneQuests.length})` },
+            ] as const
+          ).map((tab) => {
+            const isSelected = activeTabFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTabFilter(tab.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors relative z-10 cursor-pointer ${
+                  isSelected
+                    ? 'text-[#CCD0CF]'
+                    : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
+              >
+                {isSelected && (
+                  <motion.div
+                    layoutId="systemQuestFilterPill"
+                    className="absolute inset-0 rounded-xl bg-[#253745] border border-[#4A5C6A] shadow-md z-[-1]"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -448,10 +459,11 @@ export const SystemQuestsView: React.FC = () => {
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     {/* Check-In Button */}
                     {!quest.isCompleted && (
-                      <button
+                      <motion.button
+                        whileTap={!isCheckedInToday && !isResetToday ? { scale: 0.94 } : undefined}
                         onClick={() => checkInStreakQuest(quest.id)}
                         disabled={isCheckedInToday || isResetToday}
-                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition ${isResetToday
+                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${isResetToday
                           ? 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] cursor-not-allowed shadow-inner'
                           : isCheckedInToday
                             ? 'bg-thorn-dark text-parchment/40 border border-parchment/15 cursor-not-allowed'
@@ -474,18 +486,19 @@ export const SystemQuestsView: React.FC = () => {
                             <span>🔥 Điểm Danh Hôm Nay (+1 Ngày)</span>
                           </>
                         )}
-                      </button>
+                      </motion.button>
                     )}
 
                     {/* Claim Button */}
                     {canClaim && (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.94 }}
                         onClick={() => claimSystemQuestReward(quest.id)}
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-parchment font-extrabold text-xs flex items-center justify-center gap-2 shadow-xl animate-bounce"
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-parchment font-extrabold text-xs flex items-center justify-center gap-2 shadow-xl animate-bounce cursor-pointer"
                       >
                         <Gift className="w-4 h-4 text-amber-200" />
                         <span>🎁 Nhận Danh Hiệu & Phần Thưởng</span>
-                      </button>
+                      </motion.button>
                     )}
 
                     {quest.isRewardClaimed && (

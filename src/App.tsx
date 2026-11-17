@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from './store/useFaeQuestStore';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { LeftSidebar } from './components/layout/LeftSidebar';
@@ -31,6 +32,7 @@ import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
+import { PAGE_VARIANTS, EASING_SPRING } from './constants/motion';
 
 export const App: React.FC = () => {
   useRealtimeSync();
@@ -129,7 +131,12 @@ export const App: React.FC = () => {
       {/* 2. Main Content Area */}
       <div className="flex-1 min-w-0 flex flex-col h-auto md:h-screen overflow-visible md:overflow-hidden bg-[#06141B]">
         {/* Phân vùng 1: Top Sticky Section (Hồ Sơ & Header - Giữ cố định trên Desktop) */}
-        <header className="relative md:flex-shrink-0 md:z-20 bg-[#06141B] px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-3 md:pb-4 border-b border-[#253745]/40 md:shadow-[0_8px_30px_rgba(6,20,27,0.85)]">
+        <motion.header
+          initial={{ y: -16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.35, delay: 0.05, ease: EASING_SPRING }}
+          className="relative md:flex-shrink-0 md:z-20 bg-[#06141B] px-3 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-3 md:pb-4 border-b border-[#253745]/40 md:shadow-[0_8px_30px_rgba(6,20,27,0.85)]"
+        >
           <div className="max-w-7xl w-full mx-auto space-y-3">
             {/* Top Bento Header with Greeting, Search, and Quick Actions */}
             <TopBentoHeader />
@@ -143,65 +150,80 @@ export const App: React.FC = () => {
             {activeTab === 'analytics' && <ProductivityAnalyticsHeader />}
             {activeTab === 'admin' && <AdminPortalHeader />}
           </div>
-        </header>
+        </motion.header>
 
         {/* Phân vùng 2: Scrollable Content Section (Cuộn độc lập) */}
-        <main className="flex-1 overflow-visible md:overflow-y-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 scroll-smooth [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-[#06141B] [&::-webkit-scrollbar-thumb]:bg-[#253745] hover:[&::-webkit-scrollbar-thumb]:bg-[#4A5C6A] [&::-webkit-scrollbar-thumb]:rounded-full">
+        <motion.main
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.35, delay: 0.1, ease: EASING_SPRING }}
+          className="flex-1 overflow-visible md:overflow-y-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 scroll-smooth [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-[#06141B] [&::-webkit-scrollbar-thumb]:bg-[#253745] hover:[&::-webkit-scrollbar-thumb]:bg-[#4A5C6A] [&::-webkit-scrollbar-thumb]:rounded-full"
+        >
           <div className="max-w-7xl w-full mx-auto space-y-5">
-            {/* Tab 1: Bento Dashboard (Quests Module) */}
-            {activeTab === 'quests' && (
-              <section className="animate-in fade-in duration-200 space-y-5 sm:space-y-6">
-                {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
-                <QuestBentoGrid />
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                variants={PAGE_VARIANTS}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+              >
+                {/* Tab 1: Bento Dashboard (Quests Module) */}
+                {activeTab === 'quests' && (
+                  <section className="space-y-5 sm:space-y-6">
+                    {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
+                    <QuestBentoGrid />
 
-                {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
-                <FocusDock />
-              </section>
-            )}
+                    {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
+                    <FocusDock />
+                  </section>
+                )}
 
-            {/* Tab: System Quests & Titles Module */}
-            {activeTab === 'system-quests' && (
-              <section className="animate-in fade-in duration-200">
-                <SystemQuestsView />
-              </section>
-            )}
+                {/* Tab: System Quests & Titles Module */}
+                {activeTab === 'system-quests' && (
+                  <section>
+                    <SystemQuestsView />
+                  </section>
+                )}
 
-            {/* Tab 2: Shop Module */}
-            {activeTab === 'shop' && (
-              <section className="animate-in fade-in duration-200">
-                <RewardShopGrid />
-              </section>
-            )}
+                {/* Tab 2: Shop Module */}
+                {activeTab === 'shop' && (
+                  <section>
+                    <RewardShopGrid />
+                  </section>
+                )}
 
-            {/* Tab 3: Leaderboard Module */}
-            {activeTab === 'leaderboard' && (
-              <section className="animate-in fade-in duration-200">
-                <LeaderboardTable />
-              </section>
-            )}
+                {/* Tab 3: Leaderboard Module */}
+                {activeTab === 'leaderboard' && (
+                  <section>
+                    <LeaderboardTable />
+                  </section>
+                )}
 
-            {/* Tab 4: Inventory Module */}
-            {activeTab === 'inventory' && (
-              <section className="animate-in fade-in duration-200">
-                <InventoryList />
-              </section>
-            )}
+                {/* Tab 4: Inventory Module */}
+                {activeTab === 'inventory' && (
+                  <section>
+                    <InventoryList />
+                  </section>
+                )}
 
-            {/* Tab 5: Analytics Module */}
-            {activeTab === 'analytics' && (
-              <section className="animate-in fade-in duration-200">
-                <ProductivityAnalytics />
-              </section>
-            )}
+                {/* Tab 5: Analytics Module */}
+                {activeTab === 'analytics' && (
+                  <section>
+                    <ProductivityAnalytics />
+                  </section>
+                )}
 
-            {/* Tab: Admin Live-Ops Portal */}
-            {activeTab === 'admin' && (
-              <section className="animate-in fade-in duration-200">
-                <AdminPortalView />
-              </section>
-            )}
+                {/* Tab: Admin Live-Ops Portal */}
+                {activeTab === 'admin' && (
+                  <section>
+                    <AdminPortalView />
+                  </section>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
-        </main>
+        </motion.main>
       </div>
 
       {/* 3. Khóa Cố Định Dải Mini BXH (Fixed Right Sidebar trên xl:flex) */}

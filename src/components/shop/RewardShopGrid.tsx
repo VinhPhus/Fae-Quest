@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
@@ -93,9 +94,10 @@ export const RewardShopGrid: React.FC = () => {
             item.emoji.startsWith('http') || item.emoji.startsWith('/') || item.emoji.startsWith('data:');
 
           return (
-            <div
+            <motion.div
               key={item.id}
-              className={`rounded-[28px] p-5 bg-[#11212D] border transition-all duration-200 shadow-md group flex flex-col justify-between gap-4 ${item.isSystem
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              className={`rounded-[28px] p-5 bg-[#11212D] border transition-colors duration-200 shadow-md group flex flex-col justify-between gap-4 ${item.isSystem
                 ? 'border-amber-500/30 hover:border-amber-500/60'
                 : 'border-[#253745] hover:border-[#4A5C6A]'
                 }`}
@@ -129,7 +131,8 @@ export const RewardShopGrid: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-[#253745] flex items-center gap-2">
-                <button
+                <motion.button
+                  whileTap={canAfford ? { scale: 0.95 } : undefined}
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     buyShopItem(item.id, { x: rect.left + 20, y: rect.top });
@@ -138,7 +141,7 @@ export const RewardShopGrid: React.FC = () => {
                   className={`flex-1 py-2.5 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${canAfford
                     ? isInventoryFull
                       ? 'bg-[#253745] border border-amber-400/40 text-amber-300'
-                      : 'bg-[#CCD0CF] hover:bg-white text-[#06141B] shadow-[0_4px_16px_rgba(204,208,207,0.2)] active:scale-95'
+                      : 'bg-[#CCD0CF] hover:bg-white text-[#06141B] shadow-[0_4px_16px_rgba(204,208,207,0.2)]'
                     : 'bg-[#06141B] border border-[#253745] text-[#9BA8AB]/40 cursor-not-allowed'
                     }`}
                   title={isInventoryFull ? 'Túi Đồ đã đầy (50/50)' : undefined}
@@ -151,20 +154,21 @@ export const RewardShopGrid: React.FC = () => {
                         ? 'Túi Đồ Đầy (50/50)'
                         : 'Đổi Phần Thưởng'}
                   </span>
-                </button>
+                </motion.button>
 
                 {/* Quy tắc: KHÔNG HIỂN THỊ nút Xóa đối với Vật Phẩm Hệ Thống */}
                 {!item.isSystem && (
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
                     onClick={() => deleteShopItem(item.id)}
                     className="p-2.5 rounded-full bg-[#06141B] hover:bg-rose-950/70 border border-[#253745] hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 transition cursor-pointer"
                     title="Xóa vật phẩm tự thưởng này"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </motion.button>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

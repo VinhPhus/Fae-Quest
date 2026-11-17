@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
+import { EASING_SPRING } from '../../constants/motion';
 import {
   CheckSquare,
   ShoppingBag,
@@ -124,7 +126,10 @@ export const LeftSidebar: React.FC = () => {
   return (
     <>
       {/* ================= DESKTOP / TABLET SIDEBAR (>= 768px) ================= */}
-      <aside
+      <motion.aside
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.35, ease: EASING_SPRING }}
         className={`hidden md:flex flex-col h-screen sticky top-0 shrink-0 z-30 bg-[#11212D]/95 backdrop-blur-md border-r border-[#253745] overflow-hidden no-scrollbar transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] ${isSidebarCollapsed ? 'w-[76px]' : 'w-[260px]'
           }`}
       >
@@ -214,13 +219,22 @@ export const LeftSidebar: React.FC = () => {
                       : item.label
                     : undefined
                 }
-                className={`w-full flex items-center px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 relative ${isActive
-                  ? 'bg-[#253745] text-[#CCD0CF] shadow-md border border-[#4A5C6A] scale-[1.01]'
-                  : 'text-[#9BA8AB] hover:text-[#CCD0CF] hover:bg-[#253745]/50 border border-transparent'
+                className={`w-full flex items-center px-3.5 py-3 rounded-xl text-xs sm:text-sm font-bold transition-colors duration-200 relative ${isActive
+                  ? 'text-[#CCD0CF]'
+                  : 'text-[#9BA8AB] hover:text-[#CCD0CF] hover:bg-[#253745]/40 border border-transparent'
                   }`}
               >
+                {/* Active Sliding Indicator Pill */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeSidebarIndicator"
+                    className="absolute inset-0 rounded-xl bg-[#253745] border border-[#4A5C6A] shadow-md z-0"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+
                 {/* Fixed Icon Container */}
-                <div className="w-6 h-6 shrink-0 flex items-center justify-center relative">
+                <div className="w-6 h-6 shrink-0 flex items-center justify-center relative z-10">
                   {item.icon}
                   {/* Collapsed Notification Dot */}
                   {isSidebarCollapsed && item.badge !== undefined && item.badge > 0 && (
@@ -230,21 +244,25 @@ export const LeftSidebar: React.FC = () => {
 
                 {/* Smooth Fade + Slide + Max-Width Text Container */}
                 <div
-                  className={`flex items-center justify-between flex-1 min-w-0 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out ${isSidebarCollapsed
+                  className={`flex items-center justify-between flex-1 min-w-0 whitespace-nowrap overflow-hidden transition-all duration-200 ease-out relative z-10 ${isSidebarCollapsed
                     ? 'opacity-0 max-w-0 -translate-x-2 ml-0 pointer-events-none'
                     : 'opacity-100 max-w-[180px] translate-x-0 ml-3'
                     }`}
                 >
                   <span className="truncate text-left">{item.label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span
+                    <motion.span
+                      key={item.badge}
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: [1, 1.25, 1] }}
+                      transition={{ duration: 0.3, ease: EASING_SPRING }}
                       className={`ml-2 px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${isActive
                         ? 'bg-[#CCD0CF] text-[#06141B]'
                         : 'bg-[#253745] text-[#CCD0CF] border border-[#4A5C6A]'
                         }`}
                     >
                       {item.badge}
-                    </span>
+                    </motion.span>
                   )}
                 </div>
               </button>
@@ -296,10 +314,13 @@ export const LeftSidebar: React.FC = () => {
             </span>
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* ================= MOBILE BOTTOM NAVIGATION (< 768px) ================= */}
-      <nav
+      <motion.nav
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.35, ease: EASING_SPRING }}
         aria-label="Mobile Navigation"
         className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-[#11212D]/95 backdrop-blur-lg border-t border-[#253745] px-2 py-1 flex items-center justify-around shadow-2xl"
       >
@@ -309,27 +330,40 @@ export const LeftSidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-1.5 rounded-xl transition relative flex-1 min-w-0 ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1.5 rounded-xl transition-colors relative flex-1 min-w-0 ${
                 isActive
                   ? 'text-[#CCD0CF] font-bold'
                   : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
               }`}
             >
-              <div className="relative">
+              {isActive && (
+                <motion.div
+                  layoutId="activeMobileBottomIndicator"
+                  className="absolute inset-0 rounded-xl bg-[#253745]/80 border border-[#4A5C6A]/50 z-0"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <div className="relative z-10">
                 {item.icon}
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-[#CCD0CF] text-[#06141B] shadow-sm">
+                  <motion.span
+                    key={item.badge}
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: [1, 1.25, 1] }}
+                    transition={{ duration: 0.3, ease: EASING_SPRING }}
+                    className="absolute -top-1.5 -right-2 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-[#CCD0CF] text-[#06141B] shadow-sm"
+                  >
                     {item.badge}
-                  </span>
+                  </motion.span>
                 )}
               </div>
-              <span className={`text-[10px] truncate max-w-[56px] leading-tight ${isActive ? 'text-[#CCD0CF] font-bold' : 'text-[#9BA8AB]'}`}>
+              <span className={`text-[10px] truncate max-w-[56px] leading-tight relative z-10 ${isActive ? 'text-[#CCD0CF] font-bold' : 'text-[#9BA8AB]'}`}>
                 {item.mobileLabel}
               </span>
             </button>
           );
         })}
-      </nav>
+      </motion.nav>
 
       {/* ================= MOBILE TOP HEADER (< 768px) ================= */}
       <header className="md:hidden sticky top-0 z-30 bg-[#11212D]/95 backdrop-blur-md border-b border-[#253745] px-3.5 py-2.5 flex items-center justify-between">

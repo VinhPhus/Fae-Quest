@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { fetchCommunityLeaderboard, HunterProfileCloud } from '../../utils/syncManager';
 import { Trophy, ChevronRight } from 'lucide-react';
+import { EASING_SPRING } from '../../constants/motion';
 
 export const RightMiniLeaderboardStrip: React.FC = () => {
   const { playerName, avatarUrl, exp, rivals, hunterId, setActiveTab, userRole } = useFaeQuestStore();
@@ -107,9 +109,12 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
   };
 
   return (
-    <aside
+    <motion.aside
+      initial={{ x: 20, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.35, delay: 0.15, ease: EASING_SPRING }}
       onClick={() => setActiveTab('leaderboard')}
-      className="hidden xl:flex flex-col items-center py-5 px-2 w-16 shrink-0 h-screen sticky top-0 bg-[#06141B] border-l border-[#253745] shadow-2xl hover:border-[#4A5C6A] transition-all duration-300 cursor-pointer group z-20 justify-between select-none"
+      className="hidden xl:flex flex-col items-center py-5 px-2 w-16 shrink-0 h-screen sticky top-0 bg-[#06141B] border-l border-[#253745] shadow-2xl hover:border-[#4A5C6A] transition-colors duration-300 cursor-pointer group z-20 justify-between select-none"
       title="Nhấn để mở Bảng Xếp Hạng Đấu Trường"
     >
       {/* Top: User's Own Avatar with Real Live Rank */}
@@ -219,6 +224,6 @@ export const RightMiniLeaderboardStrip: React.FC = () => {
       <div className="pt-2 text-[#9BA8AB] group-hover:text-[#CCD0CF] transition flex flex-col items-center">
         <ChevronRight className="w-4 h-4" />
       </div>
-    </aside>
+    </motion.aside>
   );
 };
