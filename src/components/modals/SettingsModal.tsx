@@ -382,12 +382,12 @@ export const SettingsModal: React.FC = () => {
                 </form>
               </div>
 
-              {/* Sound & Audio Effects - Obsidian & Steel Audio Engine */}
+              {/* Sound & Audio Effects */}
               <div className="space-y-4 pt-3 border-t border-parchment/10">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
                     <Volume2 className="w-4 h-4 text-cyan-400" />
-                    <span>Bộ Xử Lý Âm Thanh Obsidian & Steel (Tone.js)</span>
+                    <span>Hiệu Ứng Âm Thanh RPG</span>
                   </label>
                   <button
                     onClick={toggleSound}
@@ -448,8 +448,8 @@ export const SettingsModal: React.FC = () => {
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                     {[
-                      { id: 'rain', label: 'Mưa Thành Cổ', icon: '🌧️' },
-                      { id: 'hearth', label: 'Lửa Trại Lò Rèn', icon: '🔥' },
+                      { id: 'rain', label: 'Mưa Cổ Thành', icon: '🌧️' },
+                      { id: 'hearth', label: 'Lửa Trại', icon: '🔥' },
                       { id: 'abyss', label: 'Gió Hư Không', icon: '🌌' },
                       { id: 'off', label: 'Tắt Âm Nền', icon: '🔇' },
                     ].map((amb) => {
@@ -459,13 +459,13 @@ export const SettingsModal: React.FC = () => {
                           key={amb.id}
                           type="button"
                           onClick={() => setFocusAmbient(amb.id as AmbientType)}
-                          className={`px-2.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${isSelected
+                          className={`px-2 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border cursor-pointer ${isSelected
                             ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 shadow-md'
                             : 'bg-[#11212D] text-[#9BA8AB] hover:text-[#CCD0CF] border-[#253745]'
                             }`}
                         >
-                          <span>{amb.icon}</span>
-                          <span className="truncate">{amb.label}</span>
+                          <span className="text-sm shrink-0">{amb.icon}</span>
+                          <span className="whitespace-nowrap">{amb.label}</span>
                         </button>
                       );
                     })}
@@ -478,11 +478,11 @@ export const SettingsModal: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <Radio className="w-4 h-4 text-cyan-400" />
                       <h4 className="font-rpg font-bold text-xs uppercase tracking-wide text-[#CCD0CF]">
-                        🔊 Bảng Thử Âm Thanh Thợ Săn (Soundboard)
+                        🔊 Bảng Thử Hiệu Ứng Âm Thanh
                       </h4>
                     </div>
                     <p className="text-[11px] text-[#9BA8AB]">
-                      Bấm để trải nghiệm các hiệu ứng âm thanh tổng hợp bằng Tone.js chuẩn Obsidian & Steel:
+                      Bấm vào từng nút để thử trước các hiệu ứng âm thanh sống động trong chuyến phiêu lưu:
                     </p>
                   </div>
 

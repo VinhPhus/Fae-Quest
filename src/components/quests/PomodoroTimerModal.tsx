@@ -316,7 +316,7 @@ export const PomodoroTimerModal: React.FC = () => {
           <div className="flex items-center justify-between text-[11px] text-[#CCD0CF] px-1">
             <span className="flex items-center gap-1.5 font-bold">
               <Headphones className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Âm Nền Tập Trung (Continuous Ambient):</span>
+              <span>Âm Nền Tập Trung Sâu:</span>
             </span>
             {isRunning && focusAmbient !== 'off' && (
               <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 animate-pulse">
