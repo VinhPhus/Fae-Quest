@@ -144,6 +144,20 @@ export const useRealtimeSync = (): void => {
       }
     );
 
+    // 6. Lắng nghe thay đổi trên Nhật Ký Thợ Săn (journals)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'journals',
+        filter: `user_id=eq.${currentUser.id}`,
+      },
+      () => {
+        useFaeQuestStore.getState().fetchJournals();
+      }
+    );
+
     channel.subscribe();
 
     return () => {

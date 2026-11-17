@@ -14,6 +14,7 @@ import { PomodoroTimerModal } from './components/quests/PomodoroTimerModal';
 import { RewardShopHeader, RewardShopGrid } from './components/shop/RewardShopGrid';
 import { AddShopItemModal } from './components/shop/AddShopItemModal';
 import { InventoryHeader, InventoryList } from './components/shop/InventoryList';
+import { ChroniclesHeader, ChroniclesView } from './components/chronicles/ChroniclesView';
 import { LeaderboardHeader, LeaderboardTable } from './components/leaderboard/LeaderboardTable';
 import { ProductivityAnalyticsHeader, ProductivityAnalytics } from './components/analytics/ProductivityAnalytics';
 import { RankUpModal } from './components/modals/RankUpModal';
@@ -147,6 +148,7 @@ export const App: React.FC = () => {
             {activeTab === 'shop' && <RewardShopHeader />}
             {activeTab === 'leaderboard' && <LeaderboardHeader />}
             {activeTab === 'inventory' && <InventoryHeader />}
+            {activeTab === 'chronicles' && <ChroniclesHeader />}
             {activeTab === 'analytics' && <ProductivityAnalyticsHeader />}
             {activeTab === 'admin' && <AdminPortalHeader />}
           </div>
@@ -204,6 +206,13 @@ export const App: React.FC = () => {
                 {activeTab === 'inventory' && (
                   <section>
                     <InventoryList />
+                  </section>
+                )}
+
+                {/* Tab: Hunter Chronicles Module */}
+                {activeTab === 'chronicles' && (
+                  <section>
+                    <ChroniclesView />
                   </section>
                 )}
 

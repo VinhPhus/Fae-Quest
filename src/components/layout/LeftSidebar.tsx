@@ -10,6 +10,7 @@ import {
   Trophy,
   Backpack,
   BarChart2,
+  BookOpen,
   Flame,
   Settings,
   Scroll,
@@ -104,6 +105,12 @@ export const LeftSidebar: React.FC = () => {
       mobileLabel: 'Túi Đồ',
       icon: <Backpack className="w-5 h-5 shrink-0" />,
       badge: validUnusedInventoryCount,
+    },
+    {
+      id: 'chronicles',
+      label: 'Nhật Ký (Chronicles)',
+      mobileLabel: 'Nhật Ký',
+      icon: <BookOpen className="w-5 h-5 shrink-0" />,
     },
     {
       id: 'analytics',

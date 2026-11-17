@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
-import { CheckSquare, ShoppingBag, Trophy, Backpack, BarChart2 } from 'lucide-react';
+import { CheckSquare, ShoppingBag, Trophy, Backpack, BookOpen, BarChart2 } from 'lucide-react';
 
 export const NavigationTabs: React.FC = () => {
   const { activeTab, setActiveTab, tasks, inventory } = useFaeQuestStore();
@@ -34,6 +34,11 @@ export const NavigationTabs: React.FC = () => {
       label: 'Túi Đồ',
       icon: <Backpack className="w-4 h-4" />,
       badge: validUnusedInventoryCount,
+    },
+    {
+      id: 'chronicles',
+      label: 'Nhật Ký',
+      icon: <BookOpen className="w-4 h-4" />,
     },
     {
       id: 'analytics',

@@ -98,7 +98,28 @@ export interface ToastMessage {
   type: 'success' | 'info' | 'error';
 }
 
-export type ActiveTab = 'quests' | 'system-quests' | 'shop' | 'leaderboard' | 'inventory' | 'analytics' | 'admin';
+export type ActiveTab =
+  | 'quests'
+  | 'system-quests'
+  | 'shop'
+  | 'leaderboard'
+  | 'inventory'
+  | 'chronicles'
+  | 'analytics'
+  | 'admin';
+
+export type JournalMood = 'Tuyệt vời' | 'Tốt' | 'Bình thường' | 'Căng thẳng' | 'Tệ';
+
+export interface JournalEntry {
+  id: string;
+  user_id: string;
+  date: string; // YYYY-MM-DD
+  mood: JournalMood;
+  content: string; // HTML format from RichText
+  images: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 export type UserRole = 'user' | 'admin';
 

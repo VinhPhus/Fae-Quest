@@ -21,6 +21,8 @@ import {
   UserMessage,
   MailRewardItem,
   RivalProfileData,
+  JournalEntry,
+  JournalMood,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -117,12 +119,19 @@ interface FaeQuestState {
   isChangeCoverOpen: boolean;
   selectedRivalForModal: RivalProfileData | null;
   isRivalModalOpen: boolean;
+  journals: JournalEntry[];
+  isWriteJournalOpen: boolean;
+  editingJournal: JournalEntry | null;
   confirmEarlyTask: { task: Task; coords?: { x: number; y: number } } | null;
   lastCompletedTimestamp: number;
   floatingRewards: FloatingRewardItem[];
   toasts: ToastMessage[];
 
   // Actions
+  setWriteJournalOpen: (open: boolean, journalToEdit?: JournalEntry | null) => void;
+  fetchJournals: () => Promise<void>;
+  saveJournal: (entry: { id?: string; date: string; mood: JournalMood; content: string; images: string[] }) => Promise<boolean>;
+  deleteJournal: (id: string) => Promise<boolean>;
   setUserRole: (role: UserRole) => void;
   setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => void;
   setUserInboxOpen: (open: boolean) => void;
@@ -293,6 +302,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isChangeCoverOpen: false,
       selectedRivalForModal: null,
       isRivalModalOpen: false,
+      journals: [],
+      isWriteJournalOpen: false,
+      editingJournal: null,
       isOathOpen: typeof window !== 'undefined' ? localStorage.getItem('faequest_oath_accepted') !== 'true' : false,
       confirmEarlyTask: null,
       lastCompletedTimestamp: 0,
@@ -303,6 +315,155 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => set({ adminPortalTab: tab }),
       setUserInboxOpen: (open: boolean) => set({ isUserInboxOpen: open }),
       setActiveWarningMessage: (msg: UserMessage | null) => set({ activeWarningMessage: msg }),
+
+      setWriteJournalOpen: (open: boolean, journalToEdit?: JournalEntry | null) =>
+        set({ isWriteJournalOpen: open, editingJournal: journalToEdit || null }),
+
+      fetchJournals: async () => {
+        const userId = get().currentUser?.id || get().hunterId;
+        if (!userId) return;
+
+        try {
+          const { data, error } = await supabase
+            .from('journals')
+            .select('*')
+            .eq('user_id', userId)
+            .order('date', { ascending: false });
+
+          if (!error && data) {
+            set({ journals: data as JournalEntry[] });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`faequest_journals_${userId}`, JSON.stringify(data));
+            }
+          } else {
+            if (typeof window !== 'undefined') {
+              const localData = localStorage.getItem(`faequest_journals_${userId}`);
+              if (localData) {
+                try {
+                  set({ journals: JSON.parse(localData) });
+                } catch {}
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching journals:', e);
+          if (typeof window !== 'undefined') {
+            const localData = localStorage.getItem(`faequest_journals_${userId}`);
+            if (localData) {
+              try {
+                set({ journals: JSON.parse(localData) });
+              } catch {}
+            }
+          }
+        }
+      },
+
+      saveJournal: async (entry: { id?: string; date: string; mood: JournalMood; content: string; images: string[] }) => {
+        const userId = get().currentUser?.id || get().hunterId;
+        if (!userId) {
+          get().addToast('Không tìm thấy thông tin Thợ Săn để lưu nhật ký!', 'error');
+          return false;
+        }
+
+        const nowIso = new Date().toISOString();
+        const isUpdate = Boolean(entry.id);
+        const journalId = entry.id || crypto.randomUUID();
+
+        const journalRecord: JournalEntry = {
+          id: journalId,
+          user_id: userId,
+          date: entry.date,
+          mood: entry.mood,
+          content: entry.content,
+          images: entry.images || [],
+          created_at: nowIso,
+          updated_at: nowIso,
+        };
+
+        const existingList = get().journals || [];
+        let updatedList: JournalEntry[];
+        if (isUpdate) {
+          updatedList = existingList.map((j) =>
+            j.id === journalId ? { ...j, ...journalRecord, updated_at: nowIso } : j
+          );
+        } else {
+          updatedList = [journalRecord, ...existingList];
+        }
+
+        set({ journals: updatedList, isWriteJournalOpen: false, editingJournal: null });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`faequest_journals_${userId}`, JSON.stringify(updatedList));
+        }
+
+        // Phát âm thanh cuộn giấy da sột soạt (scroll_open)
+        playSound('scroll_open');
+
+        try {
+          if (isUpdate) {
+            const { error } = await supabase
+              .from('journals')
+              .update({
+                date: entry.date,
+                mood: entry.mood,
+                content: entry.content,
+                images: entry.images,
+                updated_at: nowIso,
+              })
+              .eq('id', journalId)
+              .eq('user_id', userId);
+
+            if (error) {
+              console.warn('Supabase update journal note (persisted locally):', error);
+            }
+          } else {
+            const { error } = await supabase.from('journals').insert({
+              id: journalId,
+              user_id: userId,
+              date: entry.date,
+              mood: entry.mood,
+              content: entry.content,
+              images: entry.images,
+              created_at: nowIso,
+              updated_at: nowIso,
+            });
+
+            if (error) {
+              console.warn('Supabase insert journal note (persisted locally):', error);
+            }
+          }
+
+          get().addToast(
+            isUpdate ? 'Cập nhật trang nhật ký thành công!' : 'Đã ghi lại nhật ký hành trình hôm nay!',
+            'success'
+          );
+          return true;
+        } catch (err: any) {
+          console.error('Error saving journal to Supabase:', err);
+          get().addToast('Đã lưu nhật ký vào thiết bị!', 'info');
+          return true;
+        }
+      },
+
+      deleteJournal: async (id: string) => {
+        const userId = get().currentUser?.id || get().hunterId;
+        const existingList = get().journals || [];
+        const updatedList = existingList.filter((j) => j.id !== id);
+        set({ journals: updatedList });
+        if (typeof window !== 'undefined' && userId) {
+          localStorage.setItem(`faequest_journals_${userId}`, JSON.stringify(updatedList));
+        }
+
+        try {
+          if (userId) {
+            await supabase.from('journals').delete().eq('id', id).eq('user_id', userId);
+          }
+          get().addToast('Đã xóa bài nhật ký!', 'info');
+          return true;
+        } catch (err) {
+          console.error('Error deleting journal:', err);
+          return false;
+        }
+      },
 
       fetchUserMessages: async () => {
         const userId = get().currentUser?.id;
@@ -1682,6 +1843,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           unlockedTitleIds: ['title_tan_binh_gai_do'],
           equippedTitleId: 'title_tan_binh_gai_do',
           focusSessionsCompleted: 0,
+          journals: [],
           isResetOpen: false,
           isSettingsOpen: false,
       isChangeCoverOpen: false,
@@ -2280,11 +2442,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               await get().syncToCloud(true);
             }
 
-            // Đồng bộ dữ liệu Live-Ops: Hộp thư, Cửa hàng hệ thống, Thành tựu động, BXH thật
+            // Đồng bộ dữ liệu Live-Ops: Hộp thư, Cửa hàng hệ thống, Thành tựu động, BXH thật, Nhật ký
             get().fetchUserMessages();
             get().fetchSystemShopItems();
             get().fetchSystemAchievements();
+            get().fetchJournals();
             get().fetchCommunityProfiles();
+            get().fetchJournals();
           } else {
             set({ currentUser: null, authLoading: false });
           }
@@ -2422,6 +2586,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().fetchUserMessages();
             get().fetchSystemShopItems();
             get().fetchSystemAchievements();
+            get().fetchJournals();
             playSound('coin_purchase', get().soundEnabled);
             get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
             return { success: true };
@@ -2670,6 +2835,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().fetchUserMessages();
           get().fetchSystemShopItems();
           get().fetchSystemAchievements();
+          get().fetchJournals();
 
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');
