@@ -156,8 +156,11 @@ export const useRealtimeSync = (): void => {
       }
     );
 
+    let profilesDebounceTimer: NodeJS.Timeout | null = null;
+
     // 5. Lắng nghe thay đổi toàn cầu trên profiles (Ảnh bìa, Avatar, Danh hiệu, EXP, Thứ hạng)
     // Giúp mọi người chơi thấy ngay ảnh bìa và hồ sơ mới theo thời gian thực (Real-time) mà không cần F5
+    // Áp dụng Debounce 500ms để chống giật khung hình khi nhiều người chơi cùng hoàn thành nhiệm vụ
     channel.on(
       'postgres_changes',
       {
@@ -187,10 +190,15 @@ export const useRealtimeSync = (): void => {
           return;
         }
 
-        useFaeQuestStore.getState().fetchCommunityProfiles();
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard', { detail: payload }));
+        if (profilesDebounceTimer) {
+          clearTimeout(profilesDebounceTimer);
         }
+        profilesDebounceTimer = setTimeout(() => {
+          useFaeQuestStore.getState().fetchCommunityProfiles();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard', { detail: payload }));
+          }
+        }, 500);
       }
     );
 
@@ -214,6 +222,9 @@ export const useRealtimeSync = (): void => {
     channel.subscribe();
 
     return () => {
+      if (profilesDebounceTimer) {
+        clearTimeout(profilesDebounceTimer);
+      }
       supabase.removeChannel(channel);
       supabase.removeChannel(journalChannel);
     };
