@@ -299,101 +299,15 @@ export const LeaderboardTable: React.FC = () => {
     }
   };
 
-  // Cấu hình Hình Dáng Cờ (Pennant Shape) & Hiệu Ứng Sảnh Cờ Vinh Quang
-  const PENNANT_CLIP_PATH = 'polygon(0% 0%, 100% 0%, 100% 85%, 50% 100%, 0% 85%)';
-
-  const BANNER_CONFIG = {
-    1: {
-      heightClass: 'min-h-[300px] sm:min-h-[340px] md:min-h-[360px]',
-      dropShadowClass: 'drop-shadow-[0_10px_25px_rgba(245,158,11,0.35)]',
-      borderGradientClass: 'bg-gradient-to-b from-amber-300 via-amber-400 to-amber-600',
-      tintClass: 'bg-gradient-to-b from-amber-500/15 via-transparent to-[#06141B]/80',
-      auraClass: 'bg-amber-400/35',
-      avatarSizeClass: 'w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20',
-      avatarRingClass: 'ring-2 sm:ring-[2.5px] ring-amber-400 shadow-[0_0_16px_rgba(245,158,11,0.5)]',
-      avatarTextClass: 'text-amber-300',
-      tierBadgeBorderClass: 'border-amber-400/90',
-      diamondBadgeClass: 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 border border-amber-200',
-      diamondTextClass: 'text-[#06141B]',
-      playerPillClass: 'bg-amber-400 text-[#06141B]',
-      expTextClass: 'text-amber-300',
-      defaultCover: '/assets/leaderboard/top1_podium_bg.jpg',
-      sway: {
-        rotate: [-1.1, 1.1, -1.1],
-        skewX: [-0.6, 0.6, -0.6],
-        duration: 4.6,
-        delay: 0,
-      },
-    },
-    2: {
-      heightClass: 'min-h-[265px] sm:min-h-[305px] md:min-h-[325px]',
-      dropShadowClass: 'drop-shadow-[0_8px_20px_rgba(204,208,207,0.22)]',
-      borderGradientClass: 'bg-gradient-to-b from-slate-200 via-[#CCD0CF] to-[#4A5C6A]',
-      tintClass: 'bg-gradient-to-b from-slate-300/12 via-transparent to-[#06141B]/80',
-      auraClass: 'bg-slate-300/30',
-      avatarSizeClass: 'w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16',
-      avatarRingClass: 'ring-2 sm:ring-[2.5px] ring-slate-300 shadow-[0_0_14px_rgba(204,208,207,0.4)]',
-      avatarTextClass: 'text-slate-300',
-      tierBadgeBorderClass: 'border-slate-300',
-      diamondBadgeClass: 'bg-gradient-to-br from-slate-100 via-slate-300 to-slate-500 border border-white',
-      diamondTextClass: 'text-[#06141B]',
-      playerPillClass: 'bg-slate-300 text-[#06141B]',
-      expTextClass: 'text-slate-200',
-      defaultCover: '/assets/leaderboard/top2_podium_bg.jpg',
-      sway: {
-        rotate: [1.2, -1.2, 1.2],
-        skewX: [0.7, -0.7, 0.7],
-        duration: 5.3,
-        delay: 0.5,
-      },
-    },
-    3: {
-      heightClass: 'min-h-[250px] sm:min-h-[290px] md:min-h-[310px]',
-      dropShadowClass: 'drop-shadow-[0_8px_20px_rgba(217,119,6,0.25)]',
-      borderGradientClass: 'bg-gradient-to-b from-amber-600 via-amber-700 to-amber-900',
-      tintClass: 'bg-gradient-to-b from-amber-700/15 via-transparent to-[#06141B]/80',
-      auraClass: 'bg-amber-700/35',
-      avatarSizeClass: 'w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16',
-      avatarRingClass: 'ring-2 sm:ring-[2.5px] ring-amber-700 shadow-[0_0_14px_rgba(217,119,6,0.4)]',
-      avatarTextClass: 'text-amber-400',
-      tierBadgeBorderClass: 'border-amber-700',
-      diamondBadgeClass: 'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-900 border border-amber-400',
-      diamondTextClass: 'text-white',
-      playerPillClass: 'bg-amber-700 text-white',
-      expTextClass: 'text-amber-400',
-      defaultCover: '/assets/leaderboard/top3_podium_bg.jpg',
-      sway: {
-        rotate: [-1.3, 1.3, -1.3],
-        skewX: [-0.5, 0.5, -0.5],
-        duration: 4.9,
-        delay: 1.1,
-      },
-    },
-  } as const;
-
-  // Helper render Lá Cờ Chiến Trận Treo Dọc (Hanging War Banner)
-  const renderHangingBanner = (c: Combatant | undefined, rankPos: 1 | 2 | 3) => {
-    const config = BANNER_CONFIG[rankPos];
-
+// 1. Thẻ Độc Tôn Cho Hạng #1 (Sovereign Hero Card)
+  const renderTop1HeroCard = (c: Combatant | undefined) => {
     if (!c) {
-      // Ô cờ trống khi chưa có người chiếm giữ
       return (
-        <div key={`banner-empty-${rankPos}`} className="flex flex-col items-center w-full">
-          {/* Móc treo giả lập */}
-          <div className="flex justify-center items-center gap-3 sm:gap-6 -mb-1 relative z-30 pointer-events-none">
-            <div className="w-2 h-3 sm:w-2.5 sm:h-3.5 rounded-sm bg-[#253745] border border-[#4A5C6A]" />
-            <div className="w-2 h-3 sm:w-2.5 sm:h-3.5 rounded-sm bg-[#253745] border border-[#4A5C6A]" />
+        <div className="w-full rounded-2xl border-2 border-dashed border-[#253745] bg-[#11212D]/40 p-6 flex flex-col items-center justify-center text-center text-[#4A5C6A]">
+          <div className="w-10 h-10 rounded-full border border-[#253745] flex items-center justify-center text-sm font-bold mb-1.5 text-amber-400">
+            #1
           </div>
-
-          <div
-            style={{ clipPath: PENNANT_CLIP_PATH }}
-            className={`w-full ${config.heightClass} border-2 border-dashed border-[#253745] bg-[#11212D]/40 flex flex-col items-center justify-center text-center text-[#4A5C6A] p-2`}
-          >
-            <div className="w-8 h-8 rounded-full border border-[#253745] flex items-center justify-center text-xs font-bold mb-1">
-              #{rankPos}
-            </div>
-            <span className="text-[10px] sm:text-xs text-[#4A5C6A]">Đang chờ Thợ Săn</span>
-          </div>
+          <span className="text-xs">Đang chờ Thợ Săn chiếm cứ Ngai Vàng</span>
         </div>
       );
     }
@@ -401,152 +315,244 @@ export const LeaderboardTable: React.FC = () => {
     const rankIdx = getRankIndexByExp(c.exp);
     const tier = RANK_TIERS[rankIdx];
     const isPlayer = c.isPlayer;
-    const coverImage = c.cover_url || c.coverUrl || config.defaultCover;
+    const coverImage = c.cover_url || c.coverUrl || '/assets/leaderboard/top1_podium_bg.jpg';
 
     return (
-      <motion.div
-        key={c.id}
+      <div
         id={isPlayer ? 'my-rank-card' : undefined}
-        style={{ transformOrigin: 'top center' }}
-        animate={{
-          rotate: [...config.sway.rotate],
-          skewX: [...config.sway.skewX],
-        }}
-        transition={{
-          duration: config.sway.duration,
-          delay: config.sway.delay,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        onClick={() => handleSelectHunter(c, rankPos)}
-        className={`flex flex-col items-center w-full cursor-pointer group relative ${
-          isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] rounded-t-xl scale-[1.03] transition-transform' : ''
+        onClick={() => handleSelectHunter(c, 1)}
+        className={`relative overflow-hidden rounded-2xl border border-amber-400/50 bg-[#11212D] p-4 sm:p-6 cursor-pointer group shadow-[0_12px_40px_rgba(245,158,11,0.12)] hover:border-amber-400/80 transition-all ${
+          isPlayer && highlightMyCard ? 'ring-2 ring-amber-300 scale-[1.01]' : ''
         }`}
       >
-        {/* Móc treo kim loại kết nối với thanh xà ngang */}
-        <div className="flex justify-center items-center gap-3 sm:gap-6 -mb-1 relative z-30 pointer-events-none">
-          <div className="w-2 h-3 sm:w-2.5 sm:h-3.5 rounded-sm bg-gradient-to-b from-[#64748B] via-[#334155] to-[#1E293B] border border-[#9BA8AB]/40 shadow-sm" />
-          <div className="w-2 h-3 sm:w-2.5 sm:h-3.5 rounded-sm bg-gradient-to-b from-[#64748B] via-[#334155] to-[#1E293B] border border-[#9BA8AB]/40 shadow-sm" />
-        </div>
+        {/* 4 Đinh Tán Kim Loại 4 Góc Trong Thẻ */}
+        <div className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
+        <div className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
+        <div className="absolute bottom-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
+        <div className="absolute bottom-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
 
-        {/* Wrapper có drop-shadow bao quanh toàn bộ hình cờ nhọn chữ V */}
-        <div className={`w-full ${config.dropShadowClass} transition-transform duration-300 group-hover:scale-[1.02]`}>
-          {/* Lớp Viền Cờ Ngoài Cùng (Clipped Pennant Border) */}
-          <div
-            style={{ clipPath: PENNANT_CLIP_PATH }}
-            className={`w-full ${config.heightClass} p-[1.5px] sm:p-[2px] ${config.borderGradientClass}`}
-          >
-            {/* Lòng Lá Cờ (Thân cờ chính chứa ảnh bìa, avatar và thông tin) */}
-            <div
-              style={{ clipPath: PENNANT_CLIP_PATH }}
-              className="w-full h-full relative overflow-hidden bg-[#0c1822] flex flex-col justify-between items-center pt-2.5 sm:pt-3.5 pb-8 sm:pb-10 px-1.5 sm:px-2.5 text-center select-none"
-            >
-              {/* 1. Ảnh Bìa Cá Nhân / Dark Fantasy Wallpaper Phủ Kín Cờ */}
-              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                <img
-                  src={coverImage}
-                  alt={c.name}
-                  className="w-full h-full object-cover object-center select-none group-hover:scale-105 transition-transform duration-700"
-                  loading="lazy"
-                />
-                {/* Lớp Gradient Tông Trầm & Ám Sắc Theo Hạng */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/45 via-[#06141B]/35 to-[#06141B]/90" />
-                <div className={`absolute inset-0 ${config.tintClass}`} />
-              </div>
+        {/* Ảnh Bìa Cá Nhân Phủ Toàn Thẻ */}
+        <img
+          src={coverImage}
+          alt={c.name}
+          className="absolute inset-0 w-full h-full object-cover opacity-35 group-hover:scale-[1.02] transition-transform duration-500 pointer-events-none select-none"
+          loading="lazy"
+        />
 
-              {/* 2. Sóng Ánh Sáng Lướt Mặt Vải (Cloth Wave Light Ripple) */}
-              <motion.div
-                animate={{
-                  opacity: [0.1, 0.35, 0.1],
-                  backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
-                }}
-                transition={{
-                  duration: config.sway.duration * 0.85,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-                className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.08] to-transparent pointer-events-none z-10"
-              />
+        {/* Lớp Gradient Chuyển Sắc Từ Tối Sâu Sang Ánh Vàng Trầm */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#06141B] via-[#06141B]/85 to-amber-500/15 pointer-events-none" />
 
-              {/* 3. Đỉnh Lá Cờ: Vương miện vàng nhỏ (Dành riêng cho Hạng #1) */}
-              <div className="relative z-20 flex flex-col items-center w-full h-4 sm:h-5">
-                {rankPos === 1 && (
-                  <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 drop-shadow-[0_2px_8px_rgba(245,158,11,0.7)] animate-bounce" />
+        {/* Dải Ánh Sáng Vàng Mảnh Lướt Chậm Chu Kỳ 5s */}
+        <motion.div
+          animate={{ x: ['-100%', '250%'] }}
+          transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 }}
+          className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-amber-200/10 to-transparent -skew-x-12 pointer-events-none"
+        />
+
+        {/* Bố Cục Nội Dung Thẻ Top 1 */}
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Cụm Trái + Cụm Giữa */}
+          <div className="flex items-center gap-3.5 sm:gap-5 min-w-0 flex-1 w-full sm:w-auto">
+            {/* Avatar & Huy Hiệu #1 */}
+            <div className="relative shrink-0">
+              <div className="w-18 h-18 sm:w-22 sm:h-22 md:w-24 md:h-24 rounded-full ring-2 ring-amber-400/80 shadow-[0_0_25px_rgba(245,158,11,0.3)] bg-[#06141B] flex items-center justify-center shrink-0 aspect-square overflow-hidden">
+                {isAvatarUrl(c.avatar) ? (
+                  <img
+                    src={c.avatar}
+                    alt={c.name}
+                    className="w-full h-full object-cover rounded-full aspect-square"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="text-2xl sm:text-3xl font-black text-amber-300">
+                    {(c.name || 'T').charAt(0).toUpperCase()}
+                  </span>
                 )}
               </div>
 
-              {/* 4. Avatar Tròn Nằm Chính Giữa Thân Cờ (Center Avatar) */}
-              <div className="relative z-20 my-auto shrink-0 flex flex-col items-center">
-                {/* Ánh Hào Quang Tỏa Ra Phía Sau Avatar */}
-                <div className={`absolute inset-0 rounded-full ${config.auraClass} blur-md scale-110 pointer-events-none`} />
-
-                <div
-                  className={`relative ${config.avatarSizeClass} rounded-full ${config.avatarRingClass} overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square shadow-lg`}
-                >
-                  {isAvatarUrl(c.avatar) ? (
-                    <img
-                      src={c.avatar}
-                      alt={c.name}
-                      className="w-full h-full object-cover rounded-full aspect-square"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className={`text-base sm:text-2xl font-black ${config.avatarTextClass}`}>
-                      {(c.name || 'T').charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-
-                {/* Huy hiệu Bậc Rank góc trên bên trái */}
-                <div
-                  className={`absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06141B] border ${config.tierBadgeBorderClass} p-0.5 flex items-center justify-center shadow-md z-30 shrink-0`}
-                >
-                  <img
-                    src={tier.iconUrl}
-                    alt={tier.name}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-
-                {/* Huy hiệu Kim Cương số thứ hạng ngay mép dưới Avatar */}
-                <div
-                  className={`absolute -bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 sm:w-5 sm:h-5 rotate-45 ${config.diamondBadgeClass} flex items-center justify-center shadow-lg z-30 shrink-0`}
-                >
-                  <span className={`-rotate-45 font-black text-[10px] sm:text-xs ${config.diamondTextClass}`}>
-                    {rankPos}
-                  </span>
-                </div>
+              {/* Huy hiệu Bậc Rank góc trên bên trái */}
+              <div className="absolute -top-1 -left-1 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#06141B] border border-amber-400/80 p-0.5 flex items-center justify-center shadow-md z-20 shrink-0">
+                <img
+                  src={tier.iconUrl}
+                  alt={tier.name}
+                  className="w-full h-full object-contain"
+                />
               </div>
 
-              {/* 5. Cụm Thông Tin Đáy Cờ (Bảng Tên & EXP nằm gọn trên mũi chữ V) */}
-              <div className="relative z-20 flex flex-col items-center w-full px-0.5">
-                <h3 className="text-[11px] sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[95%] text-center drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] group-hover:text-white transition">
+              {/* Huy hiệu Kim Cương Vàng #1 ở đáy avatar */}
+              <div className="absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2 w-6 h-6 sm:w-7 sm:h-7 rotate-45 bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 border border-amber-200 flex items-center justify-center shadow-lg z-20 shrink-0">
+                <span className="-rotate-45 font-black text-xs sm:text-sm text-[#06141B]">
+                  #1
+                </span>
+              </div>
+            </div>
+
+            {/* Cụm Giữa: Danh Tính & Chỉ Số Thực Lực */}
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-bold tracking-widest text-amber-400/90 uppercase mb-0.5 sm:mb-1 flex items-center gap-1.5">
+                <span>👑 ĐƯƠNG KIM VÔ ĐỊCH ĐẤU TRƯỜNG</span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg sm:text-2xl font-black text-[#CCD0CF] truncate group-hover:text-white transition">
                   {c.name}
-                  {isPlayer && (
-                    <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black ${config.playerPillClass} shadow`}>
-                      BẠN
-                    </span>
-                  )}
                 </h3>
-
-                {/* Danh hiệu đang trang bị */}
-                <div className="mt-0.5 flex justify-center max-w-[90%] truncate">
-                  {renderTitlePill(c.title)}
-                </div>
-
-                {/* Khung Điểm EXP (Pill viền mảnh sang trọng) */}
-                <div className="mt-1 sm:mt-1.5 w-full max-w-[96%] py-0.5 sm:py-1 px-1 sm:px-2 rounded-full bg-[#06141B]/90 border border-[#4A5C6A]/60 text-center shadow-inner backdrop-blur-sm">
-                  <span className={`text-[9px] sm:text-xs font-mono font-bold truncate block ${config.expTextClass}`}>
-                    ✨ {c.exp.toLocaleString('vi-VN')} <span className="text-[8px] sm:text-[9px] opacity-75 font-normal">EXP</span>
+                {isPlayer && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-[#06141B] shadow shrink-0">
+                    BẠN
                   </span>
-                </div>
+                )}
+                {c.title && (
+                  <span className="text-xs font-semibold text-amber-300 bg-amber-500/10 border border-amber-400/30 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shrink-0">
+                    {renderTitlePill(c.title)}
+                  </span>
+                )}
+              </div>
+
+              {/* Dải Chỉ Số Thực Lực */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-5 mt-2 text-xs sm:text-sm text-[#9BA8AB]">
+                <span className="inline-flex items-center gap-1">
+                  🔥 Chuỗi: <strong className="text-[#CCD0CF] font-bold">{c.streak || 0} ngày</strong>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  ⚔️ Đã xong: <strong className="text-[#CCD0CF] font-bold">{c.completedTasks || 0} Nhiệm Vụ</strong>
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Cụm Phải: Khung Điểm EXP */}
+          <div className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#06141B]/90 border border-amber-400/40 flex sm:flex-col items-center sm:items-end justify-between shrink-0 shadow-inner backdrop-blur-sm">
+            <span className="text-[10px] text-[#9BA8AB] font-bold tracking-wider uppercase">
+              TỔNG ĐIỂM EXP
+            </span>
+            <span className="text-base sm:text-xl font-black text-amber-300 font-mono tracking-tight mt-0.5">
+              ✨ {c.exp.toLocaleString('vi-VN')} <span className="text-xs font-normal opacity-80">EXP</span>
+            </span>
+          </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
+
+  // 2. Thẻ Cận Vệ Cho Hạng #2 & Hạng #3 (Side-by-Side Metallic Trim Cards)
+  const renderGuardCard = (c: Combatant | undefined, rankPos: 2 | 3) => {
+    const isRank2 = rankPos === 2;
+    const borderTrimClass = isRank2 ? 'border-l-4 border-l-slate-300' : 'border-l-4 border-l-amber-600';
+    const bgGradientClass = isRank2
+      ? 'bg-gradient-to-r from-slate-300/10 via-[#11212D] to-[#11212D]'
+      : 'bg-gradient-to-r from-amber-700/12 via-[#11212D] to-[#11212D]';
+    const ringClass = isRank2
+      ? 'ring-2 ring-slate-300/70 shadow-[0_0_15px_rgba(204,208,207,0.25)]'
+      : 'ring-2 ring-amber-600/70 shadow-[0_0_15px_rgba(217,119,6,0.25)]';
+    const diamondBadgeClass = isRank2
+      ? 'bg-gradient-to-br from-slate-100 to-slate-400 border border-white text-[#06141B]'
+      : 'bg-gradient-to-br from-amber-600 to-amber-900 border border-amber-400 text-white';
+    const expTextClass = isRank2 ? 'text-slate-200' : 'text-amber-400';
+    const defaultCover = isRank2 ? '/assets/leaderboard/top2_podium_bg.jpg' : '/assets/leaderboard/top3_podium_bg.jpg';
+
+    if (!c) {
+      return (
+        <div className={`relative overflow-hidden rounded-2xl bg-[#11212D]/60 border border-[#253745] ${borderTrimClass} p-4 flex items-center justify-center text-center text-[#4A5C6A] min-h-[96px]`}>
+          <span className="text-xs">Đang chờ Hạng #{rankPos}</span>
+        </div>
+      );
+    }
+
+    const rankIdx = getRankIndexByExp(c.exp);
+    const tier = RANK_TIERS[rankIdx];
+    const isPlayer = c.isPlayer;
+    const coverImage = c.cover_url || c.coverUrl || defaultCover;
+
+    return (
+      <div
+        id={isPlayer ? 'my-rank-card' : undefined}
+        onClick={() => handleSelectHunter(c, rankPos)}
+        className={`relative overflow-hidden rounded-2xl bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] ${borderTrimClass} ${bgGradientClass} p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer transition-all group ${
+          isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.01]' : ''
+        }`}
+      >
+        {/* Ảnh bìa mờ góc phải */}
+        <img
+          src={coverImage}
+          alt={c.name}
+          className="opacity-15 w-36 sm:w-44 h-full absolute right-0 top-0 object-cover pointer-events-none select-none group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+        />
+
+        {/* Trái: Avatar & Huy hiệu + Thông tin người chơi */}
+        <div className="relative z-10 flex items-center gap-3 min-w-0 flex-1">
+          {/* Avatar with Badges */}
+          <div className="relative shrink-0">
+            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden ${ringClass} bg-[#06141B] flex items-center justify-center shrink-0 aspect-square`}>
+              {isAvatarUrl(c.avatar) ? (
+                <img
+                  src={c.avatar}
+                  alt={c.name}
+                  className="w-full h-full object-cover rounded-full aspect-square"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="text-xl sm:text-2xl font-black text-slate-300">
+                  {(c.name || 'T').charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            {/* Rank tier icon badge */}
+            <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full bg-[#06141B] border border-[#4A5C6A] p-0.5 flex items-center justify-center shadow z-10 shrink-0">
+              <img
+                src={tier.iconUrl}
+                alt={tier.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Diamond badge #2 / #3 */}
+            <div className={`absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4.5 h-4.5 rotate-45 ${diamondBadgeClass} flex items-center justify-center shadow z-10 shrink-0`}>
+              <span className="-rotate-45 font-black text-[10px]">
+                #{rankPos}
+              </span>
+            </div>
+          </div>
+
+          {/* Tên Thợ Săn, Danh Hiệu & Chỉ Số Rút Gọn */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="text-sm sm:text-base md:text-lg font-extrabold text-[#CCD0CF] truncate group-hover:text-white transition">
+                {c.name}
+              </h4>
+              {isPlayer && (
+                <span className="px-1.5 py-0.2 rounded-full text-[8px] font-black bg-slate-300 text-[#06141B] shrink-0">
+                  BẠN
+                </span>
+              )}
+            </div>
+
+            <div className="text-xs text-[#9BA8AB] truncate mt-0.5">
+              {renderTitlePill(c.title)}
+            </div>
+
+            <div className="text-[11px] sm:text-xs text-[#9BA8AB] mt-1 truncate">
+              ⚔️ {c.completedTasks || 0} nhiệm vụ • 🔥 {c.streak || 0}N
+            </div>
+          </div>
+        </div>
+
+        {/* Phải: Khung Điểm EXP Gọn Gàng */}
+        <div className="relative z-10 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#06141B]/90 border border-[#253745] shrink-0 text-right shadow-inner backdrop-blur-sm">
+          <span className="text-[9px] text-[#9BA8AB] font-bold block uppercase tracking-wider">
+            EXP
+          </span>
+          <span className={`text-xs sm:text-sm font-extrabold font-mono ${expTextClass}`}>
+            ✨ {c.exp.toLocaleString('vi-VN')}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+
 
 
 
@@ -565,19 +571,15 @@ export const LeaderboardTable: React.FC = () => {
         )}
       </div>
 
-      {/* Sảnh Cờ Vinh Quang: Thanh Treo Kim Loại & 3 Lá Cờ Chiến Trận ([#2] - [#1] - [#3]) */}
-      <div className="pt-2 pb-6">
-        {/* Thanh xà treo cờ kim loại phía trên */}
-        <div className="relative w-full flex items-center justify-center mb-0">
-          <div className="h-1.5 w-full bg-gradient-to-r from-transparent via-[#4A5C6A] to-transparent rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.6)]" />
-          <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#9BA8AB]/40 to-transparent" />
-        </div>
+      {/* Ngai Vàng Độc Tôn (Sovereign Throne Layout: Top 1 Hero Banner & Top 2-3 Guards) */}
+      <div className="space-y-3.5 mb-6">
+        {/* Tầng 1: Đỉnh Ngai Vàng (Top 1) */}
+        {renderTop1HeroCard(podiumPlayers[0])}
 
-        {/* Cụm 3 Lá Cờ Chiến Trận Treo Dọc (Hanging War Banners) */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6 items-start">
-          {renderHangingBanner(podiumPlayers[1], 2)}
-          {renderHangingBanner(podiumPlayers[0], 1)}
-          {renderHangingBanner(podiumPlayers[2], 3)}
+        {/* Tầng 2: Hai Cận Vệ (Top 2 & Top 3) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          {renderGuardCard(podiumPlayers[1], 2)}
+          {renderGuardCard(podiumPlayers[2], 3)}
         </div>
       </div>
 
