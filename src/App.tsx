@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from './store/useFaeQuestStore';
 import { AuthScreen } from './components/auth/AuthScreen';
@@ -58,13 +58,28 @@ export const App: React.FC = () => {
     initAuth();
   }, [initAuth]);
 
+  const hasCheckedAutoTourRef = useRef(false);
+
   // Tự động kích hoạt chuỗi hướng dẫn tân thủ duy nhất một lần cho account mới tạo sau khi hoàn tất Khế Ước Thợ Săn
   useEffect(() => {
-    if (currentUser && !authLoading && !hasSeenTutorial && !isOathOpen) {
-      const timer = setTimeout(() => {
-        startOnboardingTour(false);
-      }, 1000);
-      return () => clearTimeout(timer);
+    if (hasCheckedAutoTourRef.current) return;
+
+    if (!authLoading && currentUser?.id && !isOathOpen) {
+      const userId = currentUser.id;
+      const isLocallySeen =
+        localStorage.getItem(`faequest_tour_seen_${userId}`) === 'true' ||
+        localStorage.getItem(`faequest_tour_completed_${userId}`) === 'true';
+
+      // Điều kiện kích hoạt tự động: chưa từng xem trên DB/store và chưa có cờ trong localStorage
+      if (!hasSeenTutorial && !isLocallySeen) {
+        hasCheckedAutoTourRef.current = true;
+        const timer = setTimeout(() => {
+          startOnboardingTour(false);
+        }, 1000);
+        return () => clearTimeout(timer);
+      } else {
+        hasCheckedAutoTourRef.current = true;
+      }
     }
   }, [currentUser, authLoading, hasSeenTutorial, isOathOpen]);
 

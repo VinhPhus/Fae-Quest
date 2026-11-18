@@ -2142,8 +2142,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const hunterId = get().currentUser?.id || get().hunterId;
         if (hunterId && typeof window !== 'undefined') {
           if (seen) {
+            localStorage.setItem('faequest_tour_seen_' + hunterId, 'true');
             localStorage.setItem('faequest_tour_completed_' + hunterId, 'true');
           } else {
+            localStorage.removeItem('faequest_tour_seen_' + hunterId);
             localStorage.removeItem('faequest_tour_completed_' + hunterId);
           }
         }
@@ -2684,7 +2686,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             }
 
             const isLocallySeen = typeof window !== 'undefined' && hunterId
-              ? localStorage.getItem('faequest_tour_completed_' + hunterId) === 'true'
+              ? (localStorage.getItem('faequest_tour_seen_' + hunterId) === 'true' ||
+                 localStorage.getItem('faequest_tour_completed_' + hunterId) === 'true')
               : false;
 
             if (stateRow?.state_json) {
@@ -2696,12 +2699,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 (s?.exp || 0) > 0;
 
               const hasSeenTutorialVal =
-                profile?.has_seen_tutorial !== undefined
+                isLocallySeen
+                  ? true
+                  : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
                   ? Boolean(profile.has_seen_tutorial)
                   : s?.hasSeenTutorial !== undefined
                   ? Boolean(s.hasSeenTutorial)
-                  : isLocallySeen
-                  ? true
                   : isVeteranPlayer;
 
               set({
@@ -2792,9 +2795,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 equippedTitleId: 'title_tan_binh_gai_do',
                 focusSessionsCompleted: 0,
                 hasSeenTutorial:
-                  profile?.has_seen_tutorial !== undefined
+                  isLocallySeen
+                    ? true
+                    : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
                     ? Boolean(profile.has_seen_tutorial)
-                    : isLocallySeen,
+                    : false,
                 cloudSyncStatus: 'synced',
                 authLoading: false,
               });
@@ -3108,7 +3113,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
 
           const isLocallySeen = typeof window !== 'undefined' && userId
-            ? localStorage.getItem('faequest_tour_completed_' + userId) === 'true'
+            ? (localStorage.getItem('faequest_tour_seen_' + userId) === 'true' ||
+               localStorage.getItem('faequest_tour_completed_' + userId) === 'true')
             : false;
 
           if (stateRow?.state_json) {
@@ -3120,12 +3126,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               (s?.exp || 0) > 0;
 
             const hasSeenTutorialVal =
-              profile?.has_seen_tutorial !== undefined
+              isLocallySeen
+                ? true
+                : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
                 ? Boolean(profile.has_seen_tutorial)
                 : s?.hasSeenTutorial !== undefined
                 ? Boolean(s.hasSeenTutorial)
-                : isLocallySeen
-                ? true
                 : isVeteranPlayer;
 
             set({
@@ -3216,9 +3222,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               equippedTitleId: 'title_tan_binh_gai_do',
               focusSessionsCompleted: 0,
               hasSeenTutorial:
-                profile?.has_seen_tutorial !== undefined
+                isLocallySeen
+                  ? true
+                  : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
                   ? Boolean(profile.has_seen_tutorial)
-                  : isLocallySeen,
+                  : false,
               cloudSyncStatus: 'synced',
               authLoading: false,
             });

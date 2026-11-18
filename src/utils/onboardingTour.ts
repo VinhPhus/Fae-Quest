@@ -7,21 +7,43 @@ let tourDriver: Driver | null = null;
 let isTourRunning = false;
 
 /**
- * Marks the tutorial as completed in both Zustand state and Supabase Database.
+ * 3-tier persistence helper: Zustand store -> localStorage -> Supabase DB.
+ * Guarantees that tour state is marked immediately and permanently across F5 and network blips.
  */
-export async function completeOnboardingTour(): Promise<void> {
+export async function markTutorialAsSeen(userId?: string): Promise<void> {
   const store = useFaeQuestStore.getState();
+  const id = userId || store.currentUser?.id || store.hunterId;
+
+  // 1. Cập nhật ngay state trong Zustand store để UI phản hồi tức thì
   store.setHasSeenTutorial(true);
 
-  const hunterId = store.currentUser?.id || store.hunterId;
-  if (hunterId) {
+  // 2. Lưu khóa dự phòng theo đúng ID tài khoản vào localStorage
+  if (id && typeof window !== 'undefined') {
     try {
-      await supabase.from('profiles').update({ has_seen_tutorial: true }).eq('id', hunterId);
+      localStorage.setItem(`faequest_tour_seen_${id}`, 'true');
+      localStorage.setItem(`faequest_tour_completed_${id}`, 'true');
+    } catch (e) {
+      console.warn('Failed to save tour seen to localStorage:', e);
+    }
+  }
+
+  // 3. Gọi API cập nhật lên Supabase
+  if (id) {
+    try {
+      const { error } = await supabase.from('profiles').update({ has_seen_tutorial: true }).eq('id', id);
+      if (error) {
+        console.error('Supabase update has_seen_tutorial error:', error);
+      }
     } catch (err) {
-      console.warn('Failed to update has_seen_tutorial on Supabase:', err);
+      console.error('Failed to update has_seen_tutorial on Supabase:', err);
     }
   }
 }
+
+/**
+ * Backward compatibility alias for completeOnboardingTour
+ */
+export const completeOnboardingTour = markTutorialAsSeen;
 
 /**
  * Returns the driver.js instance configured with FaeQuest's Obsidian & Steel theme.
@@ -46,6 +68,38 @@ export function getOnboardingTourDriver(): Driver {
     doneBtnText: 'Bắt Đầu Chiến Đấu ⚔️',
     closeBtnLabel: 'Bỏ qua',
     popoverClass: 'faequest-tour-popover',
+
+    // Bắt đủ toàn bộ sự kiện đóng của driver.js để đảm bảo không bị spam
+    onCloseClick: () => {
+      markTutorialAsSeen();
+      if (tourDriver) {
+        tourDriver.destroy();
+      }
+    },
+
+    onDestroyStarted: () => {
+      markTutorialAsSeen();
+      if (tourDriver) {
+        tourDriver.destroy();
+      }
+    },
+
+    onDestroyed: () => {
+      markTutorialAsSeen();
+      isTourRunning = false;
+      tourDriver = null;
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('.driver-overlay, .driver-popover, .driver-active-element').forEach((el) => {
+          el.remove();
+        });
+        document.body.classList.remove('driver-active', 'driver-fade');
+      }
+      // Trả lại activeTab là quests cho người dùng
+      if (useFaeQuestStore.getState().activeTab !== 'quests') {
+        useFaeQuestStore.getState().setActiveTab('quests');
+      }
+    },
+
     steps: [
       // Bước 1 (Trang Nhiệm Vụ - Không element, hiển thị trung tâm)
       {
@@ -129,7 +183,7 @@ export function getOnboardingTourDriver(): Driver {
           align: 'center',
           doneBtnText: 'Bắt Đầu Chiến Đấu ⚔️',
           onNextClick: () => {
-            completeOnboardingTour();
+            markTutorialAsSeen();
             if (tourDriver) {
               tourDriver.destroy();
             }
@@ -147,15 +201,6 @@ export function getOnboardingTourDriver(): Driver {
         }
       }
     },
-
-    onDestroyed: () => {
-      completeOnboardingTour();
-      isTourRunning = false;
-      // Trả lại activeTab là quests cho người dùng
-      if (useFaeQuestStore.getState().activeTab !== 'quests') {
-        useFaeQuestStore.getState().setActiveTab('quests');
-      }
-    },
   });
 
   return tourDriver;
@@ -163,14 +208,29 @@ export function getOnboardingTourDriver(): Driver {
 
 /**
  * Starts the onboarding tour.
- * If force is true (e.g. from Settings "Xem Lại Hướng Dẫn"), runs immediately regardless of has_seen_tutorial.
+ * @param forceReplay If true (e.g. from Settings "Xem Lại Hướng Dẫn"), forces the tour to start regardless of hasSeenTutorial status.
  */
-export function startOnboardingTour(force = false): void {
+export function startOnboardingTour(forceReplay = false): void {
   if (typeof window === 'undefined') return;
 
   const state = useFaeQuestStore.getState();
-  if (!force && (state.hasSeenTutorial || state.isOathOpen)) {
-    return;
+  const userId = state.currentUser?.id || state.hunterId;
+
+  // Nếu không phải forceReplay, kiểm tra cờ đã xem hoặc Khế Ước Thợ Săn đang mở
+  if (!forceReplay) {
+    const isLocallySeen = userId
+      ? localStorage.getItem(`faequest_tour_seen_${userId}`) === 'true' ||
+        localStorage.getItem(`faequest_tour_completed_${userId}`) === 'true'
+      : false;
+
+    if (state.hasSeenTutorial || isLocallySeen || state.isOathOpen) {
+      return;
+    }
+
+    // Chốt chặn ngay lúc bắt đầu: Đánh dấu đã xem ngay lập tức để F5 không bao giờ bị lặp lại
+    if (userId) {
+      markTutorialAsSeen(userId);
+    }
   }
 
   if (isTourRunning) return;
@@ -188,6 +248,7 @@ export function startOnboardingTour(force = false): void {
     } catch (e) {
       console.warn('Error starting driver.js onboarding tour:', e);
       isTourRunning = false;
+      tourDriver = null;
     }
   }, 350);
 }
