@@ -19,6 +19,7 @@ import { ChroniclesHeader, ChroniclesView } from './components/chronicles/Chroni
 import { LeaderboardHeader, LeaderboardTable } from './components/leaderboard/LeaderboardTable';
 import { ProductivityAnalyticsHeader, ProductivityAnalytics } from './components/analytics/ProductivityAnalytics';
 import { RankUpModal } from './components/modals/RankUpModal';
+import { RewardPopupOverlay } from './components/modals/RewardPopupOverlay';
 import { RankRoadmapModal } from './components/modals/RankRoadmapModal';
 import { RenameModal } from './components/modals/RenameModal';
 import { ResetModal } from './components/modals/ResetModal';
@@ -248,6 +249,7 @@ export const App: React.FC = () => {
       {activeTab === 'quests' && <RightMiniLeaderboardStrip />}
 
       {/* Modals & Overlays */}
+      <RewardPopupOverlay />
       <RankUpModal />
       <RankRoadmapModal />
       <AddShopItemModal />

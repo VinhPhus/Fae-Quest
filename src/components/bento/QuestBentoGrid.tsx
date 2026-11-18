@@ -17,7 +17,7 @@ import {
   Timer,
   Pencil,
 } from 'lucide-react';
-import { TaskCategory } from '../../types';
+import { TaskCategory, Task } from '../../types';
 
 export const QuestBentoGrid: React.FC = () => {
   const {
@@ -35,6 +35,12 @@ export const QuestBentoGrid: React.FC = () => {
     setCreateQuestOpen,
     setEditingTask,
   } = useFaeQuestStore();
+
+  const handleCompleteTask = (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    toggleTask(task.id, { x: rect.right + 10, y: rect.top });
+  };
 
   // Filter tasks based on Category, Status, and Search Query
   const filtered = tasks.filter((task) => {
@@ -336,10 +342,7 @@ export const QuestBentoGrid: React.FC = () => {
                       <motion.button
                         whileTap={{ scale: 0.94 }}
                         type="button"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          toggleTask(task.id, { x: rect.right + 10, y: rect.top });
-                        }}
+                        onClick={(e) => handleCompleteTask(task, e)}
                         className="h-8 px-3 rounded-full bg-[#06141B] border border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm hover:scale-105"
                         title="Nhấn để hoàn thành & nhận EXP"
                       >
@@ -420,10 +423,7 @@ export const QuestBentoGrid: React.FC = () => {
                       <motion.button
                         whileTap={{ scale: 0.9 }}
                         type="button"
-                        onClick={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          toggleTask(task.id, { x: rect.right + 10, y: rect.top });
-                        }}
+                        onClick={(e) => handleCompleteTask(task, e)}
                         className="w-6 h-6 rounded-lg border-2 bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] flex items-center justify-center shrink-0 transition-colors cursor-pointer text-transparent"
                         title="Nhấn để hoàn thành & nhận EXP"
                       >

@@ -23,6 +23,7 @@ import {
   RivalProfileData,
   JournalEntry,
   JournalMood,
+  RewardPopupData,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -134,6 +135,7 @@ interface FaeQuestState {
   confirmEarlyTask: { task: Task; coords?: { x: number; y: number } } | null;
   lastCompletedTimestamp: number;
   floatingRewards: FloatingRewardItem[];
+  rewardPopup: RewardPopupData | null;
   toasts: ToastMessage[];
 
   // Actions
@@ -202,6 +204,8 @@ interface FaeQuestState {
   deleteShopItem: (itemId: string) => void;
   useInventoryTicket: (ticketId: string) => void;
   grantDemoBoost: (amount?: number) => void;
+  triggerRewardPopup: (data: Omit<RewardPopupData, 'isOpen'>) => void;
+  closeRewardPopup: () => void;
   closeRankUpModal: () => void;
   setRoadmapOpen: (open: boolean) => void;
   setRenameOpen: (open: boolean) => void;
@@ -257,6 +261,7 @@ const getTodayString = () => {
 };
 
 let autoSyncTimer: any = null;
+let rewardPopupTimer: any = null;
 const debouncedAutoSync = (store: any) => {
   if (autoSyncTimer) clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(() => {
@@ -326,6 +331,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       selectedRivalForModal: null,
       isRivalModalOpen: false,
       journals: [],
+      rewardPopup: null,
       isWriteJournalOpen: false,
       editingJournal: null,
       isOathOpen: typeof window !== 'undefined' ? localStorage.getItem('faequest_oath_accepted') !== 'true' : false,
@@ -1511,6 +1517,22 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         };
         const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
 
+        const newRankIdx = getRankIndexByExp(newExp);
+        const isLevelUp = newRankIdx > oldRankIdx;
+        const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
+
+        // Kích hoạt Floating Reward & Level Up Overlay
+        get().triggerRewardPopup({
+          avatarUrl: state.avatarUrl,
+          oldExp: state.exp,
+          newExp,
+          maxExp: effectiveTier.maxExp,
+          addedExp: awardedExp,
+          addedCoins: awardedCoins,
+          isLevelUp,
+          newRankName: effectiveTier.name,
+        });
+
         if (newRankTier) {
           triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
           try {
@@ -1522,7 +1544,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
           } catch (e) { }
           playSound('rank_up', state.soundEnabled);
-          set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+          // Đợi RewardPopupOverlay phát xong 3s mới hiển thị RankUpModal chi tiết
+          setTimeout(() => {
+            set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+          }, 3200);
         } else {
           playSound(questSound, state.soundEnabled);
           get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
@@ -1552,6 +1577,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         // Task base rewards (if task is not already completed)
         const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
+        const oldRankIdx = getRankIndexByExp(state.exp);
         const streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
         const isAlreadyCompleted = Boolean(task.completed);
         const taskExp = !isAlreadyCompleted ? Math.round(diff.exp * streakBonusMultiplier) : 0;
@@ -1610,7 +1636,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             console.warn('RPC complete_task error:', e);
           }
         } else {
-          const oldRankIdx = getRankIndexByExp(state.exp);
           const newRankIdx = getRankIndexByExp(newExp);
           if (newRankIdx > oldRankIdx) {
             for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
@@ -1674,6 +1699,21 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         };
         const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
 
+        const newRankIdx = getRankIndexByExp(newExp);
+        const isLevelUp = newRankIdx > oldRankIdx;
+        const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
+
+        get().triggerRewardPopup({
+          avatarUrl: state.avatarUrl,
+          oldExp: state.exp,
+          newExp,
+          maxExp: effectiveTier.maxExp,
+          addedExp: totalExp,
+          addedCoins: totalCoins,
+          isLevelUp,
+          newRankName: effectiveTier.name,
+        });
+
         if (newRankTier) {
           try {
             confetti({
@@ -1684,7 +1724,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
           } catch (e) { }
           playSound('rank_up', state.soundEnabled);
-          set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+          setTimeout(() => {
+            set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+          }, 3200);
         } else {
           playSound(questSound, state.soundEnabled);
         }
@@ -1891,6 +1933,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           coins: newCoins,
         });
 
+        const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
+        get().triggerRewardPopup({
+          avatarUrl: state.avatarUrl,
+          oldExp: state.exp,
+          newExp,
+          maxExp: effectiveTier.maxExp,
+          addedExp: amount,
+          addedCoins: rankUpBonus,
+          isLevelUp: newRankIdx > oldRankIdx,
+          newRankName: effectiveTier.name,
+        });
+
         if (newRankTier) {
           triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
           try {
@@ -1902,12 +1956,46 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
           } catch (e) { }
           playSoundEffect('rankup', state.soundEnabled);
-          set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+          setTimeout(() => {
+            set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+          }, 3200);
         } else {
           playSoundEffect('complete', state.soundEnabled);
           get().addToast(`Đã cộng thử +${amount} EXP!`, 'success');
         }
         debouncedAutoSync(get());
+      },
+
+      triggerRewardPopup: (data: Omit<RewardPopupData, 'isOpen'>) => {
+        if (rewardPopupTimer) {
+          clearTimeout(rewardPopupTimer);
+          rewardPopupTimer = null;
+        }
+        set({
+          rewardPopup: {
+            ...data,
+            isOpen: true,
+          },
+        });
+        rewardPopupTimer = setTimeout(() => {
+          get().closeRewardPopup();
+        }, 3000);
+      },
+
+      closeRewardPopup: () => {
+        if (rewardPopupTimer) {
+          clearTimeout(rewardPopupTimer);
+          rewardPopupTimer = null;
+        }
+        const current = get().rewardPopup;
+        if (current) {
+          set({
+            rewardPopup: {
+              ...current,
+              isOpen: false,
+            },
+          });
+        }
       },
 
       closeRankUpModal: () => set({ rankUpData: null }),

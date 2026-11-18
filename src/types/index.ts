@@ -254,3 +254,15 @@ export interface HunterUser {
   email: string;
   name: string;
 }
+
+export interface RewardPopupData {
+  isOpen: boolean;
+  avatarUrl?: string;
+  oldExp: number;
+  newExp: number;
+  maxExp: number;
+  addedExp: number;
+  addedCoins: number;
+  isLevelUp: boolean;
+  newRankName?: string;
+}
