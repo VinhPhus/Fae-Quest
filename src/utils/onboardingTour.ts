@@ -169,7 +169,7 @@ export function startOnboardingTour(force = false): void {
   if (typeof window === 'undefined') return;
 
   const state = useFaeQuestStore.getState();
-  if (!force && state.hasSeenTutorial) {
+  if (!force && (state.hasSeenTutorial || state.isOathOpen)) {
     return;
   }
 
@@ -177,7 +177,9 @@ export function startOnboardingTour(force = false): void {
   isTourRunning = true;
 
   // Đảm bảo chuyển về trang Nhiệm Vụ trước khi bắt đầu để các selector DOM tồn tại
-  state.setActiveTab('quests');
+  if (state.activeTab !== 'quests') {
+    state.setActiveTab('quests');
+  }
 
   setTimeout(() => {
     try {
@@ -187,5 +189,5 @@ export function startOnboardingTour(force = false): void {
       console.warn('Error starting driver.js onboarding tour:', e);
       isTourRunning = false;
     }
-  }, 250);
+  }, 350);
 }

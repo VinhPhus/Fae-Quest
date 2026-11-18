@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   equipped_title TEXT DEFAULT 'tan-binh',
   streak INTEGER DEFAULT 0,
   completed_tasks_count INTEGER DEFAULT 0,
+  has_seen_tutorial BOOLEAN DEFAULT FALSE,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 

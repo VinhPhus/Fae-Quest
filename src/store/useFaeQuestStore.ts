@@ -1173,7 +1173,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isFocusModalOpen: false,
       editingTask: null,
       isEditQuestOpen: false,
-      hasSeenTutorial: true,
+      hasSeenTutorial: false,
       floatingRewards: [],
       toasts: [],
 
@@ -2710,7 +2710,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 hasSeenTutorial:
                   profile?.has_seen_tutorial !== undefined
                     ? Boolean(profile.has_seen_tutorial)
-                    : (s?.hasSeenTutorial !== undefined ? Boolean(s.hasSeenTutorial) : (stateRow ? true : false)),
+                    : ((profile?.completed_tasks_count || 0) > 0 || (profile?.exp || 0) > 0 || (s?.completedTotal || 0) > 0 || (s?.exp || 0) > 0)
+                    ? (s?.hasSeenTutorial !== undefined ? Boolean(s.hasSeenTutorial) : true)
+                    : false,
                 cloudSyncStatus: 'synced',
                 lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
                   hour: '2-digit',
@@ -2877,6 +2879,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             unlockedTitleIds: ['title_tan_binh_gai_do'],
             equippedTitleId: 'title_tan_binh_gai_do',
             focusSessionsCompleted: 0,
+            hasSeenTutorial: false,
           };
 
           // Save immediately to public.profiles and public.user_states
@@ -2910,6 +2913,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               unlockedTitleIds: ['title_tan_binh_gai_do'],
               equippedTitleId: 'title_tan_binh_gai_do',
               focusSessionsCompleted: 0,
+              hasSeenTutorial: false,
               isOathOpen: isAdmin ? false : true,
               cloudSyncStatus: 'synced',
               lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
@@ -2954,6 +2958,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 unlockedTitleIds: ['title_tan_binh_gai_do'],
                 equippedTitleId: 'title_tan_binh_gai_do',
                 focusSessionsCompleted: 0,
+                hasSeenTutorial: false,
                 isOathOpen: isAdmin ? false : true,
                 cloudSyncStatus: 'synced',
               });
@@ -3110,7 +3115,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               hasSeenTutorial:
                 profile?.has_seen_tutorial !== undefined
                   ? Boolean(profile.has_seen_tutorial)
-                  : (s?.hasSeenTutorial !== undefined ? Boolean(s.hasSeenTutorial) : (stateRow ? true : false)),
+                  : ((profile?.completed_tasks_count || 0) > 0 || (profile?.exp || 0) > 0 || (s?.completedTotal || 0) > 0 || (s?.exp || 0) > 0)
+                  ? (s?.hasSeenTutorial !== undefined ? Boolean(s.hasSeenTutorial) : true)
+                  : false,
               cloudSyncStatus: 'synced',
               lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
                 hour: '2-digit',

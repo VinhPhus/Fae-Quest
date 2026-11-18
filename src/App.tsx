@@ -47,6 +47,7 @@ export const App: React.FC = () => {
     initAuth,
     activeTab,
     hasSeenTutorial,
+    isOathOpen,
     bannedUntil,
     checkDailyReset,
     checkSystemMilestones,
@@ -57,15 +58,15 @@ export const App: React.FC = () => {
     initAuth();
   }, [initAuth]);
 
-  // Tự động kích hoạt chuỗi hướng dẫn tân thủ duy nhất một lần cho account mới tạo
+  // Tự động kích hoạt chuỗi hướng dẫn tân thủ duy nhất một lần cho account mới tạo sau khi hoàn tất Khế Ước Thợ Săn
   useEffect(() => {
-    if (currentUser && !authLoading && !hasSeenTutorial) {
+    if (currentUser && !authLoading && !hasSeenTutorial && !isOathOpen) {
       const timer = setTimeout(() => {
         startOnboardingTour(false);
-      }, 1500);
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [currentUser, authLoading, hasSeenTutorial]);
+  }, [currentUser, authLoading, hasSeenTutorial, isOathOpen]);
 
   useEffect(() => {
     if (currentUser) {
