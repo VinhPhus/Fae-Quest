@@ -1,21 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { SYSTEM_TITLES, resolveTitleObject } from '../../constants/systemQuests';
-import { RivalTargetBanner } from './RivalTargetBanner';
 import { playSound } from '../../utils/soundEngine';
 import {
-  Trophy,
   RefreshCw,
   Swords,
   ShieldCheck,
   Crown,
-  Award,
   Sparkles,
-  X,
-  Star,
-  Coins,
 } from 'lucide-react';
 
 interface Combatant {
@@ -65,178 +58,10 @@ const renderTitlePill = (titleName?: string) => {
   return <span className="text-[10px] sm:text-[11px] text-[#9BA8AB] truncate">{titleName}</span>;
 };
 
-/**
- * Modal Phần Thưởng Đấu Trường (Rewards Chest)
- */
-interface RewardsModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-const LeaderboardRewardsModal: React.FC<RewardsModalProps> = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ duration: 0.2 }}
-          className="relative w-full max-w-md rounded-3xl bg-[#11212D] border-2 border-[#4A5C6A] p-5 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden"
-        >
-          {/* Subtle Background Glow */}
-          <div className="absolute -top-16 -right-16 w-36 h-36 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Close Button */}
-          <button
-            type="button"
-            onClick={() => {
-              playSound('ui_click');
-              onClose();
-            }}
-            className="absolute top-4 right-4 p-2 rounded-xl bg-[#06141B] border border-[#253745] text-[#9BA8AB] hover:text-white hover:border-[#4A5C6A] transition cursor-pointer"
-            title="Đóng"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-inner shrink-0">
-              <Trophy className="w-6 h-6 text-amber-400" />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-[#CCD0CF] font-rpg tracking-wide">
-                Phần Thưởng Đấu Trường
-              </h3>
-              <p className="text-xs text-[#9BA8AB]">Quy chế vinh danh Bục Quán Quân & Bảng Xếp Hạng</p>
-            </div>
-          </div>
-
-          <p className="text-xs text-[#CCD0CF]/80 mb-4 leading-relaxed bg-[#06141B]/60 p-3 rounded-xl border border-[#253745]">
-            Vinh danh những Thợ Săn kiên trì và kỷ luật nhất. Hoàn thành nhiệm vụ mỗi ngày để thăng hạng và nhận các phần quà danh giá!
-          </p>
-
-          {/* Rewards List */}
-          <div className="space-y-2.5">
-            {/* Top 1 */}
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-500/15 via-[#11212D] to-[#11212D] border border-amber-400/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-400 text-[#06141B] font-black text-sm flex items-center justify-center shadow">
-                  <Crown className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="text-xs font-black text-amber-300 uppercase tracking-wide">
-                    Hạng #1 • Quán Quân
-                  </div>
-                  <div className="text-xs font-bold text-white">Danh hiệu: Chí Tôn Thần Khải</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-black text-amber-300 flex items-center gap-1 justify-end">
-                  <Coins className="w-3.5 h-3.5 text-amber-400" /> +500 Xu
-                </div>
-                <div className="text-[11px] font-bold text-cyan-300 flex items-center gap-1 justify-end">
-                  <Star className="w-3 h-3 text-cyan-400" /> +50 Sao
-                </div>
-              </div>
-            </div>
-
-            {/* Top 2 */}
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-300/10 via-[#11212D] to-[#11212D] border border-slate-300/40 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-slate-300 text-[#06141B] font-black text-xs flex items-center justify-center shadow">
-                  2
-                </div>
-                <div>
-                  <div className="text-xs font-black text-slate-300 uppercase tracking-wide">
-                    Hạng #2 • Á Quân
-                  </div>
-                  <div className="text-xs font-bold text-white">Danh hiệu: Đại Tướng Quân</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-black text-amber-300 flex items-center gap-1 justify-end">
-                  <Coins className="w-3.5 h-3.5 text-amber-400" /> +300 Xu
-                </div>
-                <div className="text-[11px] font-bold text-cyan-300 flex items-center gap-1 justify-end">
-                  <Star className="w-3 h-3 text-cyan-400" /> +30 Sao
-                </div>
-              </div>
-            </div>
-
-            {/* Top 3 */}
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-700/15 via-[#11212D] to-[#11212D] border border-amber-700/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-amber-700 text-white font-black text-xs flex items-center justify-center shadow">
-                  3
-                </div>
-                <div>
-                  <div className="text-xs font-black text-amber-500 uppercase tracking-wide">
-                    Hạng #3 • Quý Quân
-                  </div>
-                  <div className="text-xs font-bold text-white">Danh hiệu: Hộ Pháp Thánh Điện</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-black text-amber-300 flex items-center gap-1 justify-end">
-                  <Coins className="w-3.5 h-3.5 text-amber-400" /> +200 Xu
-                </div>
-                <div className="text-[11px] font-bold text-cyan-300 flex items-center gap-1 justify-end">
-                  <Star className="w-3 h-3 text-cyan-400" /> +20 Sao
-                </div>
-              </div>
-            </div>
-
-            {/* Top 4-10 */}
-            <div className="p-3 rounded-2xl bg-[#06141B]/70 border border-[#253745] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#253745] text-[#9BA8AB] font-black text-xs flex items-center justify-center">
-                  4-10
-                </div>
-                <div>
-                  <div className="text-xs font-black text-[#9BA8AB] uppercase tracking-wide">
-                    Top 4 – 10 • Tinh Anh
-                  </div>
-                  <div className="text-xs font-bold text-[#CCD0CF]">Danh hiệu: Bá Tước Kỷ Luật</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-black text-amber-300 flex items-center gap-1 justify-end">
-                  <Coins className="w-3.5 h-3.5 text-amber-400" /> +100 Xu
-                </div>
-                <div className="text-[11px] font-bold text-cyan-300 flex items-center gap-1 justify-end">
-                  <Star className="w-3 h-3 text-cyan-400" /> +10 Sao
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Confirm Button */}
-          <button
-            type="button"
-            onClick={() => {
-              playSound('ui_click');
-              onClose();
-            }}
-            className="w-full mt-5 py-2.5 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold uppercase tracking-wider transition cursor-pointer shadow active:scale-98"
-          >
-            Đã Hiểu
-          </button>
-        </motion.div>
-      </div>
-    </AnimatePresence>
-  );
-};
-
 export const LeaderboardHeader: React.FC = () => {
   const { userRole, syncToCloud, communityProfiles, fetchCommunityProfiles, hunterId } =
     useFaeQuestStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [isRewardsOpen, setIsRewardsOpen] = useState(false);
 
   const handleRefresh = async () => {
     playSound('ui_click');
@@ -292,20 +117,6 @@ export const LeaderboardHeader: React.FC = () => {
             </span>
           </div>
 
-          {/* Nút Phần Thưởng */}
-          <button
-            type="button"
-            onClick={() => {
-              playSound('ui_click');
-              setIsRewardsOpen(true);
-            }}
-            className="px-3.5 py-2 rounded-xl bg-[#06141B] hover:bg-[#253745] border border-amber-400/40 text-amber-300 text-xs font-bold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer"
-            title="Xem bảng quy chế và phần thưởng đấu trường"
-          >
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>Phần Thưởng</span>
-          </button>
-
           {/* Nút Làm Mới */}
           <button
             type="button"
@@ -319,12 +130,6 @@ export const LeaderboardHeader: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Target Banner */}
-      <RivalTargetBanner />
-
-      {/* Rewards Modal */}
-      <LeaderboardRewardsModal isOpen={isRewardsOpen} onClose={() => setIsRewardsOpen(false)} />
     </div>
   );
 };
@@ -733,7 +538,7 @@ export const LeaderboardTable: React.FC = () => {
       </div>
 
       {/* Danh Sách Thợ Săn Hạng #4 Trở Đi (RPG Rank Cards) */}
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 pb-20 sm:pb-24">
         <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-[#9BA8AB] flex items-center justify-between">
           <span>Hạng 4 – 50 • Đấu Thủ Trực Tiếp</span>
           <span>Điểm EXP</span>
@@ -831,23 +636,25 @@ export const LeaderboardTable: React.FC = () => {
         )}
       </div>
 
-      {/* Thanh "Hạng Của Bạn" Ghim Cố Định Ở Đáy (Sticky My Rank Bar) */}
+      {/* Thanh "Hạng Của Bạn" Ghim Sát Đáy (Docked Bottom My Rank Bar) */}
       <div
         onClick={handleScrollToMyRank}
         title="Bấm để cuộn đến vị trí của bạn trên BXH"
-        className="sticky bottom-3 z-20 mt-4 bg-[#11212D]/95 backdrop-blur-md border-2 border-[#4A5C6A] hover:border-[#9BA8AB] rounded-2xl px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.7)] flex items-center justify-between gap-3 transition-all cursor-pointer group"
+        className="sticky bottom-0 z-30 bg-[#0d1822]/98 backdrop-blur-md border-t-2 border-x border-[#4A5C6A] hover:border-[#9BA8AB] rounded-t-2xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-[0_-10px_25px_rgba(0,0,0,0.85)] flex items-center justify-between gap-3 transition-all cursor-pointer group"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+          {/* Rank Badge */}
           <div className="shrink-0 text-left">
             <div className="text-[9px] font-extrabold text-[#9BA8AB] uppercase tracking-wider">
               HẠNG CỦA BẠN
             </div>
-            <div className="text-base sm:text-lg font-black text-white font-mono">
+            <div className="text-sm sm:text-base font-black text-white font-mono">
               {myRankStats.currentRank ? `#${myRankStats.currentRank}` : '#--'}
             </div>
           </div>
 
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full ring-2 ring-cyan-400 overflow-hidden shrink-0 bg-[#06141B] flex items-center justify-center">
+          {/* User Avatar */}
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-1.5 ring-cyan-400 overflow-hidden shrink-0 bg-[#06141B] flex items-center justify-center">
             {isAvatarUrl(avatarUrl) ? (
               <img
                 src={avatarUrl!}
@@ -855,15 +662,16 @@ export const LeaderboardTable: React.FC = () => {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-lg">{avatarUrl || '🛡️'}</span>
+              <span className="text-base">{avatarUrl || '🛡️'}</span>
             )}
           </div>
 
+          {/* User Name & Target Progress */}
           <div className="min-w-0">
             <div className="text-xs sm:text-sm font-bold text-white truncate">
               {playerName}
             </div>
-            <div className="text-[11px] truncate">
+            <div className="text-[10px] sm:text-[11px] truncate">
               {userRole === 'admin' ? (
                 <span className="text-amber-300 font-semibold">
                   🛡️ Quản Trị Viên (Ẩn khỏi BXH)
@@ -899,6 +707,7 @@ export const LeaderboardTable: React.FC = () => {
           </div>
         </div>
 
+        {/* EXP Total */}
         <div className="shrink-0 text-right">
           <div className="text-[9px] font-extrabold text-[#9BA8AB] uppercase tracking-wider">
             TỔNG EXP
