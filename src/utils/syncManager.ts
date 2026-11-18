@@ -15,6 +15,7 @@ export interface HunterProfileCloud {
   streak: number;
   completed_tasks_count: number;
   role?: string;
+  has_seen_tutorial?: boolean;
   updated_at: string;
 }
 
@@ -28,6 +29,7 @@ export interface UserStateCloud {
   completedTotal: number;
   streakDays: number;
   dailyCompletedCount: number;
+  hasSeenTutorial?: boolean;
   dailyBossCompletedCount: number;
   tasks: Task[];
   shopItems: ShopItem[];
@@ -107,6 +109,7 @@ export const syncProfileAndStateToCloud = async (
         streak: state.streakDays || 0,
         completed_tasks_count: state.completedTotal || 0,
         role: detectedRole,
+        has_seen_tutorial: state.hasSeenTutorial ?? false,
         updated_at: new Date().toISOString(),
       });
 
@@ -137,6 +140,7 @@ export const syncProfileAndStateToCloud = async (
         stars: state.stars || 0,
         streak: state.streakDays || 0,
         completed_tasks_count: state.completedTotal || 0,
+        has_seen_tutorial: state.hasSeenTutorial ?? false,
         updated_at: new Date().toISOString(),
       }).eq('id', hunterId);
 

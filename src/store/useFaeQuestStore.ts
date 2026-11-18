@@ -116,6 +116,7 @@ interface FaeQuestState {
   isAddShopItemOpen: boolean;
   communityProfiles: HunterProfileCloud[];
   activePomodoroTaskId: string | null;
+  hasSeenTutorial: boolean;
   isOathOpen: boolean;
   isChangeCoverOpen: boolean;
   selectedRivalForModal: RivalProfileData | null;
@@ -216,6 +217,7 @@ interface FaeQuestState {
   equipTitle: (titleId: string) => void;
   checkSystemMilestones: () => void;
   cleanupExpiredInventory: () => void;
+  setHasSeenTutorial: (seen: boolean) => Promise<void>;
   setHunterId: (id: string) => void;
   syncToCloud: (silent?: boolean) => Promise<boolean>;
   restoreFromCloud: (targetHunterId: string) => Promise<boolean>;
@@ -1120,6 +1122,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
       isAddShopItemOpen: false,
       activePomodoroTaskId: null,
+      hasSeenTutorial: true,
       floatingRewards: [],
       toasts: [],
 
@@ -1858,6 +1861,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         set({ activePomodoroTaskId: id });
       },
 
+      setHasSeenTutorial: async (seen: boolean) => {
+        set({ hasSeenTutorial: seen });
+        const hunterId = get().currentUser?.id || get().hunterId;
+        if (hunterId) {
+          try {
+            await supabase.from('profiles').update({ has_seen_tutorial: seen }).eq('id', hunterId);
+          } catch (e) {
+            console.warn('Failed to update has_seen_tutorial to profiles:', e);
+          }
+        }
+        debouncedAutoSync(get());
+      },
+
       resetAllData: () => {
         set({
           playerName: 'Thợ Săn Fae',
@@ -2415,6 +2431,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
                 equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
                 focusSessionsCompleted: s.focusSessionsCompleted || 0,
+                hasSeenTutorial:
+                  profile?.has_seen_tutorial !== undefined
+                    ? Boolean(profile.has_seen_tutorial)
+                    : (s?.hasSeenTutorial !== undefined ? Boolean(s.hasSeenTutorial) : (stateRow ? true : false)),
                 cloudSyncStatus: 'synced',
                 lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
                   hour: '2-digit',
@@ -2472,6 +2492,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 unlockedTitleIds: ['title_tan_binh_gai_do'],
                 equippedTitleId: 'title_tan_binh_gai_do',
                 focusSessionsCompleted: 0,
+                hasSeenTutorial: false,
                 cloudSyncStatus: 'synced',
                 authLoading: false,
               });
@@ -2810,6 +2831,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
               equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
               focusSessionsCompleted: s.focusSessionsCompleted || 0,
+              hasSeenTutorial:
+                profile?.has_seen_tutorial !== undefined
+                  ? Boolean(profile.has_seen_tutorial)
+                  : (s?.hasSeenTutorial !== undefined ? Boolean(s.hasSeenTutorial) : (stateRow ? true : false)),
               cloudSyncStatus: 'synced',
               lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
@@ -2866,6 +2891,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               unlockedTitleIds: ['title_tan_binh_gai_do'],
               equippedTitleId: 'title_tan_binh_gai_do',
               focusSessionsCompleted: 0,
+              hasSeenTutorial: false,
               cloudSyncStatus: 'synced',
             });
             await get().syncToCloud(true);

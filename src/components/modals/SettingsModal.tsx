@@ -32,7 +32,9 @@ import {
   Flame,
   CloudRain,
   Radio,
+  Compass,
 } from 'lucide-react';
+import { startOnboardingTour } from '../../utils/onboardingTour';
 
 export const SettingsModal: React.FC = () => {
   const {
@@ -553,6 +555,32 @@ export const SettingsModal: React.FC = () => {
                       <div className="text-[10px] text-[#9BA8AB]">Đuốc bùng cháy & âm trầm</div>
                     </button>
                   </div>
+                </div>
+
+                {/* 📖 Hướng Dẫn & Trợ Giúp Tân Thủ */}
+                <div className="p-4 rounded-2xl bg-[#06141B] border border-[#253745] space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-cyan-400" />
+                    <h4 className="font-rpg font-bold text-xs uppercase tracking-wide text-[#CCD0CF]">
+                      Hướng Dẫn & Trợ Giúp
+                    </h4>
+                  </div>
+                  <p className="text-xs text-[#9BA8AB] leading-relaxed">
+                    Xem lại toàn bộ chuỗi hướng dẫn tương tác để nắm rõ các cơ chế nhận EXP, tích lũy Xu Vàng, Fae Focus và tự thưởng trong FaeQuest.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsOpen(false);
+                      setTimeout(() => {
+                        startOnboardingTour(true);
+                      }, 250);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl border border-[#253745] hover:border-[#4A5C6A] bg-[#11212D] hover:bg-[#253745] text-[#CCD0CF] hover:text-white font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-sm active:scale-98"
+                  >
+                    <RotateCcw className="w-4 h-4 text-amber-300" />
+                    <span>🔄 Xem Lại Hướng Dẫn Tân Thủ</span>
+                  </button>
                 </div>
               </div>
             </div>

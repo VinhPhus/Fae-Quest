@@ -224,7 +224,7 @@ export const ProfileView: React.FC = () => {
       />
 
       {/* ================= BỐ CỤC 2 CỘT NGANG (grid-cols-1 lg:grid-cols-2) ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch w-full">
+      <div id="tour-profile-stats" className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch w-full">
         {/* ================= THẺ 1: THẺ CĂN CƯỚC THỢ SĂN CÓ ẢNH BÌA & AVATAR ================= */}
         <div className="rounded-[28px] bg-[#11212D] border border-[#253745] shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[340px]">
           {/* Nút Đổi Ảnh Bìa */}

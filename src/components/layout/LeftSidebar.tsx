@@ -214,6 +214,13 @@ export const LeftSidebar: React.FC = () => {
             return (
               <button
                 key={item.id}
+                id={
+                  item.id === 'profile'
+                    ? 'tour-sidebar-profile'
+                    : item.id === 'shop'
+                    ? 'tour-sidebar-shop'
+                    : undefined
+                }
                 onClick={() => setActiveTab(item.id)}
                 title={
                   isSidebarCollapsed
@@ -332,6 +339,13 @@ export const LeftSidebar: React.FC = () => {
           return (
             <button
               key={item.id}
+              id={
+                item.id === 'profile'
+                  ? 'tour-mobile-profile'
+                  : item.id === 'shop'
+                  ? 'tour-mobile-shop'
+                  : undefined
+              }
               onClick={() => setActiveTab(item.id)}
               className={`flex flex-col items-center justify-center gap-1 py-1 px-1.5 rounded-xl transition-colors relative flex-1 min-w-0 ${
                 isActive

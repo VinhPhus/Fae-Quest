@@ -34,6 +34,7 @@ import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
 import { PAGE_VARIANTS, EASING_SPRING } from './constants/motion';
+import { startOnboardingTour } from './utils/onboardingTour';
 
 export const App: React.FC = () => {
   useRealtimeSync();
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
     authLoading,
     initAuth,
     activeTab,
+    hasSeenTutorial,
     bannedUntil,
     checkDailyReset,
     checkSystemMilestones,
@@ -52,6 +54,16 @@ export const App: React.FC = () => {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  // Tự động kích hoạt chuỗi hướng dẫn tân thủ duy nhất một lần cho account mới tạo
+  useEffect(() => {
+    if (currentUser && !authLoading && !hasSeenTutorial) {
+      const timer = setTimeout(() => {
+        startOnboardingTour(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser, authLoading, hasSeenTutorial]);
 
   useEffect(() => {
     if (currentUser) {

@@ -81,6 +81,7 @@ export const RewardShopHeader: React.FC = () => {
 
           {/* Tab 2: Túi Đồ */}
           <button
+            id="tour-inventory"
             type="button"
             onClick={() => setShopSubTab('inventory')}
             className={`px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 transition-all relative cursor-pointer ${
@@ -266,6 +267,7 @@ export const RewardShopGrid: React.FC = () => {
         {shopSubTab === 'shop' && (
           <motion.div
             key="shop-tab"
+            id="tour-shop-items"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

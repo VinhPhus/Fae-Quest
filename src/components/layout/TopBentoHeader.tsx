@@ -133,6 +133,7 @@ export const TopBentoHeader: React.FC = () => {
 
         {/* Primary CTA: + Khắc Lệnh Mới Button */}
         <button
+          id="tour-add-task"
           type="button"
           onClick={() => setCreateQuestOpen(true)}
           className="px-3.5 sm:px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_20px_rgba(204,208,207,0.2)] active:scale-95 transition cursor-pointer shrink-0"

@@ -59,7 +59,7 @@ export const QuestBentoGrid: React.FC = () => {
   const completedCount = tasks.filter((t) => t.completed).length;
 
   return (
-    <div className="space-y-4">
+    <div id="tour-task-grid" className="space-y-4">
       {/* 1. Header Toolbar: Title, Category Pills, Status & View Toggle */}
       <div className="flex flex-col gap-3">
         {/* Top Row: Title & Action Controls */}
