@@ -602,6 +602,13 @@ input[type='number'] {
   box-shadow: 0 6px 18px rgba(204, 208, 207, 0.3) !important;
 }
 
+/* Ẩn nút Quay Lại (Previous button) ở Bước 1 */
+.driver-popover.faequest-first-step .driver-popover-prev-btn,
+.driver-popover.faequest-first-step button.driver-popover-prev-btn,
+.driver-popover.faequest-first-step .driver-popover-navigation-btns button:first-child:not(.driver-popover-next-btn) {
+  display: none !important;
+}
+
 /* Arrows pointing to spotlight */
 .driver-popover.faequest-tour-popover .driver-popover-arrow-side-left {
   border-left-color: #11212D !important;

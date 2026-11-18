@@ -77,6 +77,19 @@ export function getOnboardingTourDriver(): Driver {
       }
     },
 
+    onPopoverRender: (popover, { state }) => {
+      // Ở Bước 1 (activeIndex === 0), ẩn nút "Quay Lại" vì đây là bước khởi đầu
+      if (state.activeIndex === 0) {
+        if (popover.previousButton) {
+          popover.previousButton.style.display = 'none';
+        }
+      } else {
+        if (popover.previousButton) {
+          popover.previousButton.style.display = '';
+        }
+      }
+    },
+
     onDestroyStarted: () => {
       markTutorialAsSeen();
       if (tourDriver) {
@@ -111,6 +124,8 @@ export function getOnboardingTourDriver(): Driver {
           side: 'bottom',
           align: 'center',
           nextBtnText: 'Khám Phá Ngay ➔',
+          showButtons: ['next'],
+          popoverClass: 'faequest-tour-popover faequest-first-step',
         },
       },
 
