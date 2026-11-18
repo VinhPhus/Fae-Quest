@@ -51,7 +51,7 @@ export const CreateQuestDrawer: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full max-w-lg rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[90vh]"
+            className="w-[94vw] max-w-lg rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[86vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

@@ -70,7 +70,7 @@ export const FocusFloatingBar: React.FC = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 28, scale: 0.94 }}
           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 sm:max-w-md w-auto bg-[#11212D]/95 backdrop-blur-md rounded-[24px] border border-[#4A5C6A] shadow-[0_12px_40px_rgba(0,0,0,0.6)] p-3 sm:p-3.5 overflow-hidden group select-none"
+          className="fixed bottom-[138px] right-3 left-3 md:left-auto md:bottom-6 md:right-6 z-50 sm:max-w-md w-auto bg-[#11212D]/95 backdrop-blur-md rounded-[24px] border border-[#4A5C6A] shadow-[0_12px_40px_rgba(0,0,0,0.6)] p-3 sm:p-3.5 overflow-hidden group select-none"
         >
           {/* Subtle timer progress bar at top edge */}
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#253745]">

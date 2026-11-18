@@ -155,12 +155,12 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="thorn-pattern antialiased min-h-screen md:h-screen md:overflow-hidden selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row bg-[#06141B]">
+    <div className="thorn-pattern antialiased min-h-screen md:h-screen md:overflow-hidden selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row bg-[#06141B] overflow-x-hidden max-w-[100vw]">
       {/* 1. Collapsible Left Sidebar on Desktop / Bottom Navigation on Mobile */}
       <LeftSidebar />
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 min-w-0 flex flex-col h-auto md:h-screen overflow-visible md:overflow-hidden bg-[#06141B]">
+      <div className="flex-1 min-w-0 flex flex-col h-auto md:h-screen overflow-visible md:overflow-hidden bg-[#06141B] overflow-x-hidden max-w-[100vw]">
         {/* Phân vùng 1: Top Sticky Section (Hồ Sơ & Header - Giữ cố định trên Desktop) */}
         <motion.header
           initial={{ y: -16, opacity: 0 }}

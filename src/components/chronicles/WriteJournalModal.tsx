@@ -146,7 +146,7 @@ export const WriteJournalModal: React.FC = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 16 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="max-w-[700px] w-full max-h-[90vh] overflow-y-auto bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto scroll-smooth no-scrollbar"
+          className="w-[94vw] max-w-[700px] max-h-[86vh] overflow-y-auto bg-[#11212D] border border-[#253745] rounded-[32px] p-4 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto scroll-smooth no-scrollbar"
         >
           {/* Subtle Ambient Light Glow */}
           <div className="absolute top-0 right-1/4 w-72 h-32 bg-[#4A5C6A]/10 rounded-full blur-3xl pointer-events-none" />

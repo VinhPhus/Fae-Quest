@@ -85,7 +85,7 @@ export const LeftSidebar: React.FC = () => {
     {
       id: 'leaderboard',
       label: 'Đấu Trường BXH',
-      mobileLabel: 'BXH',
+      mobileLabel: 'Đấu Trường',
       icon: <Trophy className="w-5 h-5 shrink-0" />,
     },
     {
@@ -125,6 +125,11 @@ export const LeftSidebar: React.FC = () => {
         ]
       : []),
   ];
+
+  // 5 tab chính chuẩn Mobile Bottom Navigation
+  const mobileBottomMenuItems = menuItems.filter(
+    (item) => item.id !== 'system-quests' && item.id !== 'admin'
+  );
 
   return (
     <>
@@ -332,9 +337,9 @@ export const LeftSidebar: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: EASING_SPRING }}
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-[#11212D]/95 backdrop-blur-lg border-t border-[#253745] px-2 py-1 flex items-center justify-around shadow-2xl"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#06141B] border-t border-[#253745] px-2 py-1 flex items-center justify-around shadow-2xl pb-[env(safe-area-inset-bottom)]"
       >
-        {menuItems.map((item) => {
+        {mobileBottomMenuItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
@@ -347,7 +352,7 @@ export const LeftSidebar: React.FC = () => {
                   : undefined
               }
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-1.5 rounded-xl transition-colors relative flex-1 min-w-0 ${
+              className={`flex flex-col items-center justify-center gap-1 py-1 px-1.5 rounded-xl transition-colors relative flex-1 min-w-0 min-h-[48px] ${
                 isActive
                   ? 'text-[#CCD0CF] font-bold'
                   : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
@@ -413,8 +418,26 @@ export const LeftSidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Quick Action Buttons (Hộp Thư, Khế Ước & Cài Đặt) */}
+        {/* Right: Quick Action Buttons (Thành Tựu, Hộp Thư, Khế Ước & Cài Đặt) */}
         <div className="flex items-center gap-1.5">
+          {/* Quick Access: Thành Tựu (System Quests) */}
+          <button
+            onClick={() => setActiveTab('system-quests')}
+            className={`p-1.5 rounded-lg border transition shadow-sm relative cursor-pointer ${
+              activeTab === 'system-quests'
+                ? 'bg-[#253745] border-[#4A5C6A] text-[#CCD0CF]'
+                : 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF]'
+            }`}
+            title="Thành Tựu & Khế Ước"
+          >
+            <Award className="w-4 h-4" />
+            {actionableSystemQuestsCount > 0 && (
+              <span className="absolute -top-1 -right-1 px-1 py-0.2 rounded-full text-[8px] font-extrabold bg-[#CCD0CF] text-[#06141B] shadow-sm">
+                {actionableSystemQuestsCount}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={() => setUserInboxOpen(true)}
             className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm relative cursor-pointer"
@@ -428,7 +451,7 @@ export const LeftSidebar: React.FC = () => {
 
           <button
             onClick={() => setOathOpen(true)}
-            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm"
+            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm cursor-pointer"
             title="Khế Ước Thợ Săn"
           >
             <Scroll className="w-4 h-4" />
@@ -436,7 +459,7 @@ export const LeftSidebar: React.FC = () => {
 
           <button
             onClick={() => setSettingsOpen(true)}
-            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm"
+            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm cursor-pointer"
             title="Cài Đặt Hệ Thống"
           >
             <Settings className="w-4 h-4 text-[#CCD0CF]" />

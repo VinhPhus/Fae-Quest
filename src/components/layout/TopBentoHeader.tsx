@@ -140,6 +140,7 @@ export const TopBentoHeader: React.FC = () => {
           title="Tạo Nhiệm Vụ Mới"
         >
           <Plus className="w-4 h-4 text-[#06141B] stroke-[3]" />
+          <span className="sm:hidden">Lệnh</span>
           <span className="hidden sm:inline">Khắc Lệnh Mới</span>
         </button>
       </div>

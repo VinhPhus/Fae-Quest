@@ -128,7 +128,7 @@ export const RivalProfileModal: React.FC = () => {
           exit={{ opacity: 0, scale: 0.94, y: 8 }}
           transition={{ duration: 0.28, ease: EASING_SPRING }}
           onClick={(e) => e.stopPropagation()}
-          className="max-w-[400px] w-full bg-[#11212D] border border-[#253745] rounded-[32px] p-4 shadow-[0_24px_60px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden max-h-[92vh] overflow-y-auto no-scrollbar"
+          className="w-[94vw] max-w-[400px] bg-[#11212D] border border-[#253745] rounded-[32px] p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden max-h-[86vh] overflow-y-auto no-scrollbar"
         >
           {/* Phần 1 — Ảnh Bìa Lọt Lòng & Nút Đóng (Inset Cover Banner) */}
           <div className="h-36 w-full rounded-[22px] overflow-hidden relative bg-[#06141B] shrink-0 border border-[#253745]">
