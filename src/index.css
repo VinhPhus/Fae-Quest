@@ -435,8 +435,20 @@ input[type='number'] {
    DRIVER.JS DARK FANTASY CUSTOM THEME (Obsidian & Steel)
    ============================================================================== */
 .driver-overlay {
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Ép phần tử đang được hướng dẫn nổi lên trên cùng */
+.driver-active-element {
+  position: relative !important;
+  z-index: 100000 !important;
+  background-color: transparent; /* Giữ nguyên màu nền gốc của phần tử */
+}
+
+/* Đảm bảo Khung thoại (Popover) nằm cao nhất */
+.driver-popover {
+  z-index: 100005 !important;
 }
 
 .driver-popover.faequest-tour-popover {
@@ -452,7 +464,7 @@ input[type='number'] {
   min-width: 280px !important;
   font-family: inherit !important;
   position: fixed !important;
-  z-index: 1000000000 !important;
+  z-index: 100005 !important;
   animation: tourFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
@@ -461,6 +473,7 @@ input[type='number'] {
     opacity: 0;
     transform: scale(0.96) translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -574,12 +587,15 @@ input[type='number'] {
 .driver-popover.faequest-tour-popover .driver-popover-arrow-side-left {
   border-left-color: #11212D !important;
 }
+
 .driver-popover.faequest-tour-popover .driver-popover-arrow-side-right {
   border-right-color: #11212D !important;
 }
+
 .driver-popover.faequest-tour-popover .driver-popover-arrow-side-top {
   border-top-color: #11212D !important;
 }
+
 .driver-popover.faequest-tour-popover .driver-popover-arrow-side-bottom {
   border-bottom-color: #11212D !important;
 }

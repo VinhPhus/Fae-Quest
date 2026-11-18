@@ -34,7 +34,7 @@ export function getOnboardingTourDriver(): Driver {
   tourDriver = driver({
     animate: true,
     overlayColor: '#06141B',
-    overlayOpacity: 0.85,
+    overlayOpacity: 0.9,
     smoothScroll: true,
     stagePadding: 8,
     stageRadius: 16,
