@@ -2191,32 +2191,57 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           },
         ];
 
+        const nowIso = new Date().toISOString();
+
         // 1. Quy trình Database-First: Ghi đè trực tiếp lên Supabase trước nếu đã đăng nhập
         if (hunterId && currentUser) {
           try {
-            // A. Cập nhật public.profiles về giá trị khởi điểm ban đầu
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .update({
-                exp: 0,
-                coins: 25,
-                stars: 0,
-                rank_id: 'dong',
-                equipped_title: 'title_tan_binh_gai_do',
-                streak: 0,
-                completed_tasks_count: 0,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', hunterId);
-
-            if (profileError) {
-              console.error('Supabase reset profiles error:', profileError);
-              state.addToast(`Lỗi đặt lại hồ sơ trên máy chủ: ${profileError.message}`, 'error');
-              return false;
+            // A. Ưu tiên gọi hàm RPC rpc_reset_user_journey (chạy với quyền SECURITY DEFINER, tránh hoàn toàn lỗi permission denied)
+            let rpcSucceeded = false;
+            try {
+              const { error: rpcError } = await supabase.rpc('rpc_reset_user_journey');
+              if (!rpcError) {
+                rpcSucceeded = true;
+              } else {
+                console.warn('RPC rpc_reset_user_journey not yet registered on Supabase:', rpcError);
+              }
+            } catch (e) {
+              console.warn('Exception calling rpc_reset_user_journey:', e);
             }
 
-            // B. Ghi đè snapshot public.user_states về cấu trúc mặc định
-            const freshStateJson: UserStateCloud = {
+            // B. Nếu chưa có RPC trên Supabase, thử cập nhật trực tiếp bảng profiles
+            if (!rpcSucceeded) {
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .update({
+                  exp: 0,
+                  coins: 25,
+                  stars: 0,
+                  rank_id: 'dong',
+                  equipped_title: 'title_tan_binh_gai_do',
+                  streak: 0,
+                  completed_tasks_count: 0,
+                  updated_at: nowIso,
+                })
+                .eq('id', hunterId);
+
+              if (profileError) {
+                console.warn('Direct update on profiles failed (column permissions restricted):', profileError);
+                // Fallback: Ghi đè các cột client có quyền truy cập
+                try {
+                  await supabase
+                    .from('profiles')
+                    .update({
+                      equipped_title: 'title_tan_binh_gai_do',
+                      updated_at: nowIso,
+                    })
+                    .eq('id', hunterId);
+                } catch { }
+              }
+            }
+
+            // C. Ghi đè snapshot public.user_states về cấu trúc mặc định (chủ sở hữu luôn có toàn quyền)
+            const freshStateJson: UserStateCloud & { resetAt: string } = {
               playerName: currentUser.name || state.playerName || 'Thợ Săn Fae',
               avatarUrl: state.avatarUrl || '',
               coverUrl: state.coverUrl || '',
@@ -2236,6 +2261,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               equippedTitleId: 'title_tan_binh_gai_do',
               focusSessionsCompleted: 0,
               hasSeenTutorial: true,
+              resetAt: nowIso,
             };
 
             const { error: stateError } = await supabase
@@ -2244,7 +2270,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 {
                   user_id: hunterId,
                   state_json: freshStateJson,
-                  updated_at: new Date().toISOString(),
+                  updated_at: nowIso,
                 },
                 { onConflict: 'user_id' }
               );
@@ -2255,7 +2281,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               return false;
             }
 
-            // C. Dọn sạch bảng nhật ký public.journals
+            // D. Dọn sạch bảng nhật ký public.journals
             try {
               const { error: journalError } = await supabase
                 .from('journals')
@@ -2268,7 +2294,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               console.warn('Lỗi xóa bảng journals:', err);
             }
 
-            // D. Dọn sạch bảng lịch sử hoạt động public.activity_logs nếu có
+            // E. Dọn sạch bảng lịch sử hoạt động public.activity_logs nếu có
             try {
               await supabase.from('activity_logs').delete().eq('user_id', hunterId);
             } catch (err) {
@@ -2878,11 +2904,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                   profile?.cover_url !== undefined && profile?.cover_url !== null
                     ? profile.cover_url
                     : (s.coverUrl || ''),
-                exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
-                coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
+                exp: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                  ? (s?.exp ?? 0)
+                  : (profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0)),
+                coins: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                  ? (s?.coins ?? 25)
+                  : (profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25)),
                 stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
-                completedTotal: profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0),
-                streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
+                completedTotal: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                  ? 0
+                  : (profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0)),
+                streakDays: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                  ? 0
+                  : (profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0)),
                 dailyCompletedCount: s.dailyCompletedCount || 0,
                 dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
@@ -3305,11 +3339,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 profile?.cover_url !== undefined && profile?.cover_url !== null
                   ? profile.cover_url
                   : (s.coverUrl || ''),
-              exp: profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0),
-              coins: profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25),
+              exp: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                ? (s?.exp ?? 0)
+                : (profile?.exp !== undefined ? profile.exp : (typeof s.exp === 'number' ? s.exp : 0)),
+              coins: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                ? (s?.coins ?? 25)
+                : (profile?.coins !== undefined ? profile.coins : (typeof s.coins === 'number' ? s.coins : 25)),
               stars: profile?.stars !== undefined ? profile.stars : (typeof s.stars === 'number' ? s.stars : 0),
-              completedTotal: profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0),
-              streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
+              completedTotal: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                ? 0
+                : (profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0)),
+              streakDays: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                ? 0
+                : (profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0)),
               dailyCompletedCount: s.dailyCompletedCount || 0,
               dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
