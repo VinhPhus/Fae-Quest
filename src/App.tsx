@@ -6,7 +6,7 @@ import { LeftSidebar } from './components/layout/LeftSidebar';
 import { TopBentoHeader } from './components/layout/TopBentoHeader';
 import { ProfileHeader, ProfileView } from './components/profile/ProfileView';
 import { QuestBentoGrid } from './components/bento/QuestBentoGrid';
-import { FocusDock } from './components/bento/FocusDock';
+import { FocusFloatingBar } from './components/quests/FocusFloatingBar';
 import { RightMiniLeaderboardStrip } from './components/bento/RightMiniLeaderboardStrip';
 import { CreateQuestDrawer } from './components/modals/CreateQuestDrawer';
 import { SystemQuestsHeader, SystemQuestsView } from './components/system-quests/SystemQuestsView';
@@ -186,9 +186,6 @@ export const App: React.FC = () => {
                   <section className="space-y-5 sm:space-y-6">
                     {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
                     <QuestBentoGrid />
-
-                    {/* Thanh Dock Đáy — Phiên Tập Trung Tiêu Điểm */}
-                    <FocusDock />
                   </section>
                 )}
 
@@ -263,6 +260,9 @@ export const App: React.FC = () => {
       <AdminWarningModal />
       <ChangeCoverModal />
       <RivalProfileModal />
+
+      {/* Global Focus Floating Bar */}
+      <FocusFloatingBar />
 
       {/* Interactive FX */}
       <FloatingReward />

@@ -41,7 +41,7 @@ import {
   resolveTitleObject,
 } from '../constants/systemQuests';
 import { playSoundEffect } from '../utils/soundEffects';
-import { playSound, setMasterVolume, stopFocusAmbient, AmbientType } from '../utils/soundEngine';
+import { playSound, setMasterVolume, startFocusAmbient, stopFocusAmbient, AmbientType } from '../utils/soundEngine';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import {
   syncProfileAndStateToCloud,
@@ -116,6 +116,11 @@ interface FaeQuestState {
   isAddShopItemOpen: boolean;
   communityProfiles: HunterProfileCloud[];
   activePomodoroTaskId: string | null;
+  activeFocusTaskId: string | null;
+  isFocusRunning: boolean;
+  focusTimeLeft: number;
+  focusTargetMinutes: number;
+  isFocusModalOpen: boolean;
   hasSeenTutorial: boolean;
   isOathOpen: boolean;
   isChangeCoverOpen: boolean;
@@ -207,6 +212,14 @@ interface FaeQuestState {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setAddShopItemOpen: (open: boolean) => void;
   setActivePomodoroTaskId: (id: string | null) => void;
+  startFocusForTask: (taskId: string, durationMinutes?: number) => void;
+  toggleFocusRunning: () => void;
+  setFocusRunning: (running: boolean) => void;
+  setFocusTimeLeft: (seconds: number) => void;
+  setFocusTargetMinutes: (minutes: number) => void;
+  tickFocusTimer: () => void;
+  cancelFocus: () => void;
+  setFocusModalOpen: (open: boolean) => void;
   resetAllData: () => void;
   addToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   removeToast: (id: string) => void;
@@ -1122,6 +1135,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
       isAddShopItemOpen: false,
       activePomodoroTaskId: null,
+      activeFocusTaskId: null,
+      isFocusRunning: false,
+      focusTimeLeft: 25 * 60,
+      focusTargetMinutes: 25,
+      isFocusModalOpen: false,
       hasSeenTutorial: true,
       floatingRewards: [],
       toasts: [],
@@ -1445,6 +1463,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       deleteTask: (id: string) => {
+        if (get().activeFocusTaskId === id || get().activePomodoroTaskId === id) {
+          get().cancelFocus();
+        }
         set((prev) => ({
           tasks: prev.tasks.filter((t) => t.id !== id),
         }));
@@ -1544,6 +1565,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           exp: newExp,
           coins: finalCoins,
           activePomodoroTaskId: null,
+          activeFocusTaskId: null,
+          isFocusRunning: false,
+          isFocusModalOpen: false,
           completedTotal: !isAlreadyCompleted ? prev.completedTotal + 1 : prev.completedTotal,
           dailyCompletedCount: !isAlreadyCompleted ? prev.dailyCompletedCount + 1 : prev.dailyCompletedCount,
           dailyBossCompletedCount:
@@ -1856,9 +1880,105 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setAddShopItemOpen: (open: boolean) => set({ isAddShopItemOpen: open }),
       setActivePomodoroTaskId: (id: string | null) => {
         if (!id) {
-          stopFocusAmbient(0);
+          get().cancelFocus();
+        } else {
+          get().startFocusForTask(id);
         }
-        set({ activePomodoroTaskId: id });
+      },
+
+      startFocusForTask: (taskId: string, durationMinutes?: number) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        const targetMin = durationMinutes || task.focusDuration || 25;
+        if (!task.focusDuration) {
+          get().updateTaskFocusDuration(taskId, targetMin);
+        }
+        set({
+          activeFocusTaskId: taskId,
+          activePomodoroTaskId: taskId,
+          focusTargetMinutes: targetMin,
+          focusTimeLeft: targetMin * 60,
+          isFocusRunning: true,
+          isFocusModalOpen: false,
+        });
+        const { soundEnabled, soundVolume, focusAmbient } = get();
+        if (soundEnabled && focusAmbient !== 'off') {
+          startFocusAmbient(focusAmbient, soundVolume);
+        }
+      },
+
+      toggleFocusRunning: () => {
+        const nextState = !get().isFocusRunning;
+        set({ isFocusRunning: nextState });
+        const { soundEnabled, soundVolume, focusAmbient } = get();
+        if (nextState && soundEnabled && focusAmbient !== 'off') {
+          startFocusAmbient(focusAmbient, soundVolume);
+        } else if (!nextState) {
+          stopFocusAmbient(0.3);
+        }
+      },
+
+      setFocusRunning: (running: boolean) => {
+        set({ isFocusRunning: running });
+        const { soundEnabled, soundVolume, focusAmbient } = get();
+        if (running && soundEnabled && focusAmbient !== 'off') {
+          startFocusAmbient(focusAmbient, soundVolume);
+        } else if (!running) {
+          stopFocusAmbient(0.3);
+        }
+      },
+
+      setFocusTimeLeft: (seconds: number) => {
+        set({ focusTimeLeft: seconds });
+      },
+
+      setFocusTargetMinutes: (minutes: number) => {
+        const clean = Math.min(180, Math.max(5, minutes));
+        set({
+          focusTargetMinutes: clean,
+          focusTimeLeft: clean * 60,
+        });
+        const activeId = get().activeFocusTaskId;
+        if (activeId) {
+          get().updateTaskFocusDuration(activeId, clean);
+        }
+      },
+
+      tickFocusTimer: () => {
+        const { focusTimeLeft, activeFocusTaskId, focusTargetMinutes, soundEnabled } = get();
+        if (!activeFocusTaskId) return;
+
+        if (focusTimeLeft <= 1) {
+          stopFocusAmbient(0);
+          playSound('quest_easy', soundEnabled);
+          const task = get().tasks.find((t) => t.id === activeFocusTaskId);
+          if (task) {
+            get().completePomodoro(task.id, focusTargetMinutes, focusTargetMinutes);
+          }
+          set({
+            activeFocusTaskId: null,
+            activePomodoroTaskId: null,
+            isFocusRunning: false,
+            focusTimeLeft: 0,
+            isFocusModalOpen: false,
+          });
+        } else {
+          set({ focusTimeLeft: focusTimeLeft - 1 });
+        }
+      },
+
+      cancelFocus: () => {
+        stopFocusAmbient(0);
+        set({
+          activeFocusTaskId: null,
+          activePomodoroTaskId: null,
+          isFocusRunning: false,
+          isFocusModalOpen: false,
+        });
+      },
+
+      setFocusModalOpen: (open: boolean) => {
+        set({ isFocusModalOpen: open });
       },
 
       setHasSeenTutorial: async (seen: boolean) => {
