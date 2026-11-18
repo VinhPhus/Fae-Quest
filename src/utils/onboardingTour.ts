@@ -128,6 +128,12 @@ export function getOnboardingTourDriver(): Driver {
           side: 'bottom',
           align: 'center',
           doneBtnText: 'Bắt Đầu Chiến Đấu ⚔️',
+          onNextClick: () => {
+            completeOnboardingTour();
+            if (tourDriver) {
+              tourDriver.destroy();
+            }
+          },
         },
       },
     ],
@@ -142,11 +148,8 @@ export function getOnboardingTourDriver(): Driver {
       }
     },
 
-    onDestroyStarted: () => {
-      completeOnboardingTour();
-    },
-
     onDestroyed: () => {
+      completeOnboardingTour();
       isTourRunning = false;
       // Trả lại activeTab là quests cho người dùng
       if (useFaeQuestStore.getState().activeTab !== 'quests') {

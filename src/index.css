@@ -439,16 +439,27 @@ input[type='number'] {
   -webkit-backdrop-filter: none !important;
 }
 
-/* Ép phần tử đang được hướng dẫn nổi lên trên cùng */
-.driver-active-element {
+/* Chiếu sáng phần tử đang được hướng dẫn: Tỏa sáng rực rỡ như thông báo */
+.driver-active-element:not(#driver-dummy-element) {
   position: relative !important;
   z-index: 100000 !important;
-  background-color: transparent; /* Giữ nguyên màu nền gốc của phần tử */
+  box-shadow: 0 0 0 2px #CCD0CF,
+              0 0 25px rgba(204, 208, 207, 0.6),
+              0 0 50px rgba(74, 92, 106, 0.4) !important;
+  filter: brightness(1.15) !important;
+  transition: box-shadow 0.25s ease, filter 0.25s ease !important;
 }
 
-/* Đảm bảo Khung thoại (Popover) nằm cao nhất */
+#driver-dummy-element {
+  display: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Đảm bảo Khung thoại (Popover) nằm cao nhất và nhận click */
 .driver-popover {
   z-index: 100005 !important;
+  pointer-events: auto !important;
 }
 
 .driver-popover.faequest-tour-popover {
@@ -465,6 +476,7 @@ input[type='number'] {
   font-family: inherit !important;
   position: fixed !important;
   z-index: 100005 !important;
+  pointer-events: auto !important;
   animation: tourFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
@@ -533,6 +545,9 @@ input[type='number'] {
   right: 14px !important;
   font-size: 16px !important;
   transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  z-index: 20 !important;
+  user-select: none !important;
 }
 
 .driver-popover.faequest-tour-popover .driver-popover-close-btn:hover {
@@ -561,6 +576,10 @@ input[type='number'] {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 10 !important;
+  user-select: none !important;
 }
 
 .driver-popover.faequest-tour-popover .driver-popover-footer-btn:hover {
