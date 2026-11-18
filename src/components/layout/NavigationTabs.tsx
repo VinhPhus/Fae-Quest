@@ -1,10 +1,10 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
-import { CheckSquare, ShoppingBag, Trophy, Backpack, BookOpen, BarChart2 } from 'lucide-react';
+import { CheckSquare, ShoppingBag, Trophy, BookOpen, Award, User } from 'lucide-react';
 
 export const NavigationTabs: React.FC = () => {
-  const { activeTab, setActiveTab, tasks, inventory } = useFaeQuestStore();
+  const { activeTab, setActiveTab, tasks, inventory, systemQuests } = useFaeQuestStore();
 
   const pendingCount = tasks.filter((t) => !t.completed).length;
   const now = Date.now();
@@ -12,17 +12,17 @@ export const NavigationTabs: React.FC = () => {
     (i) => !i.used && (!i.expiresAt || i.expiresAt > now)
   ).length;
 
+  const actionableSystemQuestsCount = (systemQuests || []).filter((q) => {
+    if (q.isCompleted && !q.isRewardClaimed) return true;
+    return false;
+  }).length;
+
   const tabs: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     {
       id: 'quests',
-      label: 'Bảng Nhiệm Vụ',
+      label: 'Nhiệm Vụ',
       icon: <CheckSquare className="w-4 h-4" />,
       badge: pendingCount,
-    },
-    {
-      id: 'shop',
-      label: 'Cửa Hàng Tự Thưởng',
-      icon: <ShoppingBag className="w-4 h-4" />,
     },
     {
       id: 'leaderboard',
@@ -30,10 +30,10 @@ export const NavigationTabs: React.FC = () => {
       icon: <Trophy className="w-4 h-4" />,
     },
     {
-      id: 'inventory',
-      label: 'Túi Đồ',
-      icon: <Backpack className="w-4 h-4" />,
-      badge: validUnusedInventoryCount,
+      id: 'shop',
+      label: 'Cửa Hàng & Túi Đồ',
+      icon: <ShoppingBag className="w-4 h-4" />,
+      badge: validUnusedInventoryCount > 0 ? validUnusedInventoryCount : undefined,
     },
     {
       id: 'chronicles',
@@ -41,9 +41,15 @@ export const NavigationTabs: React.FC = () => {
       icon: <BookOpen className="w-4 h-4" />,
     },
     {
-      id: 'analytics',
-      label: 'Thống Kê Năng Suất',
-      icon: <BarChart2 className="w-4 h-4" />,
+      id: 'system-quests',
+      label: 'Thành Tựu',
+      icon: <Award className="w-4 h-4" />,
+      badge: actionableSystemQuestsCount > 0 ? actionableSystemQuestsCount : undefined,
+    },
+    {
+      id: 'profile',
+      label: 'Hồ Sơ',
+      icon: <User className="w-4 h-4" />,
     },
   ];
 

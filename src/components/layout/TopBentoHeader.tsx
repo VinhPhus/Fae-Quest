@@ -65,7 +65,7 @@ export const TopBentoHeader: React.FC = () => {
             type="button"
             onClick={() => setActiveTab('admin')}
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-amber-600/10 border border-amber-500/40 hover:border-amber-400 text-[11px] font-extrabold text-amber-300 shadow-sm transition hover:scale-105 cursor-pointer"
-            title="Đặc quyền Quản Trị Viên (Admin). Bấm để truy cập Admin Live-Ops Portal"
+            title="Đặc quyền Quản Trị Viên (Admin). Bấm để truy cập Bảng Quản Trị Hệ Thống"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span>BAN QUẢN TRỊ</span>

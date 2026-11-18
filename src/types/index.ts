@@ -107,6 +107,7 @@ export type ActiveTab =
   | 'inventory'
   | 'chronicles'
   | 'analytics'
+  | 'profile'
   | 'admin';
 
 export type JournalMood = 'Tuyệt vời' | 'Tốt' | 'Bình thường' | 'Căng thẳng' | 'Tệ';

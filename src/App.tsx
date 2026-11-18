@@ -4,7 +4,7 @@ import { useFaeQuestStore } from './store/useFaeQuestStore';
 import { AuthScreen } from './components/auth/AuthScreen';
 import { LeftSidebar } from './components/layout/LeftSidebar';
 import { TopBentoHeader } from './components/layout/TopBentoHeader';
-import { HeroBentoBanner } from './components/bento/HeroBentoBanner';
+import { ProfileHeader, ProfileView } from './components/profile/ProfileView';
 import { QuestBentoGrid } from './components/bento/QuestBentoGrid';
 import { FocusDock } from './components/bento/FocusDock';
 import { RightMiniLeaderboardStrip } from './components/bento/RightMiniLeaderboardStrip';
@@ -142,13 +142,12 @@ export const App: React.FC = () => {
             {/* Top Bento Header with Greeting, Search, and Quick Actions */}
             <TopBentoHeader />
 
-            {/* Dedicated Top Profile / Banner per Active Tab */}
-            {activeTab === 'quests' && <HeroBentoBanner />}
+            {/* Dedicated Top Profile / Banner per Active Tab (Quests is streamlined, no huge card) */}
             {activeTab === 'system-quests' && <SystemQuestsHeader />}
-            {activeTab === 'shop' && <RewardShopHeader />}
+            {(activeTab === 'shop' || activeTab === 'inventory') && <RewardShopHeader />}
             {activeTab === 'leaderboard' && <LeaderboardHeader />}
-            {activeTab === 'inventory' && <InventoryHeader />}
             {activeTab === 'chronicles' && <ChroniclesHeader />}
+            {activeTab === 'profile' && <ProfileHeader />}
             {activeTab === 'analytics' && <ProductivityAnalyticsHeader />}
             {activeTab === 'admin' && <AdminPortalHeader />}
           </div>
@@ -170,7 +169,7 @@ export const App: React.FC = () => {
                 animate="animate"
                 exit="exit"
               >
-                {/* Tab 1: Bento Dashboard (Quests Module) */}
+                {/* Tab 1: Bento Dashboard (Quests Module) - Streamlined, elevated task grid */}
                 {activeTab === 'quests' && (
                   <section className="space-y-5 sm:space-y-6">
                     {/* Nhiệm Vụ Chinh Phục (Lưới Thẻ Bento) */}
@@ -181,42 +180,42 @@ export const App: React.FC = () => {
                   </section>
                 )}
 
-                {/* Tab: System Quests & Titles Module */}
-                {activeTab === 'system-quests' && (
-                  <section>
-                    <SystemQuestsView />
-                  </section>
-                )}
-
-                {/* Tab 2: Shop Module */}
-                {activeTab === 'shop' && (
-                  <section>
-                    <RewardShopGrid />
-                  </section>
-                )}
-
-                {/* Tab 3: Leaderboard Module */}
+                {/* Tab 2: Leaderboard Module */}
                 {activeTab === 'leaderboard' && (
                   <section>
                     <LeaderboardTable />
                   </section>
                 )}
 
-                {/* Tab 4: Inventory Module */}
-                {activeTab === 'inventory' && (
+                {/* Tab 3: Unified Shop & Inventory Module */}
+                {(activeTab === 'shop' || activeTab === 'inventory') && (
                   <section>
-                    <InventoryList />
+                    <RewardShopGrid />
                   </section>
                 )}
 
-                {/* Tab: Hunter Chronicles Module */}
+                {/* Tab 4: Hunter Chronicles Module */}
                 {activeTab === 'chronicles' && (
                   <section>
                     <ChroniclesView />
                   </section>
                 )}
 
-                {/* Tab 5: Analytics Module */}
+                {/* Tab 5: System Quests & Titles Module */}
+                {activeTab === 'system-quests' && (
+                  <section>
+                    <SystemQuestsView />
+                  </section>
+                )}
+
+                {/* Tab 6: Profile & Reputation Module */}
+                {activeTab === 'profile' && (
+                  <section>
+                    <ProfileView />
+                  </section>
+                )}
+
+                {/* Fallback Tab: Analytics Module */}
                 {activeTab === 'analytics' && (
                   <section>
                     <ProductivityAnalytics />

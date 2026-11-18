@@ -100,6 +100,7 @@ interface FaeQuestState {
 
   // UI state
   activeTab: ActiveTab;
+  shopSubTab: 'shop' | 'inventory';
   activeCategoryFilter: string;
   activeStatusFilter: string;
   rankUpData: { achievedTier: RankTier; bonusCoins: number } | null;
@@ -175,6 +176,7 @@ interface FaeQuestState {
   setSoundVolume: (volume: number) => void;
   setFocusAmbient: (ambient: AmbientType) => void;
   setActiveTab: (tab: ActiveTab) => void;
+  setShopSubTab: (subTab: 'shop' | 'inventory') => void;
   setCategoryFilter: (cat: string) => void;
   setStatusFilter: (status: string) => void;
   addTask: (title: string, category: TaskCategory, difficulty: TaskDifficulty, isDailyRecurring?: boolean, focusDuration?: number | null, description?: string) => void;
@@ -289,6 +291,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       activeWarningMessage: null,
 
       activeTab: 'quests',
+      shopSubTab: 'shop',
       activeCategoryFilter: 'all',
       activeStatusFilter: 'all',
       searchQuery: '',
@@ -1201,8 +1204,23 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       setActiveTab: (tab: ActiveTab) => {
         playSound('ui_click', get().soundEnabled);
+        if (tab === 'inventory') {
+          set({ activeTab: 'shop', shopSubTab: 'inventory' });
+          get().cleanupExpiredInventory();
+          return;
+        }
+        if (tab === 'analytics') {
+          set({ activeTab: 'profile' });
+          get().cleanupExpiredInventory();
+          return;
+        }
         set({ activeTab: tab });
         get().cleanupExpiredInventory();
+      },
+
+      setShopSubTab: (subTab: 'shop' | 'inventory') => {
+        playSound('ui_click', get().soundEnabled);
+        set({ shopSubTab: subTab });
       },
 
       setCategoryFilter: (cat: string) => {

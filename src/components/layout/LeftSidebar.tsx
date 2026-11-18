@@ -18,6 +18,8 @@ import {
   ChevronRight,
   ShieldAlert,
   Mail,
+  User,
+  Award,
 } from 'lucide-react';
 
 export const LeftSidebar: React.FC = () => {
@@ -81,30 +83,17 @@ export const LeftSidebar: React.FC = () => {
       badge: pendingCount,
     },
     {
-      id: 'system-quests',
-      label: 'Thành Tựu',
-      mobileLabel: 'Thành Tựu',
-      icon: <Scroll className="w-5 h-5 shrink-0" />,
-      badge: actionableSystemQuestsCount,
-    },
-    {
-      id: 'shop',
-      label: 'Cửa Hàng',
-      mobileLabel: 'Cửa Hàng',
-      icon: <ShoppingBag className="w-5 h-5 shrink-0" />,
-    },
-    {
       id: 'leaderboard',
       label: 'Đấu Trường BXH',
       mobileLabel: 'BXH',
       icon: <Trophy className="w-5 h-5 shrink-0" />,
     },
     {
-      id: 'inventory',
-      label: 'Túi Đồ',
-      mobileLabel: 'Túi Đồ',
-      icon: <Backpack className="w-5 h-5 shrink-0" />,
-      badge: validUnusedInventoryCount,
+      id: 'shop',
+      label: 'Cửa Hàng & Túi Đồ',
+      mobileLabel: 'Cửa Hàng',
+      icon: <ShoppingBag className="w-5 h-5 shrink-0" />,
+      badge: validUnusedInventoryCount > 0 ? validUnusedInventoryCount : undefined,
     },
     {
       id: 'chronicles',
@@ -113,10 +102,17 @@ export const LeftSidebar: React.FC = () => {
       icon: <BookOpen className="w-5 h-5 shrink-0" />,
     },
     {
-      id: 'analytics',
-      label: 'Thống Kê Năng Suất',
-      mobileLabel: 'Thống Kê',
-      icon: <BarChart2 className="w-5 h-5 shrink-0" />,
+      id: 'system-quests',
+      label: 'Thành Tựu',
+      mobileLabel: 'Thành Tựu',
+      icon: <Award className="w-5 h-5 shrink-0" />,
+      badge: actionableSystemQuestsCount > 0 ? actionableSystemQuestsCount : undefined,
+    },
+    {
+      id: 'profile',
+      label: 'Hồ Sơ',
+      mobileLabel: 'Hồ Sơ',
+      icon: <User className="w-5 h-5 shrink-0" />,
     },
     ...(userRole === 'admin'
       ? [
