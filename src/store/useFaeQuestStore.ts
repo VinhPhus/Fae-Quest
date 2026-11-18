@@ -229,7 +229,7 @@ interface FaeQuestState {
   tickFocusTimer: () => void;
   cancelFocus: () => void;
   setFocusModalOpen: (open: boolean) => void;
-  resetAllData: () => void;
+  resetAllData: () => Promise<boolean>;
   addToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   removeToast: (id: string) => void;
   checkDailyReset: () => void;
@@ -2159,31 +2159,188 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      resetAllData: () => {
+      resetAllData: async (): Promise<boolean> => {
+        const state = get();
+        const currentUser = state.currentUser;
+        const hunterId = currentUser?.id || state.hunterId;
+
+        if (autoSyncTimer) {
+          clearTimeout(autoSyncTimer);
+          autoSyncTimer = null;
+        }
+
+        const defaultStarterTasks: Task[] = [
+          {
+            id: 'task_starter_oath',
+            title: 'Tuyên thệ Khế Ước Thợ Săn & Khám phá thế giới FaeQuest',
+            category: 'ca-nhan',
+            difficulty: 'easy',
+            completed: false,
+            createdAt: Date.now(),
+            rewardClaimed: false,
+          },
+          {
+            id: 'task_starter_focus',
+            title: 'Hoàn thành 1 phiên tập trung Fae Focus 25 phút đầu tiên',
+            category: 'hoc-tap',
+            difficulty: 'medium',
+            completed: false,
+            createdAt: Date.now(),
+            focusDuration: 25,
+            rewardClaimed: false,
+          },
+        ];
+
+        // 1. Quy trình Database-First: Ghi đè trực tiếp lên Supabase trước nếu đã đăng nhập
+        if (hunterId && currentUser) {
+          try {
+            // A. Cập nhật public.profiles về giá trị khởi điểm ban đầu
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({
+                exp: 0,
+                coins: 25,
+                stars: 0,
+                rank_id: 'dong',
+                equipped_title: 'title_tan_binh_gai_do',
+                streak: 0,
+                completed_tasks_count: 0,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', hunterId);
+
+            if (profileError) {
+              console.error('Supabase reset profiles error:', profileError);
+              state.addToast(`Lỗi đặt lại hồ sơ trên máy chủ: ${profileError.message}`, 'error');
+              return false;
+            }
+
+            // B. Ghi đè snapshot public.user_states về cấu trúc mặc định
+            const freshStateJson: UserStateCloud = {
+              playerName: currentUser.name || state.playerName || 'Thợ Săn Fae',
+              avatarUrl: state.avatarUrl || '',
+              coverUrl: state.coverUrl || '',
+              exp: 0,
+              coins: 25,
+              stars: 0,
+              completedTotal: 0,
+              streakDays: 0,
+              dailyCompletedCount: 0,
+              dailyBossCompletedCount: 0,
+              tasks: defaultStarterTasks,
+              shopItems: INITIAL_SHOP_ITEMS,
+              inventory: [],
+              rivals: [],
+              systemQuests: INITIAL_SYSTEM_QUESTS,
+              unlockedTitleIds: ['title_tan_binh_gai_do'],
+              equippedTitleId: 'title_tan_binh_gai_do',
+              focusSessionsCompleted: 0,
+              hasSeenTutorial: true,
+            };
+
+            const { error: stateError } = await supabase
+              .from('user_states')
+              .upsert(
+                {
+                  user_id: hunterId,
+                  state_json: freshStateJson,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: 'user_id' }
+              );
+
+            if (stateError) {
+              console.error('Supabase reset user_states error:', stateError);
+              state.addToast(`Lỗi đặt lại dữ liệu game trên máy chủ: ${stateError.message}`, 'error');
+              return false;
+            }
+
+            // C. Dọn sạch bảng nhật ký public.journals
+            try {
+              const { error: journalError } = await supabase
+                .from('journals')
+                .delete()
+                .eq('user_id', hunterId);
+              if (journalError && !journalError.message?.includes('schema cache')) {
+                console.warn('Supabase delete journals error:', journalError);
+              }
+            } catch (err) {
+              console.warn('Lỗi xóa bảng journals:', err);
+            }
+
+            // D. Dọn sạch bảng lịch sử hoạt động public.activity_logs nếu có
+            try {
+              await supabase.from('activity_logs').delete().eq('user_id', hunterId);
+            } catch (err) {
+              console.warn('Lỗi xóa bảng activity_logs:', err);
+            }
+          } catch (err: any) {
+            console.error('Ngoại lệ khi thực thi reset Database:', err);
+            state.addToast(`Lỗi kết nối máy chủ: ${err?.message || 'Không thể đặt lại dữ liệu'}`, 'error');
+            return false;
+          }
+        }
+
+        // 2. Dọn dẹp LocalStorage & SessionStorage (Bảo toàn nguyên vẹn token đăng nhập Supabase)
+        if (typeof window !== 'undefined') {
+          try {
+            const preservedAuthKeys: Record<string, string> = {};
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && (key.startsWith('sb-') || key.includes('supabase.auth'))) {
+                const val = localStorage.getItem(key);
+                if (val !== null) preservedAuthKeys[key] = val;
+              }
+            }
+            localStorage.clear();
+            Object.entries(preservedAuthKeys).forEach(([k, v]) => {
+              localStorage.setItem(k, v);
+            });
+            if (hunterId) {
+              localStorage.setItem(`faequest_tour_seen_${hunterId}`, 'true');
+              localStorage.setItem(`faequest_tour_completed_${hunterId}`, 'true');
+            }
+          } catch (err) {
+            console.warn('Lỗi khi dọn dẹp localStorage:', err);
+          }
+
+          try {
+            sessionStorage.clear();
+          } catch (err) {
+            console.warn('Lỗi khi dọn dẹp sessionStorage:', err);
+          }
+        }
+
+        // 3. Cập nhật Zustand Store về giá trị khởi điểm ban đầu
         set({
-          playerName: 'Thợ Săn Fae',
-          avatarUrl: '',
-          exp: 110,
+          playerName: currentUser?.name || state.playerName || 'Thợ Săn Fae',
+          exp: 0,
           coins: 25,
-          completedTotal: 2,
-          streakDays: 1,
+          stars: 0,
+          completedTotal: 0,
+          streakDays: 0,
           dailyCompletedCount: 0,
           dailyBossCompletedCount: 0,
           lastActiveDate: getTodayString(),
-          tasks: INITIAL_TASKS,
+          tasks: defaultStarterTasks,
           shopItems: INITIAL_SHOP_ITEMS,
-          inventory: INITIAL_INVENTORY,
+          inventory: [],
           rivals: [],
           systemQuests: INITIAL_SYSTEM_QUESTS,
           unlockedTitleIds: ['title_tan_binh_gai_do'],
           equippedTitleId: 'title_tan_binh_gai_do',
           focusSessionsCompleted: 0,
           journals: [],
+          hasSeenTutorial: true,
           isResetOpen: false,
           isSettingsOpen: false,
           isChangeCoverOpen: false,
+          cloudSyncStatus: 'synced',
         });
-        get().addToast('Đã khởi tạo lại toàn bộ dữ liệu ban đầu!', 'info');
+
+        playSound('scroll_open', state.soundEnabled);
+        state.addToast('✨ Đã khởi tạo lại toàn bộ hành trình về trạng thái ban đầu!', 'success');
+        return true;
       },
 
       checkInStreakQuest: async (questId: string) => {
