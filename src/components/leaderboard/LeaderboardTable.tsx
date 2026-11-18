@@ -85,21 +85,21 @@ export const LeaderboardHeader: React.FC = () => {
   return (
     <div className="space-y-3">
       {/* Leaderboard Header Banner */}
-      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl">
+      <div className="rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col md:flex-row items-start md:items-center justify-between gap-3 sm:gap-4 shadow-xl">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF]">
+            <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[11px] sm:text-xs font-bold text-[#CCD0CF]">
               <Swords className="w-3.5 h-3.5 text-cyan-400" />
               <span>Đấu Trường Danh Vọng • Supabase Realtime</span>
             </div>
             {userRole === 'admin' && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[11px] font-extrabold text-amber-300">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] sm:text-[11px] font-extrabold text-amber-300">
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
                 <span>CHẾ ĐỘ QUẢN TRỊ VIÊN (ẨN KHỎI BXH)</span>
               </span>
             )}
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide">
+          <h2 className="text-lg sm:text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide">
             Bảng Xếp Hạng Thợ Săn
           </h2>
           <p className="text-xs text-[#9BA8AB] max-w-2xl leading-relaxed hidden sm:block">
@@ -109,9 +109,9 @@ export const LeaderboardHeader: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center justify-between w-full md:w-auto gap-2">
           {/* Thẻ đếm số lượng người chơi thật */}
-          <div className="px-3.5 py-2 rounded-xl bg-[#06141B] border border-[#253745] text-xs font-bold text-[#CCD0CF] flex items-center gap-2 shadow-inner">
+          <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#06141B] border border-[#253745] text-[11px] sm:text-xs font-bold text-[#CCD0CF] flex items-center gap-2 shadow-inner">
             <Swords className="w-3.5 h-3.5 text-cyan-400" />
             <span>
               <strong className="text-white font-extrabold">{totalRealHunters}</strong> Thợ Săn Đang Thi Đấu
@@ -123,7 +123,7 @@ export const LeaderboardHeader: React.FC = () => {
             type="button"
             onClick={handleRefresh}
             disabled={isLoading}
-            className="px-4 py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50 shrink-0"
             title="Tải lại BXH người chơi thật từ Supabase"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -333,7 +333,7 @@ export const LeaderboardTable: React.FC = () => {
           key={c.id}
           id={isPlayer ? 'my-rank-card' : undefined}
           onClick={() => handleSelectHunter(c, 1)}
-          className={`relative rounded-3xl p-4 sm:p-5 md:p-6 border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 via-[#11212D] to-[#11212D] shadow-[0_0_30px_rgba(251,191,36,0.18)] flex flex-col items-center justify-between md:min-h-[260px] cursor-pointer hover:border-amber-400 hover:scale-[1.01] transition-all duration-300 col-span-2 md:col-span-1 order-1 md:order-2 overflow-hidden group ${
+          className={`relative rounded-3xl p-4 sm:p-5 md:p-6 border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 via-[#11212D] to-[#11212D] shadow-[0_0_30px_rgba(251,191,36,0.18)] flex flex-col items-center justify-between min-h-[220px] md:min-h-[260px] cursor-pointer hover:border-amber-400 hover:scale-[1.01] transition-all duration-300 col-span-2 md:col-span-1 order-1 md:order-2 overflow-hidden group ${
             isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.02]' : ''
           }`}
         >
@@ -345,13 +345,13 @@ export const LeaderboardTable: React.FC = () => {
             <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 mb-1 drop-shadow animate-bounce" />
 
             {/* Avatar with Badges */}
-            <div className="relative mb-2.5 sm:mb-3">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.4)] overflow-hidden bg-[#06141B] flex items-center justify-center">
+            <div className="relative mb-2.5 sm:mb-3 shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full ring-2 ring-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.4)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
                 {isAvatarUrl(c.avatar) ? (
                   <img
                     src={c.avatar}
                     alt={c.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full aspect-square"
                     loading="lazy"
                   />
                 ) : (
@@ -362,7 +362,7 @@ export const LeaderboardTable: React.FC = () => {
               </div>
 
               {/* Rank tier icon badge top-left */}
-              <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#06141B] border border-amber-400/80 p-0.5 flex items-center justify-center shadow-md z-10">
+              <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#06141B] border border-amber-400/80 p-0.5 flex items-center justify-center shadow-md z-10 shrink-0">
                 <img
                   src={tier.iconUrl}
                   alt={tier.name}
@@ -371,7 +371,7 @@ export const LeaderboardTable: React.FC = () => {
               </div>
 
               {/* Diamond badge 1 at bottom */}
-              <div className="absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rotate-45 bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 border border-amber-200 flex items-center justify-center shadow-lg z-10">
+              <div className="absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rotate-45 bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 border border-amber-200 flex items-center justify-center shadow-lg z-10 shrink-0">
                 <span className="-rotate-45 font-black text-[11px] sm:text-xs text-[#06141B]">1</span>
               </div>
             </div>
@@ -407,30 +407,30 @@ export const LeaderboardTable: React.FC = () => {
           key={c.id}
           id={isPlayer ? 'my-rank-card' : undefined}
           onClick={() => handleSelectHunter(c, 2)}
-          className={`relative rounded-3xl p-3.5 sm:p-5 border border-slate-300/50 bg-gradient-to-b from-slate-300/12 via-[#11212D] to-[#11212D] shadow-[0_0_20px_rgba(203,213,225,0.12)] flex flex-col items-center justify-between md:min-h-[235px] cursor-pointer hover:border-slate-200 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-2 md:order-1 overflow-hidden group ${
+          className={`relative rounded-3xl p-3 sm:p-5 border border-slate-300/50 bg-gradient-to-b from-slate-300/12 via-[#11212D] to-[#11212D] shadow-[0_0_20px_rgba(203,213,225,0.12)] flex flex-col items-center justify-between h-full min-h-[190px] sm:min-h-[220px] md:min-h-[235px] cursor-pointer hover:border-slate-200 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-2 md:order-1 overflow-hidden group ${
             isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.02]' : ''
           }`}
         >
           <div className="flex flex-col items-center w-full">
             {/* Avatar with Badges */}
-            <div className="relative mb-2 mt-1 sm:mt-2">
-              <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full object-cover ring-2 ring-slate-300 shadow-[0_0_12px_rgba(203,213,225,0.25)] overflow-hidden bg-[#06141B] flex items-center justify-center">
+            <div className="relative mb-2 mt-1 shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full ring-2 ring-slate-300 shadow-[0_0_12px_rgba(203,213,225,0.25)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
                 {isAvatarUrl(c.avatar) ? (
                   <img
                     src={c.avatar}
                     alt={c.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full aspect-square"
                     loading="lazy"
                   />
                 ) : (
-                  <span className="text-lg sm:text-2xl font-black text-slate-300">
+                  <span className="text-xl sm:text-2xl font-black text-slate-300">
                     {(c.name || 'T').charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
 
               {/* Rank tier icon badge top-left */}
-              <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06141B] border border-slate-300 p-0.5 flex items-center justify-center shadow z-10">
+              <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06141B] border border-slate-300 p-0.5 flex items-center justify-center shadow z-10 shrink-0">
                 <img
                   src={tier.iconUrl}
                   alt={tier.name}
@@ -439,14 +439,14 @@ export const LeaderboardTable: React.FC = () => {
               </div>
 
               {/* Diamond badge 2 at bottom */}
-              <div className="absolute -bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 w-4.5 h-4.5 sm:w-5 sm:h-5 rotate-45 bg-gradient-to-br from-slate-200 to-slate-400 border border-white flex items-center justify-center shadow z-10">
+              <div className="absolute -bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 w-4.5 h-4.5 sm:w-5 sm:h-5 rotate-45 bg-gradient-to-br from-slate-200 to-slate-400 border border-white flex items-center justify-center shadow z-10 shrink-0">
                 <span className="-rotate-45 font-black text-[10px] sm:text-[11px] text-[#06141B]">2</span>
               </div>
             </div>
 
             {/* Name & Title */}
-            <div className="text-center w-full px-1 sm:px-2 mt-1">
-              <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate group-hover:text-white transition">
+            <div className="text-center w-full px-1 mt-0.5">
+              <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[120px] sm:max-w-full mx-auto group-hover:text-white transition">
                 {c.name}
                 {isPlayer && (
                   <span className="ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black bg-slate-300 text-[#06141B]">
@@ -454,15 +454,15 @@ export const LeaderboardTable: React.FC = () => {
                   </span>
                 )}
               </h3>
-              <div className="mt-1 flex justify-center">{renderTitlePill(c.title)}</div>
+              <div className="mt-1 flex justify-center max-w-[110px] sm:max-w-full mx-auto">{renderTitlePill(c.title)}</div>
             </div>
           </div>
 
           {/* EXP Frame */}
-          <div className="mt-2.5 sm:mt-3.5 w-full py-1 sm:py-1.5 px-2 sm:px-3 rounded-xl bg-[#06141B]/90 border border-slate-400/30 text-center shadow-inner">
-            <span className="text-[11px] sm:text-xs text-slate-200 font-extrabold font-mono">
+          <div className="mt-2.5 w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-xl bg-[#06141B]/90 border border-slate-400/30 text-center shadow-inner">
+            <span className="text-[10px] sm:text-xs text-slate-200 font-extrabold font-mono">
               ✨ {c.exp.toLocaleString('vi-VN')}{' '}
-              <span className="text-[9px] sm:text-[10px] text-slate-400 font-normal">EXP</span>
+              <span className="text-[8px] sm:text-[10px] text-slate-400 font-normal">EXP</span>
             </span>
           </div>
         </div>
@@ -475,30 +475,30 @@ export const LeaderboardTable: React.FC = () => {
         key={c.id}
         id={isPlayer ? 'my-rank-card' : undefined}
         onClick={() => handleSelectHunter(c, 3)}
-        className={`relative rounded-3xl p-3.5 sm:p-5 border border-amber-700/60 bg-gradient-to-b from-amber-700/15 via-[#11212D] to-[#11212D] shadow-[0_0_20px_rgba(180,83,9,0.12)] flex flex-col items-center justify-between md:min-h-[220px] cursor-pointer hover:border-amber-600 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-3 md:order-3 overflow-hidden group ${
+        className={`relative rounded-3xl p-3 sm:p-5 border border-amber-700/60 bg-gradient-to-b from-amber-700/15 via-[#11212D] to-[#11212D] shadow-[0_0_20px_rgba(180,83,9,0.12)] flex flex-col items-center justify-between h-full min-h-[190px] sm:min-h-[220px] md:min-h-[220px] cursor-pointer hover:border-amber-600 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-3 md:order-3 overflow-hidden group ${
           isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.02]' : ''
         }`}
       >
         <div className="flex flex-col items-center w-full">
           {/* Avatar with Badges */}
-          <div className="relative mb-2 mt-1 sm:mt-2">
-            <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-full object-cover ring-2 ring-amber-700 shadow-[0_0_12px_rgba(180,83,9,0.25)] overflow-hidden bg-[#06141B] flex items-center justify-center">
+          <div className="relative mb-2 mt-1 shrink-0">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full ring-2 ring-amber-700 shadow-[0_0_12px_rgba(180,83,9,0.25)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
               {isAvatarUrl(c.avatar) ? (
                 <img
                   src={c.avatar}
                   alt={c.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-full aspect-square"
                   loading="lazy"
                 />
               ) : (
-                <span className="text-lg sm:text-2xl font-black text-amber-400">
+                <span className="text-xl sm:text-2xl font-black text-amber-400">
                   {(c.name || 'T').charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
 
             {/* Rank tier icon badge top-left */}
-            <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06141B] border border-amber-700 p-0.5 flex items-center justify-center shadow z-10">
+            <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06141B] border border-amber-700 p-0.5 flex items-center justify-center shadow z-10 shrink-0">
               <img
                 src={tier.iconUrl}
                 alt={tier.name}
@@ -507,14 +507,14 @@ export const LeaderboardTable: React.FC = () => {
             </div>
 
             {/* Diamond badge 3 at bottom */}
-            <div className="absolute -bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 w-4.5 h-4.5 sm:w-5 sm:h-5 rotate-45 bg-gradient-to-br from-amber-600 to-amber-800 border border-amber-500 flex items-center justify-center shadow z-10">
+            <div className="absolute -bottom-1.5 sm:-bottom-2 left-1/2 -translate-x-1/2 w-4.5 h-4.5 sm:w-5 sm:h-5 rotate-45 bg-gradient-to-br from-amber-600 to-amber-800 border border-amber-500 flex items-center justify-center shadow z-10 shrink-0">
               <span className="-rotate-45 font-black text-[10px] sm:text-[11px] text-white">3</span>
             </div>
           </div>
 
           {/* Name & Title */}
-          <div className="text-center w-full px-1 sm:px-2 mt-1">
-            <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate group-hover:text-white transition">
+          <div className="text-center w-full px-1 mt-0.5">
+            <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[120px] sm:max-w-full mx-auto group-hover:text-white transition">
               {c.name}
               {isPlayer && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black bg-amber-700 text-white">
@@ -522,15 +522,15 @@ export const LeaderboardTable: React.FC = () => {
                 </span>
               )}
             </h3>
-            <div className="mt-1 flex justify-center">{renderTitlePill(c.title)}</div>
+            <div className="mt-1 flex justify-center max-w-[110px] sm:max-w-full mx-auto">{renderTitlePill(c.title)}</div>
           </div>
         </div>
 
         {/* EXP Frame */}
-        <div className="mt-2.5 sm:mt-3.5 w-full py-1 sm:py-1.5 px-2 sm:px-3 rounded-xl bg-[#06141B]/90 border border-amber-700/30 text-center shadow-inner">
-          <span className="text-[11px] sm:text-xs text-amber-400 font-extrabold font-mono">
+        <div className="mt-2.5 w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-xl bg-[#06141B]/90 border border-amber-700/30 text-center shadow-inner">
+          <span className="text-[10px] sm:text-xs text-amber-400 font-extrabold font-mono">
             ✨ {c.exp.toLocaleString('vi-VN')}{' '}
-            <span className="text-[9px] sm:text-[10px] text-amber-500/70 font-normal">EXP</span>
+            <span className="text-[8px] sm:text-[10px] text-amber-500/70 font-normal">EXP</span>
           </span>
         </div>
       </div>
@@ -540,27 +540,27 @@ export const LeaderboardTable: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* Helper Banner */}
-      <div className="flex items-center justify-between text-xs text-[#9BA8AB] px-1">
-        <span className="flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Bấm vào Thợ Săn để soi thẻ hồ sơ & so sánh chỉ số</span>
+      <div className="flex items-center justify-between text-xs text-[#9BA8AB] px-1 gap-2">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <span className="text-[11px] sm:text-xs truncate">Bấm vào Thợ Săn để xem hồ sơ & so sánh</span>
         </span>
         {lastRefreshed && (
-          <span className="text-[11px] font-mono text-[#4A5C6A]">
-            Cập nhật lúc: {lastRefreshed}
+          <span className="text-[10px] sm:text-[11px] font-mono text-[#4A5C6A] shrink-0 hidden xs:inline">
+            Cập nhật: {lastRefreshed}
           </span>
         )}
       </div>
 
       {/* 3-Card Podium Showcase (Top 1 - 3) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4 items-end mt-2 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-4 items-stretch md:items-end mt-2 mb-6">
         {renderPodiumCard(podiumPlayers[1], 2)}
         {renderPodiumCard(podiumPlayers[0], 1)}
         {renderPodiumCard(podiumPlayers[2], 3)}
       </div>
 
       {/* Danh Sách Thợ Săn Hạng #4 Trở Đi (RPG Rank Cards) */}
-      <div className="space-y-2.5 pb-40 md:pb-28">
+      <div className="space-y-2.5 pb-28 md:pb-6">
         <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-[#9BA8AB] flex items-center justify-between">
           <span>Hạng 4 – 50 • Đấu Thủ Trực Tiếp</span>
           <span>Điểm EXP</span>
@@ -666,7 +666,7 @@ export const LeaderboardTable: React.FC = () => {
       <div
         onClick={handleScrollToMyRank}
         title="Bấm để cuộn đến vị trí của bạn trên BXH"
-        className="sticky bottom-[74px] md:bottom-3 z-30 bg-gradient-to-r from-[#132533] via-[#11212D] to-[#0D1B24] border-t-2 md:border-2 border-[#4A5C6A] hover:border-[#9BA8AB] rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-[0_-14px_34px_rgba(6,20,27,0.98)] flex items-center justify-between gap-2.5 sm:gap-3 transition-all cursor-pointer group select-none"
+        className="fixed bottom-16 inset-x-2.5 sm:inset-x-4 md:sticky md:bottom-3 md:inset-x-auto md:w-full z-30 bg-gradient-to-r from-[#132533] via-[#11212D] to-[#0D1B24] border-2 border-[#4A5C6A] hover:border-[#CCD0CF] rounded-2xl px-3 sm:px-5 py-2 sm:py-2.5 shadow-[0_-14px_34px_rgba(6,20,27,0.98)] flex items-center justify-between gap-2.5 sm:gap-3 transition-all cursor-pointer group select-none max-w-7xl mx-auto"
       >
         <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1">
           {/* Cụm 1: Ô Hạng vuông bo góc + Avatar thật */}
@@ -681,12 +681,12 @@ export const LeaderboardTable: React.FC = () => {
             </div>
 
             <div className="relative shrink-0">
-              <div className="w-9 h-9 md:w-11 md:h-11 rounded-full ring-2 ring-[#4A5C6A] group-hover:ring-[#CCD0CF] transition overflow-hidden shrink-0 bg-[#253745] flex items-center justify-center">
+              <div className="w-9 h-9 md:w-11 md:h-11 rounded-full ring-2 ring-[#4A5C6A] group-hover:ring-[#CCD0CF] transition overflow-hidden shrink-0 bg-[#253745] flex items-center justify-center aspect-square">
                 {isAvatarUrl(avatarUrl) ? (
                   <img
                     src={avatarUrl!}
                     alt={playerName}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover rounded-full aspect-square"
                   />
                 ) : (
                   <span className="text-xs sm:text-base font-black text-[#CCD0CF]">

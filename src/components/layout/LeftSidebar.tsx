@@ -337,7 +337,7 @@ export const LeftSidebar: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: EASING_SPRING }}
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#06141B] border-t border-[#253745] px-2 py-1 flex items-center justify-around shadow-2xl pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-[#06141B] border-t border-[#253745] px-2 flex items-center justify-around shadow-2xl pb-[env(safe-area-inset-bottom,0px)]"
       >
         {mobileBottomMenuItems.map((item) => {
           const isActive = activeTab === item.id;
