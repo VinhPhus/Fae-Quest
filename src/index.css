@@ -317,17 +317,15 @@ button:hover .coin-interactive-fx,
 }
 
 .scroll-roller-wood {
-  background: linear-gradient(
-    180deg,
-    #06141B 0%,
-    #11212D 18%,
-    #253745 34%,
-    #4A5C6A 48%,
-    #CCD0CF 51%,
-    #9BA8AB 60%,
-    #253745 82%,
-    #06141B 100%
-  );
+  background: linear-gradient(180deg,
+      #06141B 0%,
+      #11212D 18%,
+      #253745 34%,
+      #4A5C6A 48%,
+      #CCD0CF 51%,
+      #9BA8AB 60%,
+      #253745 82%,
+      #06141B 100%);
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.85),
     inset 0 2px 3px rgba(255, 255, 255, 0.28),
@@ -585,4 +583,3 @@ input[type='number'] {
 .driver-popover.faequest-tour-popover .driver-popover-arrow-side-bottom {
   border-bottom-color: #11212D !important;
 }
-
