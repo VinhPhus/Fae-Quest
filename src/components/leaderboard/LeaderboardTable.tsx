@@ -335,7 +335,7 @@ export const LeaderboardTable: React.FC = () => {
         <img
           src={coverImage}
           alt={c.name}
-          className="absolute inset-0 w-full h-full object-cover opacity-35 group-hover:scale-[1.02] transition-transform duration-500 pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-40 group-hover:scale-[1.02] transition-transform duration-500 pointer-events-none select-none"
           loading="lazy"
         />
 
@@ -472,12 +472,36 @@ export const LeaderboardTable: React.FC = () => {
           isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.01]' : ''
         }`}
       >
-        {/* Ảnh bìa mờ góc phải */}
+        {/* 4 Đinh Tán Kim Loại 4 Góc Trong Thẻ */}
+        <div className={`absolute top-2 left-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
+        <div className={`absolute top-2 right-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
+        <div className={`absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
+        <div className={`absolute bottom-2 right-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
+
+        {/* Ảnh Nền Phủ Toàn Thẻ Giống Top 1 */}
         <img
           src={coverImage}
           alt={c.name}
-          className="opacity-15 w-36 sm:w-44 h-full absolute right-0 top-0 object-cover pointer-events-none select-none group-hover:scale-105 transition-transform duration-500"
+          className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-[1.02] transition-transform duration-500 pointer-events-none select-none"
           loading="lazy"
+        />
+
+        {/* Lớp Gradient Chuyển Sắc Từ Tối Sâu Sang Tông Ám Của Hạng */}
+        <div
+          className={`absolute inset-0 ${
+            isRank2
+              ? 'bg-gradient-to-r from-[#06141B] via-[#06141B]/85 to-slate-300/10'
+              : 'bg-gradient-to-r from-[#06141B] via-[#06141B]/85 to-amber-700/15'
+          } pointer-events-none`}
+        />
+
+        {/* Dải Ánh Sáng Mảnh Lướt Chậm Chu Kỳ 5s */}
+        <motion.div
+          animate={{ x: ['-100%', '250%'] }}
+          transition={{ duration: isRank2 ? 5.5 : 5.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: isRank2 ? 1.5 : 2 }}
+          className={`absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent ${
+            isRank2 ? 'via-slate-100/10' : 'via-amber-500/10'
+          } to-transparent -skew-x-12 pointer-events-none`}
         />
 
         {/* Trái: Avatar & Huy hiệu + Thông tin người chơi */}
