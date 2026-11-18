@@ -9,6 +9,7 @@ import { QuestBentoGrid } from './components/bento/QuestBentoGrid';
 import { FocusFloatingBar } from './components/quests/FocusFloatingBar';
 import { RightMiniLeaderboardStrip } from './components/bento/RightMiniLeaderboardStrip';
 import { CreateQuestDrawer } from './components/modals/CreateQuestDrawer';
+import { EditQuestModal } from './components/modals/EditQuestModal';
 import { SystemQuestsHeader, SystemQuestsView } from './components/system-quests/SystemQuestsView';
 import { PomodoroTimerModal } from './components/quests/PomodoroTimerModal';
 import { RewardShopHeader, RewardShopGrid } from './components/shop/RewardShopGrid';
@@ -256,6 +257,7 @@ export const App: React.FC = () => {
       <PomodoroTimerModal />
       <HuntersOathModal />
       <CreateQuestDrawer />
+      <EditQuestModal />
       <UserInboxModal />
       <AdminWarningModal />
       <ChangeCoverModal />

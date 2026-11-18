@@ -129,6 +129,8 @@ interface FaeQuestState {
   journals: JournalEntry[];
   isWriteJournalOpen: boolean;
   editingJournal: JournalEntry | null;
+  editingTask: Task | null;
+  isEditQuestOpen: boolean;
   confirmEarlyTask: { task: Task; coords?: { x: number; y: number } } | null;
   lastCompletedTimestamp: number;
   floatingRewards: FloatingRewardItem[];
@@ -191,6 +193,8 @@ interface FaeQuestState {
   confirmEarlyTaskCompletion: () => void;
   cancelEarlyTaskConfirmation: () => void;
   deleteTask: (id: string) => void;
+  updateTask: (id: string, updates: Partial<Task>) => void;
+  setEditingTask: (task: Task | null) => void;
   completePomodoro: (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => Promise<void> | void;
   buyShopItem: (itemId: string, coords?: { x: number; y: number }) => Promise<void> | void;
   addShopItem: (title: string, desc: string, cost: number, emoji: string) => void;
@@ -359,7 +363,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               if (localData) {
                 try {
                   set({ journals: JSON.parse(localData) });
-                } catch {}
+                } catch { }
               }
             }
           }
@@ -370,7 +374,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             if (localData) {
               try {
                 set({ journals: JSON.parse(localData) });
-              } catch {}
+              } catch { }
             }
           }
         }
@@ -1140,6 +1144,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       focusTimeLeft: 25 * 60,
       focusTargetMinutes: 25,
       isFocusModalOpen: false,
+      editingTask: null,
+      isEditQuestOpen: false,
       hasSeenTutorial: true,
       floatingRewards: [],
       toasts: [],
@@ -1284,6 +1290,47 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
+      updateTask: (id: string, updates: Partial<Task>) => {
+        const titleTrimmed = updates.title !== undefined ? updates.title.trim() : undefined;
+        if (titleTrimmed !== undefined && !titleTrimmed) return;
+
+        const duration =
+          updates.focusDuration !== undefined
+            ? updates.focusDuration
+              ? Math.min(180, Math.max(5, Number(updates.focusDuration)))
+              : null
+            : undefined;
+
+        set((state) => ({
+          tasks: state.tasks.map((t) => {
+            if (t.id !== id) return t;
+            return {
+              ...t,
+              ...(titleTrimmed !== undefined && { title: titleTrimmed }),
+              ...(updates.description !== undefined && { description: updates.description.trim() || undefined }),
+              ...(updates.category !== undefined && { category: updates.category }),
+              ...(updates.difficulty !== undefined && { difficulty: updates.difficulty }),
+              ...(updates.isDailyRecurring !== undefined && { isDailyRecurring: updates.isDailyRecurring }),
+              ...(duration !== undefined && { focusDuration: duration, pomodoroMinutes: duration }),
+            };
+          }),
+          editingTask: null,
+          isEditQuestOpen: false,
+        }));
+
+        if (get().activeFocusTaskId === id && duration !== undefined && duration !== null) {
+          get().setFocusTargetMinutes(duration);
+        }
+
+        playSound('ui_click', get().soundEnabled);
+        get().addToast('Đã lưu thay đổi nhiệm vụ thành công!', 'success');
+        debouncedAutoSync(get());
+      },
+
+      setEditingTask: (task: Task | null) => {
+        set({ editingTask: task, isEditQuestOpen: Boolean(task) });
+      },
+
       updateTaskFocusDuration: (taskId: string, duration: number) => {
         const clean = Math.min(180, Math.max(5, Number(duration) || 25));
         set((prev) => ({
@@ -1342,7 +1389,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
 
             if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
-              try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+              try { await supabase.rpc('rpc_ensure_profile'); } catch { }
               await get().syncToCloud(true);
               const retry = await supabase.rpc('rpc_complete_task', {
                 p_difficulty: task.difficulty,
@@ -1509,7 +1556,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
 
             if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
-              try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+              try { await supabase.rpc('rpc_ensure_profile'); } catch { }
               await get().syncToCloud(true);
               const retry = await supabase.rpc('rpc_complete_task', {
                 p_difficulty: task.difficulty,
@@ -2016,7 +2063,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           journals: [],
           isResetOpen: false,
           isSettingsOpen: false,
-      isChangeCoverOpen: false,
+          isChangeCoverOpen: false,
         });
         get().addToast('Đã khởi tạo lại toàn bộ dữ liệu ban đầu!', 'info');
       },
@@ -2227,7 +2274,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               updated_at: new Date().toISOString(),
             })
             .eq('id', targetUserId)
-            .then(() => {});
+            .then(() => { });
         }
         playSound('scroll_open', state.soundEnabled);
         get().addToast(`Đã trang bị danh hiệu "${titleInfo?.name || titleId}"!`, 'success');
@@ -2466,7 +2513,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
             if (!profile) {
-              try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+              try { await supabase.rpc('rpc_ensure_profile'); } catch { }
               const { data: refetched } = await supabase
                 .from('profiles')
                 .select('*')
@@ -2503,7 +2550,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             let userRole: UserRole = (profile?.role === 'admin' || isAdminCandidate) ? 'admin' : 'user';
             // Tự động đồng bộ quyền Admin nếu tài khoản thuộc diện Quản Trị nhưng chưa được gán role
             if (profile?.role !== 'admin' && isAdminCandidate) {
-              try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: hunterId, p_new_role: 'admin' }); } catch {}
+              try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: hunterId, p_new_role: 'admin' }); } catch { }
             }
 
             const { data: stateRow } = await supabase
@@ -2866,7 +2913,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
           if (!profile) {
-            try { await supabase.rpc('rpc_ensure_profile'); } catch {}
+            try { await supabase.rpc('rpc_ensure_profile'); } catch { }
             const { data: refetched } = await supabase
               .from('profiles')
               .select('*')
@@ -2903,7 +2950,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           let userRole: UserRole = (profile?.role === 'admin' || isAdminCandidate) ? 'admin' : 'user';
           // Tự động đồng bộ quyền Admin nếu tài khoản thuộc diện Quản Trị nhưng chưa được gán role
           if (profile?.role !== 'admin' && isAdminCandidate) {
-            try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: userId, p_new_role: 'admin' }); } catch {}
+            try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: userId, p_new_role: 'admin' }); } catch { }
           }
 
           const { data: stateRow } = await supabase

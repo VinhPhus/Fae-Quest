@@ -15,6 +15,7 @@ import {
   Plus,
   Swords,
   Timer,
+  Pencil,
 } from 'lucide-react';
 import { TaskCategory } from '../../types';
 
@@ -32,6 +33,7 @@ export const QuestBentoGrid: React.FC = () => {
     deleteTask,
     setActivePomodoroTaskId,
     setCreateQuestOpen,
+    setEditingTask,
   } = useFaeQuestStore();
 
   // Filter tasks based on Category, Status, and Search Query
@@ -361,6 +363,17 @@ export const QuestBentoGrid: React.FC = () => {
                         </motion.button>
                       )}
 
+                      {/* Edit Button */}
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        type="button"
+                        onClick={() => setEditingTask(task)}
+                        className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-[#CCD0CF] flex items-center justify-center transition cursor-pointer"
+                        title="Chỉnh sửa nhiệm vụ"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </motion.button>
+
                       {/* Delete Button */}
                       <motion.button
                         whileTap={{ scale: 0.9 }}
@@ -462,6 +475,16 @@ export const QuestBentoGrid: React.FC = () => {
                         <span>{task.focusDuration}p</span>
                       </motion.button>
                     )}
+
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      type="button"
+                      onClick={() => setEditingTask(task)}
+                      className="p-1.5 rounded-lg text-[#9BA8AB] hover:text-[#CCD0CF] hover:bg-[#253745] transition cursor-pointer"
+                      title="Chỉnh sửa nhiệm vụ"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </motion.button>
 
                     <motion.button
                       whileTap={{ scale: 0.9 }}
