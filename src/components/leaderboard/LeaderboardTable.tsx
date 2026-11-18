@@ -333,20 +333,31 @@ export const LeaderboardTable: React.FC = () => {
           key={c.id}
           id={isPlayer ? 'my-rank-card' : undefined}
           onClick={() => handleSelectHunter(c, 1)}
-          className={`relative rounded-3xl p-4 sm:p-5 md:p-6 border-2 border-amber-400/60 bg-gradient-to-b from-amber-500/15 via-[#11212D] to-[#11212D] shadow-[0_0_30px_rgba(251,191,36,0.18)] flex flex-col items-center justify-between min-h-[220px] md:min-h-[260px] cursor-pointer hover:border-amber-400 hover:scale-[1.01] transition-all duration-300 col-span-2 md:col-span-1 order-1 md:order-2 overflow-hidden group ${
+          className={`relative rounded-3xl p-4 sm:p-5 md:p-6 border-2 border-amber-400/70 bg-[#0c1822] shadow-[0_0_35px_rgba(251,191,36,0.22)] flex flex-col items-center justify-between min-h-[220px] md:min-h-[260px] cursor-pointer hover:border-amber-400 hover:scale-[1.01] transition-all duration-300 col-span-2 md:col-span-1 order-1 md:order-2 overflow-hidden group ${
             isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.02]' : ''
           }`}
         >
-          {/* Subtle Diamond Pattern / Light Beam */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-400/10 via-transparent to-transparent pointer-events-none" />
+          {/* Card Background Artwork (Top 1: Glowing Red Cybernetic Core) */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <img
+              src="/assets/leaderboard/top1_podium_bg.jpg"
+              alt="Quán Quân Top 1 Background"
+              className="w-full h-full object-cover object-center opacity-80 group-hover:opacity-95 group-hover:scale-105 transition-all duration-700 select-none"
+            />
+            {/* Vignette gradients to guarantee top crown and bottom text/EXP pop with razor-sharp contrast */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/50 via-transparent to-[#0c1822] opacity-90" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-400/20 via-transparent to-transparent" />
+          </div>
 
-          {/* Crown */}
-          <div className="flex flex-col items-center w-full">
+          {/* Foreground Content */}
+          <div className="relative z-10 flex flex-col items-center w-full">
             <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 mb-1 drop-shadow animate-bounce" />
 
-            {/* Avatar with Badges */}
+            {/* Avatar with Badges & Golden Aura Backlight */}
             <div className="relative mb-2.5 sm:mb-3 shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full ring-2 ring-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.4)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
+              <div className="absolute inset-0 rounded-full bg-amber-400/35 blur-md scale-110 pointer-events-none" />
+
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full ring-2 ring-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.5)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
                 {isAvatarUrl(c.avatar) ? (
                   <img
                     src={c.avatar}
@@ -378,10 +389,10 @@ export const LeaderboardTable: React.FC = () => {
 
             {/* Name & Title */}
             <div className="text-center w-full px-2 mt-1">
-              <h3 className="text-sm sm:text-base md:text-lg font-extrabold text-white truncate group-hover:text-amber-200 transition">
+              <h3 className="text-sm sm:text-base md:text-lg font-extrabold text-white truncate drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover:text-amber-200 transition">
                 {c.name}
                 {isPlayer && (
-                  <span className="ml-1.5 px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-[#06141B]">
+                  <span className="ml-1.5 px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-[#06141B] shadow">
                     BẠN
                   </span>
                 )}
@@ -391,7 +402,7 @@ export const LeaderboardTable: React.FC = () => {
           </div>
 
           {/* EXP Frame */}
-          <div className="mt-3 sm:mt-4 w-full py-1.5 px-3 rounded-xl bg-[#06141B]/90 border border-amber-400/40 text-center shadow-inner">
+          <div className="relative z-10 mt-3 sm:mt-4 w-full py-1.5 px-3 rounded-xl bg-[#06141B]/95 border border-amber-400/50 text-center shadow-inner backdrop-blur-sm">
             <span className="text-xs sm:text-sm text-amber-300 font-black font-mono">
               ✨ {c.exp.toLocaleString('vi-VN')}{' '}
               <span className="text-[10px] text-amber-200/70 font-semibold">EXP</span>
@@ -407,14 +418,27 @@ export const LeaderboardTable: React.FC = () => {
           key={c.id}
           id={isPlayer ? 'my-rank-card' : undefined}
           onClick={() => handleSelectHunter(c, 2)}
-          className={`relative rounded-3xl p-3 sm:p-5 border border-slate-300/50 bg-gradient-to-b from-slate-300/12 via-[#11212D] to-[#11212D] shadow-[0_0_20px_rgba(203,213,225,0.12)] flex flex-col items-center justify-between h-full min-h-[190px] sm:min-h-[220px] md:min-h-[235px] cursor-pointer hover:border-slate-200 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-2 md:order-1 overflow-hidden group ${
+          className={`relative rounded-3xl p-3 sm:p-5 border border-slate-300/60 bg-[#0c1822] shadow-[0_0_25px_rgba(203,213,225,0.18)] flex flex-col items-center justify-between h-full min-h-[190px] sm:min-h-[220px] md:min-h-[235px] cursor-pointer hover:border-slate-200 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-2 md:order-1 overflow-hidden group ${
             isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.02]' : ''
           }`}
         >
-          <div className="flex flex-col items-center w-full">
-            {/* Avatar with Badges */}
+          {/* Card Background Artwork (Top 2: Sword Battlefield Pink/Orange Sky) */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <img
+              src="/assets/leaderboard/top2_podium_bg.jpg"
+              alt="Á Quân Top 2 Background"
+              className="w-full h-full object-cover object-center opacity-80 group-hover:opacity-95 group-hover:scale-105 transition-all duration-700 select-none"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/40 via-transparent to-[#0c1822] opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#11212D] via-[#11212D]/40 to-transparent" />
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center w-full">
+            {/* Avatar with Badges & Silver Backlight */}
             <div className="relative mb-2 mt-1 shrink-0">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full ring-2 ring-slate-300 shadow-[0_0_12px_rgba(203,213,225,0.25)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
+              <div className="absolute inset-0 rounded-full bg-slate-300/30 blur-md scale-110 pointer-events-none" />
+
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full ring-2 ring-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.4)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
                 {isAvatarUrl(c.avatar) ? (
                   <img
                     src={c.avatar}
@@ -446,10 +470,10 @@ export const LeaderboardTable: React.FC = () => {
 
             {/* Name & Title */}
             <div className="text-center w-full px-1 mt-0.5">
-              <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[120px] sm:max-w-full mx-auto group-hover:text-white transition">
+              <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[120px] sm:max-w-full mx-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover:text-white transition">
                 {c.name}
                 {isPlayer && (
-                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black bg-slate-300 text-[#06141B]">
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black bg-slate-300 text-[#06141B] shadow">
                     BẠN
                   </span>
                 )}
@@ -459,7 +483,7 @@ export const LeaderboardTable: React.FC = () => {
           </div>
 
           {/* EXP Frame */}
-          <div className="mt-2.5 w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-xl bg-[#06141B]/90 border border-slate-400/30 text-center shadow-inner">
+          <div className="relative z-10 mt-2.5 w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-xl bg-[#06141B]/95 border border-slate-400/40 text-center shadow-inner backdrop-blur-sm">
             <span className="text-[10px] sm:text-xs text-slate-200 font-extrabold font-mono">
               ✨ {c.exp.toLocaleString('vi-VN')}{' '}
               <span className="text-[8px] sm:text-[10px] text-slate-400 font-normal">EXP</span>
@@ -475,14 +499,27 @@ export const LeaderboardTable: React.FC = () => {
         key={c.id}
         id={isPlayer ? 'my-rank-card' : undefined}
         onClick={() => handleSelectHunter(c, 3)}
-        className={`relative rounded-3xl p-3 sm:p-5 border border-amber-700/60 bg-gradient-to-b from-amber-700/15 via-[#11212D] to-[#11212D] shadow-[0_0_20px_rgba(180,83,9,0.12)] flex flex-col items-center justify-between h-full min-h-[190px] sm:min-h-[220px] md:min-h-[220px] cursor-pointer hover:border-amber-600 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-3 md:order-3 overflow-hidden group ${
+        className={`relative rounded-3xl p-3 sm:p-5 border border-amber-700/70 bg-[#0c1822] shadow-[0_0_25px_rgba(180,83,9,0.18)] flex flex-col items-center justify-between h-full min-h-[190px] sm:min-h-[220px] md:min-h-[220px] cursor-pointer hover:border-amber-600 hover:scale-[1.01] transition-all duration-300 col-span-1 md:col-span-1 order-3 md:order-3 overflow-hidden group ${
           isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.02]' : ''
         }`}
       >
-        <div className="flex flex-col items-center w-full">
-          {/* Avatar with Badges */}
+        {/* Card Background Artwork (Top 3: Mystical Celestial Purple Arc) */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <img
+            src="/assets/leaderboard/top3_podium_bg.jpg"
+            alt="Quý Quân Top 3 Background"
+            className="w-full h-full object-cover object-center opacity-80 group-hover:opacity-95 group-hover:scale-105 transition-all duration-700 select-none"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/40 via-transparent to-[#0c1822] opacity-90" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#11212D] via-[#11212D]/40 to-transparent" />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center w-full">
+          {/* Avatar with Badges & Purple/Bronze Backlight */}
           <div className="relative mb-2 mt-1 shrink-0">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full ring-2 ring-amber-700 shadow-[0_0_12px_rgba(180,83,9,0.25)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
+            <div className="absolute inset-0 rounded-full bg-purple-500/30 blur-md scale-110 pointer-events-none" />
+
+            <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full ring-2 ring-amber-700 shadow-[0_0_15px_rgba(180,83,9,0.4)] overflow-hidden bg-[#06141B] flex items-center justify-center shrink-0 aspect-square">
               {isAvatarUrl(c.avatar) ? (
                 <img
                   src={c.avatar}
@@ -514,10 +551,10 @@ export const LeaderboardTable: React.FC = () => {
 
           {/* Name & Title */}
           <div className="text-center w-full px-1 mt-0.5">
-            <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[120px] sm:max-w-full mx-auto group-hover:text-white transition">
+            <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-[#CCD0CF] truncate max-w-[120px] sm:max-w-full mx-auto drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] group-hover:text-white transition">
               {c.name}
               {isPlayer && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black bg-amber-700 text-white">
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[8px] sm:text-[9px] font-black bg-amber-700 text-white shadow">
                   BẠN
                 </span>
               )}
@@ -527,7 +564,7 @@ export const LeaderboardTable: React.FC = () => {
         </div>
 
         {/* EXP Frame */}
-        <div className="mt-2.5 w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-xl bg-[#06141B]/90 border border-amber-700/30 text-center shadow-inner">
+        <div className="relative z-10 mt-2.5 w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-xl bg-[#06141B]/95 border border-amber-700/40 text-center shadow-inner backdrop-blur-sm">
           <span className="text-[10px] sm:text-xs text-amber-400 font-extrabold font-mono">
             ✨ {c.exp.toLocaleString('vi-VN')}{' '}
             <span className="text-[8px] sm:text-[10px] text-amber-500/70 font-normal">EXP</span>
