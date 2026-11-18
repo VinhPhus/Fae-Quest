@@ -331,7 +331,7 @@ export const LeaderboardTable: React.FC = () => {
         <div className="absolute bottom-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
         <div className="absolute bottom-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
 
-        {/* Ảnh Bìa Cá Nhân Phủ Toàn Thẻ */}
+        {/* Ảnh Bìa Rồng Đỏ Phủ Toàn Thẻ */}
         <img
           src={coverImage}
           alt={c.name}
@@ -478,7 +478,7 @@ export const LeaderboardTable: React.FC = () => {
         <div className={`absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
         <div className={`absolute bottom-2 right-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
 
-        {/* Ảnh Nền Phủ Toàn Thẻ Giống Top 1 */}
+        {/* Ảnh Nền Phủ Toàn Thẻ (Full Bleed) Giống Top 1 */}
         <img
           src={coverImage}
           alt={c.name}
@@ -578,8 +578,6 @@ export const LeaderboardTable: React.FC = () => {
 
 
 
-
-
   return (
     <div className="space-y-4">
       {/* Helper Banner */}
@@ -630,13 +628,11 @@ export const LeaderboardTable: React.FC = () => {
                 key={c.id}
                 id={isUser ? 'my-rank-card' : undefined}
                 onClick={() => handleSelectHunter(c, rankPos)}
-                className={`bg-[#11212D]/90 hover:bg-[#253745]/50 border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2.5 sm:gap-3 transition-all cursor-pointer group ${
-                  isUser
-                    ? `border-[#9BA8AB]/70 bg-[#253745]/60 shadow-[0_0_15px_rgba(155,168,171,0.2)] ring-1 ring-[#9BA8AB]/40 ${
-                        highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.01]' : ''
-                      }`
-                    : 'border-[#253745] hover:border-[#4A5C6A]'
-                }`}
+                className={`bg-[#11212D]/90 hover:bg-[#253745]/50 border rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-2.5 sm:gap-3 transition-all cursor-pointer group ${isUser
+                  ? `border-[#9BA8AB]/70 bg-[#253745]/60 shadow-[0_0_15px_rgba(155,168,171,0.2)] ring-1 ring-[#9BA8AB]/40 ${highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.01]' : ''
+                  }`
+                  : 'border-[#253745] hover:border-[#4A5C6A]'
+                  }`}
               >
                 {/* Left: Rank pos + Avatar + Name + Title */}
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
@@ -792,7 +788,7 @@ export const LeaderboardTable: React.FC = () => {
                             Math.round(
                               ((typeof exp === 'number' ? exp : 0) /
                                 (myRankStats.targetRival.exp || 1)) *
-                                100
+                              100
                             )
                           )
                         )}%`,
