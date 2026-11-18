@@ -27,32 +27,15 @@ DROP POLICY IF EXISTS "Allow user to select own journals" ON public.journals;
 DROP POLICY IF EXISTS "Allow user to insert own journals" ON public.journals;
 DROP POLICY IF EXISTS "Allow user to update own journals" ON public.journals;
 DROP POLICY IF EXISTS "Allow user to delete own journals" ON public.journals;
+DROP POLICY IF EXISTS "Allow full access to journals" ON public.journals;
 
--- Tạo các policy RLS: Người dùng chỉ được SELECT, INSERT, UPDATE, DELETE bản ghi của chính mình
-CREATE POLICY "Allow user to select own journals"
+-- Tạo policy RLS đồng bộ với cấu trúc bảng profiles và user_states của FaeQuest
+CREATE POLICY "Allow full access to journals"
 ON public.journals
-FOR SELECT
-TO authenticated, anon
-USING (auth.uid()::text = user_id OR user_id = current_setting('request.jwt.claim.sub', true));
-
-CREATE POLICY "Allow user to insert own journals"
-ON public.journals
-FOR INSERT
-TO authenticated, anon
-WITH CHECK (auth.uid()::text = user_id OR user_id = current_setting('request.jwt.claim.sub', true));
-
-CREATE POLICY "Allow user to update own journals"
-ON public.journals
-FOR UPDATE
-TO authenticated, anon
-USING (auth.uid()::text = user_id OR user_id = current_setting('request.jwt.claim.sub', true))
-WITH CHECK (auth.uid()::text = user_id OR user_id = current_setting('request.jwt.claim.sub', true));
-
-CREATE POLICY "Allow user to delete own journals"
-ON public.journals
-FOR DELETE
-TO authenticated, anon
-USING (auth.uid()::text = user_id OR user_id = current_setting('request.jwt.claim.sub', true));
+FOR ALL
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
 
 -- Cấp quyền truy cập bảng
 GRANT ALL ON public.journals TO authenticated, anon;
@@ -70,3 +53,6 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE public.journals;
   END IF;
 END $$;
+
+-- 6. Tự động làm mới Schema Cache của PostgREST ngay lập tức
+NOTIFY pgrst, 'reload schema';

@@ -395,7 +395,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (error || !data) {
               console.error('Supabase update journal error:', error);
-              get().addToast(error?.message || 'Lỗi khi cập nhật nhật ký lên máy chủ!', 'error');
+              const isSchemaError = error?.message?.includes('schema cache') || (error as any)?.code === 'PGRST205';
+              const errorMsg = isSchemaError
+                ? "Chưa tạo bảng 'journals' trên Supabase. Vui lòng chạy file 'supabase_journals.sql' trong SQL Editor!"
+                : (error?.message || 'Lỗi khi cập nhật nhật ký lên máy chủ!');
+              get().addToast(errorMsg, 'error');
               return false;
             }
 
@@ -424,7 +428,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (error || !data) {
               console.error('Supabase insert journal error:', error);
-              get().addToast(error?.message || 'Lỗi khi lưu nhật ký lên máy chủ!', 'error');
+              const isSchemaError = error?.message?.includes('schema cache') || (error as any)?.code === 'PGRST205';
+              const errorMsg = isSchemaError
+                ? "Chưa tạo bảng 'journals' trên Supabase. Vui lòng chạy file 'supabase_journals.sql' trong SQL Editor!"
+                : (error?.message || 'Lỗi khi lưu nhật ký lên máy chủ!');
+              get().addToast(errorMsg, 'error');
               return false;
             }
 
