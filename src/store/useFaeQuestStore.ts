@@ -141,6 +141,7 @@ interface FaeQuestState {
   fetchJournals: () => Promise<void>;
   saveJournal: (entry: { id?: string; date: string; mood: JournalMood; content: string; images: string[] }) => Promise<boolean>;
   deleteJournal: (id: string) => Promise<boolean>;
+  syncJournalRealtime: (payload: any) => void;
   setUserRole: (role: UserRole) => void;
   setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => void;
   setUserInboxOpen: (open: boolean) => void;
@@ -342,7 +343,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         set({ isWriteJournalOpen: open, editingJournal: journalToEdit || null }),
 
       fetchJournals: async () => {
-        const userId = get().currentUser?.id || get().hunterId;
+        const currentUser = get().currentUser;
+        const userId = currentUser?.id;
         if (!userId) return;
 
         try {
@@ -352,138 +354,149 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .eq('user_id', userId)
             .order('date', { ascending: false });
 
-          if (!error && data) {
+          if (error) {
+            console.error('Supabase fetch journals error:', error);
+            return;
+          }
+
+          if (data) {
             set({ journals: data as JournalEntry[] });
-            if (typeof window !== 'undefined') {
-              localStorage.setItem(`faequest_journals_${userId}`, JSON.stringify(data));
-            }
-          } else {
-            if (typeof window !== 'undefined') {
-              const localData = localStorage.getItem(`faequest_journals_${userId}`);
-              if (localData) {
-                try {
-                  set({ journals: JSON.parse(localData) });
-                } catch { }
-              }
-            }
           }
         } catch (e) {
-          console.error('Error fetching journals:', e);
-          if (typeof window !== 'undefined') {
-            const localData = localStorage.getItem(`faequest_journals_${userId}`);
-            if (localData) {
-              try {
-                set({ journals: JSON.parse(localData) });
-              } catch { }
-            }
-          }
+          console.error('Exception fetching journals:', e);
         }
       },
 
       saveJournal: async (entry: { id?: string; date: string; mood: JournalMood; content: string; images: string[] }) => {
-        const userId = get().currentUser?.id || get().hunterId;
-        if (!userId) {
-          get().addToast('Không tìm thấy thông tin Thợ Săn để lưu nhật ký!', 'error');
+        const currentUser = get().currentUser;
+        if (!currentUser?.id) {
+          get().addToast('Vui lòng đăng nhập để lưu nhật ký!', 'error');
           return false;
         }
-
+        const userId = currentUser.id;
         const nowIso = new Date().toISOString();
         const isUpdate = Boolean(entry.id);
-        const journalId = entry.id || crypto.randomUUID();
-
-        const journalRecord: JournalEntry = {
-          id: journalId,
-          user_id: userId,
-          date: entry.date,
-          mood: entry.mood,
-          content: entry.content,
-          images: entry.images || [],
-          created_at: nowIso,
-          updated_at: nowIso,
-        };
-
-        const existingList = get().journals || [];
-        let updatedList: JournalEntry[];
-        if (isUpdate) {
-          updatedList = existingList.map((j) =>
-            j.id === journalId ? { ...j, ...journalRecord, updated_at: nowIso } : j
-          );
-        } else {
-          updatedList = [journalRecord, ...existingList];
-        }
-
-        set({ journals: updatedList, isWriteJournalOpen: false, editingJournal: null });
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`faequest_journals_${userId}`, JSON.stringify(updatedList));
-        }
-
-        // Phát âm thanh cuộn giấy da sột soạt (scroll_open)
-        playSound('scroll_open');
 
         try {
-          if (isUpdate) {
-            const { error } = await supabase
+          if (isUpdate && entry.id) {
+            const { data, error } = await supabase
               .from('journals')
               .update({
                 date: entry.date,
                 mood: entry.mood,
                 content: entry.content,
-                images: entry.images,
+                images: entry.images || [],
                 updated_at: nowIso,
               })
-              .eq('id', journalId)
-              .eq('user_id', userId);
+              .eq('id', entry.id)
+              .eq('user_id', userId)
+              .select('*')
+              .single();
 
-            if (error) {
-              console.warn('Supabase update journal note (persisted locally):', error);
+            if (error || !data) {
+              console.error('Supabase update journal error:', error);
+              get().addToast(error?.message || 'Lỗi khi cập nhật nhật ký lên máy chủ!', 'error');
+              return false;
             }
+
+            const updatedRecord = data as JournalEntry;
+            const existing = get().journals || [];
+            const nextList = existing.map((j) => (j.id === updatedRecord.id ? updatedRecord : j));
+            nextList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            set({ journals: nextList, isWriteJournalOpen: false, editingJournal: null });
+            playSound('scroll_open');
+            get().addToast('Cập nhật trang nhật ký thành công!', 'success');
+            return true;
           } else {
-            const { error } = await supabase.from('journals').insert({
-              id: journalId,
-              user_id: userId,
-              date: entry.date,
-              mood: entry.mood,
-              content: entry.content,
-              images: entry.images,
-              created_at: nowIso,
-              updated_at: nowIso,
-            });
+            const { data, error } = await supabase
+              .from('journals')
+              .insert({
+                user_id: userId,
+                date: entry.date,
+                mood: entry.mood,
+                content: entry.content,
+                images: entry.images || [],
+                created_at: nowIso,
+                updated_at: nowIso,
+              })
+              .select('*')
+              .single();
 
-            if (error) {
-              console.warn('Supabase insert journal note (persisted locally):', error);
+            if (error || !data) {
+              console.error('Supabase insert journal error:', error);
+              get().addToast(error?.message || 'Lỗi khi lưu nhật ký lên máy chủ!', 'error');
+              return false;
             }
-          }
 
-          get().addToast(
-            isUpdate ? 'Cập nhật trang nhật ký thành công!' : 'Đã ghi lại nhật ký hành trình hôm nay!',
-            'success'
-          );
-          return true;
+            const newRecord = data as JournalEntry;
+            const existing = get().journals || [];
+            const nextList = [newRecord, ...existing.filter((j) => j.id !== newRecord.id)];
+            nextList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            set({ journals: nextList, isWriteJournalOpen: false, editingJournal: null });
+            playSound('scroll_open');
+            get().addToast('Đã ghi lại nhật ký hành trình hôm nay!', 'success');
+            return true;
+          }
         } catch (err: any) {
-          console.error('Error saving journal to Supabase:', err);
-          get().addToast('Đã lưu nhật ký vào thiết bị!', 'info');
-          return true;
+          console.error('Exception saving journal to Supabase:', err);
+          get().addToast(err?.message || 'Lỗi kết nối máy chủ khi lưu nhật ký!', 'error');
+          return false;
         }
       },
 
       deleteJournal: async (id: string) => {
-        const userId = get().currentUser?.id || get().hunterId;
-        const existingList = get().journals || [];
-        const updatedList = existingList.filter((j) => j.id !== id);
-        set({ journals: updatedList });
-        if (typeof window !== 'undefined' && userId) {
-          localStorage.setItem(`faequest_journals_${userId}`, JSON.stringify(updatedList));
-        }
+        const currentUser = get().currentUser;
+        if (!currentUser?.id) return false;
 
         try {
-          if (userId) {
-            await supabase.from('journals').delete().eq('id', id).eq('user_id', userId);
+          const { error } = await supabase
+            .from('journals')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', currentUser.id);
+
+          if (error) {
+            console.error('Supabase delete journal error:', error);
+            get().addToast('Không thể xóa bài nhật ký trên máy chủ!', 'error');
+            return false;
           }
+
+          set((state) => ({
+            journals: state.journals.filter((j) => j.id !== id),
+          }));
           get().addToast('Đã xóa bài nhật ký!', 'info');
           return true;
-        } catch (err) {
-          console.error('Error deleting journal:', err);
+        } catch (err: any) {
+          console.error('Exception deleting journal:', err);
+          get().addToast('Lỗi khi xóa bài nhật ký!', 'error');
           return false;
+        }
+      },
+
+      syncJournalRealtime: (payload: any) => {
+        const { eventType, new: newRecord, old: oldRecord } = payload;
+        if (eventType === 'INSERT' && newRecord) {
+          set((state) => {
+            const exists = state.journals.some((j) => j.id === newRecord.id);
+            if (exists) return state;
+            const updated = [newRecord as JournalEntry, ...state.journals];
+            updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            return { journals: updated };
+          });
+        } else if (eventType === 'UPDATE' && newRecord) {
+          set((state) => {
+            const updated = state.journals.map((j) =>
+              j.id === newRecord.id ? (newRecord as JournalEntry) : j
+            );
+            updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            return { journals: updated };
+          });
+        } else if (eventType === 'DELETE' && oldRecord) {
+          set((state) => ({
+            journals: state.journals.filter((j) => j.id !== oldRecord.id),
+          }));
+        } else {
+          get().fetchJournals();
         }
       },
 

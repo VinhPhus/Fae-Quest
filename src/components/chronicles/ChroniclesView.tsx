@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { JournalEntry, JournalMood } from '../../types';
@@ -109,8 +109,12 @@ export const ChroniclesHeader: React.FC = () => {
  * Main Chronicles View: Artful Magazine / Portfolio Masonry Grid Layout
  */
 export const ChroniclesView: React.FC = () => {
-  const { journals, setWriteJournalOpen } = useFaeQuestStore();
+  const { journals, setWriteJournalOpen, fetchJournals } = useFaeQuestStore();
   const [selectedJournal, setSelectedJournal] = useState<JournalEntry | null>(null);
+
+  useEffect(() => {
+    fetchJournals();
+  }, [fetchJournals]);
 
   return (
     <div className="space-y-6">

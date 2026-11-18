@@ -152,24 +152,28 @@ export const useRealtimeSync = (): void => {
       }
     );
 
-    // 6. Lắng nghe thay đổi trên Nhật Ký Thợ Săn (journals)
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'journals',
-        filter: `user_id=eq.${currentUser.id}`,
-      },
-      () => {
-        useFaeQuestStore.getState().fetchJournals();
-      }
-    );
+    // 6. Kênh lắng nghe Realtime riêng cho Nhật Ký Thợ Săn (public:journals)
+    const journalChannel = supabase
+      .channel(`public:journals:${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'journals',
+          filter: `user_id=eq.${currentUser.id}`,
+        },
+        (payload) => {
+          useFaeQuestStore.getState().syncJournalRealtime(payload);
+        }
+      )
+      .subscribe();
 
     channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(journalChannel);
     };
   }, [currentUser?.id, soundEnabled, addToast]);
 };
