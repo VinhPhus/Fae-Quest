@@ -1127,16 +1127,40 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       adminDeleteUser: async (targetUserId) => {
         try {
-          const { error } = await supabase.rpc('rpc_admin_delete_user', {
-            p_target_user_id: targetUserId,
+          // 1. Ưu tiên gọi RPC admin_delete_user với tham số target_user_id (chuẩn theo yêu cầu)
+          let rpcError: any = null;
+          const { error: err1 } = await supabase.rpc('admin_delete_user', {
+            target_user_id: targetUserId,
           });
 
-          if (error) {
+          if (err1) {
+            rpcError = err1;
+            // 2. Fallback thử gọi rpc_admin_delete_user với tham số p_target_user_id
+            const { error: err2 } = await supabase.rpc('rpc_admin_delete_user', {
+              p_target_user_id: targetUserId,
+            });
+            if (!err2) {
+              rpcError = null;
+            }
+          }
+
+          // 3. Nếu chưa có RPC trên Supabase, fallback dọn dẹp trực tiếp qua các bảng nghiệp vụ
+          if (rpcError) {
+            console.warn('RPC delete user failed, performing direct table deletes:', rpcError);
             await supabase.from('activity_logs').delete().eq('user_id', targetUserId);
             await supabase.from('user_messages').delete().eq('receiver_id', targetUserId);
+            await supabase.from('journals').delete().eq('user_id', targetUserId);
             await supabase.from('user_states').delete().eq('user_id', targetUserId);
-            await supabase.from('profiles').delete().eq('id', targetUserId);
+            const { error: delProfileErr } = await supabase.from('profiles').delete().eq('id', targetUserId);
+            if (delProfileErr) {
+              console.error('Error deleting profile directly:', delProfileErr);
+              get().addToast(`Lỗi khi xóa hồ sơ người dùng: ${delProfileErr.message}`, 'error');
+              return false;
+            }
           }
+
+          // Cập nhật lại danh sách Thợ Săn trong Admin
+          get().fetchCommunityProfiles();
           return true;
         } catch (e: any) {
           get().addToast(e.message || 'Lỗi khi xóa tài khoản', 'error');
@@ -2812,40 +2836,29 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               hunterName.toLowerCase().includes('quản trị') ||
               hunterName.toLowerCase().includes('admin');
 
-            // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
+            // CHỐT CHẶN BẢO VỆ: Nếu có phiên đăng nhập nhưng không tìm thấy profile trên máy chủ
+            // Điều này có nghĩa tài khoản ĐÃ BỊ QUẢN TRỊ VIÊN XÓA! Tuyệt đối KHÔNG tự động tái tạo profile!
             if (!profile) {
-              try { await supabase.rpc('rpc_ensure_profile'); } catch { }
-              const { data: refetched } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', hunterId)
-                .maybeSingle();
-              if (refetched) {
-                profile = refetched;
-              } else {
-                const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
-                const { data: createdProfile } = await supabase
-                  .from('profiles')
-                  .insert({
-                    id: hunterId,
-                    username: hunterName,
-                    avatar_url: null,
-                    exp: 0,
-                    coins: 25,
-                    rank_id: 'dong',
-                    equipped_title: 'title_tan_binh_gai_do',
-                    role: defaultRole,
-                    streak: 0,
-                    completed_tasks_count: 0,
-                    stars: 0,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .select('*')
-                  .maybeSingle();
-                if (createdProfile) {
-                  profile = createdProfile;
-                }
+              console.warn('Phiên đăng nhập tồn tại nhưng hồ sơ không có trên máy chủ (Tài khoản đã bị xóa):', hunterId);
+              try {
+                await supabase.auth.signOut();
+              } catch { }
+
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                } catch { }
               }
+
+              set({
+                currentUser: null,
+                hunterId: '',
+                authLoading: false,
+              });
+
+              get().addToast('⚠️ Tài khoản của bạn đã bị Quản Trị Viên xóa khỏi hệ thống!', 'error');
+              return;
             }
 
             let userRole: UserRole = (profile?.role === 'admin' || isAdminCandidate) ? 'admin' : 'user';
@@ -3247,40 +3260,22 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             hunterName.toLowerCase().includes('quản trị') ||
             hunterName.toLowerCase().includes('admin');
 
-          // Tự động khởi tạo hồ sơ nếu chưa có trên máy chủ
+          // CHỐT CHẶN BẢO VỆ: Nếu đăng nhập Auth thành công nhưng không tìm thấy profile trên máy chủ
+          // Điều này có nghĩa tài khoản ĐÃ BỊ QUẢN TRỊ VIÊN XÓA! Tuyệt đối KHÔNG tự động tái tạo profile!
           if (!profile) {
-            try { await supabase.rpc('rpc_ensure_profile'); } catch { }
-            const { data: refetched } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', userId)
-              .maybeSingle();
-            if (refetched) {
-              profile = refetched;
-            } else {
-              const defaultRole: UserRole = isAdminCandidate ? 'admin' : 'user';
-              const { data: createdProfile } = await supabase
-                .from('profiles')
-                .insert({
-                  id: userId,
-                  username: hunterName,
-                  avatar_url: null,
-                  exp: 0,
-                  coins: 25,
-                  stars: 0,
-                  rank_id: 'dong',
-                  equipped_title: 'title_tan_binh_gai_do',
-                  role: defaultRole,
-                  streak: 0,
-                  completed_tasks_count: 0,
-                  updated_at: new Date().toISOString(),
-                })
-                .select('*')
-                .maybeSingle();
-              if (createdProfile) {
-                profile = createdProfile;
-              }
-            }
+            console.warn('Đăng nhập thành công nhưng hồ sơ không tồn tại trên máy chủ (Tài khoản đã bị xóa):', userId);
+            try {
+              await supabase.auth.signOut();
+            } catch { }
+
+            set({
+              currentUser: null,
+              hunterId: '',
+              authLoading: false,
+            });
+
+            get().addToast('⚠️ Tài khoản này đã bị Quản Trị Viên xóa khỏi hệ thống!', 'error');
+            return { success: false, error: 'Tài khoản này đã bị Quản Trị Viên xóa khỏi hệ thống!' };
           }
 
           let userRole: UserRole = (profile?.role === 'admin' || isAdminCandidate) ? 'admin' : 'user';

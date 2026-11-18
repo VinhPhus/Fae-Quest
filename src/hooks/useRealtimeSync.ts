@@ -91,7 +91,28 @@ export const useRealtimeSync = (): void => {
         table: 'profiles',
         filter: `id=eq.${currentUser.id}`,
       },
-      (payload) => {
+      async (payload) => {
+        // CƠ CHẾ ĐỒNG BỘ REALTIME: BẮT SỰ KIỆN ADMIN XÓA TÀI KHOẢN (DELETE)
+        if (payload.eventType === 'DELETE') {
+          console.warn('Realtime sync phát hiện tài khoản của bạn bị Quản Trị Viên xóa:', currentUser.id);
+          playSoundEffect('warning', soundEnabled);
+          addToast('⚠️ Tài khoản của bạn đã bị Quản Trị Viên xóa khỏi hệ thống!', 'error');
+
+          try {
+            await supabase.auth.signOut();
+          } catch { }
+
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.clear();
+              sessionStorage.clear();
+            } catch { }
+          }
+
+          useFaeQuestStore.getState().signOut();
+          return;
+        }
+
         if (payload.new) {
           const p = payload.new as any;
           const patch: any = {};
@@ -144,7 +165,28 @@ export const useRealtimeSync = (): void => {
         schema: 'public',
         table: 'profiles',
       },
-      (payload) => {
+      async (payload) => {
+        // Bắt thêm ở kênh toàn cầu phòng trường hợp filter channel 4 không kích hoạt sự kiện DELETE
+        if (payload.eventType === 'DELETE' && (payload.old as any)?.id === currentUser.id) {
+          console.warn('Realtime sync phát hiện tài khoản bị xóa từ kênh toàn cầu:', currentUser.id);
+          playSoundEffect('warning', soundEnabled);
+          addToast('⚠️ Tài khoản của bạn đã bị Quản Trị Viên xóa khỏi hệ thống!', 'error');
+
+          try {
+            await supabase.auth.signOut();
+          } catch { }
+
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.clear();
+              sessionStorage.clear();
+            } catch { }
+          }
+
+          useFaeQuestStore.getState().signOut();
+          return;
+        }
+
         useFaeQuestStore.getState().fetchCommunityProfiles();
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard', { detail: payload }));
