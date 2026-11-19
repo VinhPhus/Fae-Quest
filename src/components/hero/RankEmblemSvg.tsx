@@ -23,7 +23,7 @@ export const RankEmblem: React.FC<RankEmblemProps> = ({
         <img
           src={iconUrl}
           alt={alt}
-          className={`${className} object-contain select-none rank-badge-interactive ${showPulse ? 'rank-pulse-fx' : ''}`}
+          className={`${className} object-contain [image-rendering:pixelated] select-none rank-badge-interactive ${showPulse ? 'rank-pulse-fx' : ''}`}
           loading="eager"
         />
       </div>

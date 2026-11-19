@@ -17,7 +17,7 @@ export const InventoryHeader: React.FC = () => {
       <div>
         <div className="flex flex-wrap items-center gap-2 mb-1">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[11px] font-extrabold text-[#CCD0CF]">
-            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain" />
+            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]" />
             <span>{currentTier.name.toUpperCase()}</span>
           </span>
           <span className="text-[11px] text-[#9BA8AB] font-mono">

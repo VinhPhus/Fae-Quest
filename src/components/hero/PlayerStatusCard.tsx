@@ -267,7 +267,7 @@ export const PlayerStatusCard: React.FC = () => {
                 <img
                   src={currentTier.iconUrl}
                   alt={currentTier.name}
-                  className="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] object-contain drop-shadow"
+                  className="w-[18px] h-[18px] sm:w-[22px] sm:h-[22px] object-contain [image-rendering:pixelated] drop-shadow"
                   loading="lazy"
                 />
                 <span>{currentTier.name.toUpperCase()}</span>

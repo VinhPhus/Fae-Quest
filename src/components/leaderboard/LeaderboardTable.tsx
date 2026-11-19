@@ -423,7 +423,7 @@ export const LeaderboardTable: React.FC = () => {
                 <img
                   src={tier.iconUrl}
                   alt={tier.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain [image-rendering:pixelated]"
                 />
               </div>
 
@@ -576,7 +576,7 @@ export const LeaderboardTable: React.FC = () => {
               <img
                 src={tier.iconUrl}
                 alt={tier.name}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain [image-rendering:pixelated]"
               />
             </div>
 
@@ -708,7 +708,7 @@ export const LeaderboardTable: React.FC = () => {
                       <img
                         src={tier.iconUrl}
                         alt={tier.name}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain [image-rendering:pixelated]"
                       />
                     </div>
                   </div>
@@ -734,7 +734,7 @@ export const LeaderboardTable: React.FC = () => {
                     <img
                       src={tier.iconUrl}
                       alt={tier.name}
-                      className="w-4 h-4 object-contain"
+                      className="w-4 h-4 object-contain [image-rendering:pixelated]"
                     />
                     <span>{tier.name}</span>
                   </div>
@@ -791,7 +791,7 @@ export const LeaderboardTable: React.FC = () => {
                 <img
                   src={myTier.iconUrl}
                   alt={myTier.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain [image-rendering:pixelated]"
                 />
               </div>
             </div>

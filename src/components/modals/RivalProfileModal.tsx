@@ -190,7 +190,7 @@ export const RivalProfileModal: React.FC = () => {
                 <img
                   src={rivalTier.iconUrl}
                   alt={rivalTier.name}
-                  className="w-4 h-4 object-contain"
+                  className="w-4 h-4 object-contain [image-rendering:pixelated]"
                 />
               </div>
             </div>
@@ -198,7 +198,7 @@ export const RivalProfileModal: React.FC = () => {
             {/* Badge Bậc Rank */}
             <div className="mb-1 flex items-center gap-1.5">
               <span className="text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[#CCD0CF] shadow-inner flex items-center gap-1">
-                <img src={rivalTier.iconUrl} alt={rivalTier.name} className="w-3.5 h-3.5 object-contain" />
+                <img src={rivalTier.iconUrl} alt={rivalTier.name} className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]" />
                 <span>{rivalTier.name}</span>
               </span>
             </div>

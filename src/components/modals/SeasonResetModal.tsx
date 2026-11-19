@@ -211,7 +211,7 @@ export const SeasonResetModal: React.FC = () => {
                         <img
                           src={h.currentTierIcon}
                           alt={h.currentTierName}
-                          className="w-3.5 h-3.5 object-contain"
+                          className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
                         />
                         <span>{h.currentTierName}</span>
                       </div>
@@ -223,7 +223,7 @@ export const SeasonResetModal: React.FC = () => {
                         <img
                           src={h.newTierIcon}
                           alt={h.newTierName}
-                          className="w-3.5 h-3.5 object-contain"
+                          className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
                         />
                         <span>{h.newTierName}</span>
                         <span className="text-[10px] text-[#9BA8AB] font-mono">

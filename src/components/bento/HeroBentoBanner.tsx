@@ -232,7 +232,7 @@ export const HeroBentoBanner: React.FC = () => {
                     <img
                       src={currentTier.iconUrl}
                       alt={currentTier.name}
-                      className="w-full h-full object-contain p-2"
+                      className="w-full h-full object-contain [image-rendering:pixelated] p-2"
                     />
                   )}
 
@@ -331,7 +331,7 @@ export const HeroBentoBanner: React.FC = () => {
                   <img
                     src={currentTier.iconUrl}
                     alt={currentTier.name}
-                    className="w-3.5 h-3.5 object-contain"
+                    className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
                   />
                   <span>{currentTier.name.toUpperCase()}</span>
                 </span>

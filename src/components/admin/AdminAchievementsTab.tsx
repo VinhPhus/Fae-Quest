@@ -81,9 +81,12 @@ export const AdminAchievementsTab: React.FC = () => {
     { label: 'Thợ Săn', url: '/assets/titles/title-tho-san.png' },
     { label: 'Hiền Nhân', url: '/assets/titles/title-hien-nhan.png' },
     { label: 'Độc Cô', url: '/assets/titles/title-doc-co.png' },
+    { label: 'Đồng', url: '/assets/ranks/rank-dong.png' },
     { label: 'Bạc', url: '/assets/ranks/rank-bac.png' },
     { label: 'Vàng', url: '/assets/ranks/rank-vang.png' },
     { label: 'Lục Bảo', url: '/assets/ranks/rank-luc-bao.png' },
+    { label: 'Cao Thủ', url: '/assets/ranks/rank-cao-thu.png' },
+    { label: 'Đại Cao Thủ', url: '/assets/ranks/rank-dai-cao-thu.png' },
     { label: 'Thách Đấu', url: '/assets/ranks/rank-thach-dau.png' },
   ];
 
@@ -625,7 +628,7 @@ export const AdminAchievementsTab: React.FC = () => {
                       }`}
                       title={t.label}
                     >
-                      <img src={t.url} alt={t.label} className="w-7 h-7 object-contain" />
+                      <img src={t.url} alt={t.label} className="w-7 h-7 object-contain [image-rendering:pixelated]" />
                       <span className="text-[9px] text-[#9BA8AB] truncate max-w-full">{t.label}</span>
                     </button>
                   ))}

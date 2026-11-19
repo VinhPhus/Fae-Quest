@@ -398,7 +398,8 @@ export const AdminUsersTab: React.FC = () => {
                       {/* Rank & EXP */}
                       <td className="py-3 px-3">
                         <div className="space-y-0.5">
-                          <span className="font-bold text-[#CCD0CF] flex items-center gap-1">
+                          <span className="font-bold text-[#CCD0CF] flex items-center gap-1.5">
+                            <img src={tier.iconUrl} alt={tier.name} className="w-4 h-4 object-contain [image-rendering:pixelated]" />
                             <span className="text-white">{tier.name}</span>
                           </span>
                           <span className="text-[11px] text-cyan-400 font-bold block">

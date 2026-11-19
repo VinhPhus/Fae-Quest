@@ -95,6 +95,55 @@ export const DEFAULT_ADMIN_ASSETS: AdminAsset[] = [
     category: 'achievement',
     created_at: new Date().toISOString(),
   },
+  {
+    id: 'default-rank-dong',
+    name: 'Rank Pixel: Đồng',
+    url: '/assets/ranks/rank-dong.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-rank-bac',
+    name: 'Rank Pixel: Bạc',
+    url: '/assets/ranks/rank-bac.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-rank-vang',
+    name: 'Rank Pixel: Vàng',
+    url: '/assets/ranks/rank-vang.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-rank-luc-bao',
+    name: 'Rank Pixel: Lục Bảo',
+    url: '/assets/ranks/rank-luc-bao.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-rank-cao-thu',
+    name: 'Rank Pixel: Cao Thủ',
+    url: '/assets/ranks/rank-cao-thu.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-rank-dai-cao-thu',
+    name: 'Rank Pixel: Đại Cao Thủ',
+    url: '/assets/ranks/rank-dai-cao-thu.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-rank-thach-dau',
+    name: 'Rank Pixel: Thách Đấu',
+    url: '/assets/ranks/rank-thach-dau.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
 ];
 
 interface FaeQuestState {

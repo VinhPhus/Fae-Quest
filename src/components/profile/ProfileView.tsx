@@ -47,7 +47,7 @@ export const ProfileHeader: React.FC = () => {
             <span>Hồ Sơ Cá Nhân</span>
           </div>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[11px] font-extrabold text-[#CCD0CF]">
-            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain" />
+            <img src={currentTier.iconUrl} alt={currentTier.name} className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]" />
             <span>{currentTier.name.toUpperCase()}</span>
           </span>
         </div>
@@ -287,7 +287,7 @@ export const ProfileView: React.FC = () => {
                     {avatarUrl ? (
                       <img src={avatarUrl} alt={playerName} className="w-full h-full object-cover rounded-full" />
                     ) : (
-                      <img src={currentTier.iconUrl} alt={currentTier.name} className="w-full h-full object-contain p-2" />
+                      <img src={currentTier.iconUrl} alt={currentTier.name} className="w-full h-full object-contain [image-rendering:pixelated] p-2" />
                     )}
 
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex flex-col items-center justify-center text-[#CCD0CF] pointer-events-none">
@@ -375,7 +375,7 @@ export const ProfileView: React.FC = () => {
             <div className="pt-3 border-t border-[#253745]/70 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#253745] border border-[#4A5C6A] text-xs font-black text-[#CCD0CF] shadow-sm">
-                  <img src={currentTier.iconUrl} alt={currentTier.name} className="w-4 h-4 object-contain" />
+                  <img src={currentTier.iconUrl} alt={currentTier.name} className="w-4 h-4 object-contain [image-rendering:pixelated]" />
                   <span>{currentTier.name.toUpperCase()}</span>
                 </span>
                 {nextTier && (
