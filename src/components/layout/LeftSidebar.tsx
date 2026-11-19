@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
+import { InstallAppButton } from '../ui/InstallAppButton';
 import { EASING_SPRING } from '../../constants/motion';
 import {
   CheckSquare,
@@ -287,6 +288,9 @@ export const LeftSidebar: React.FC = () => {
 
         {/* 4. Footer of Sidebar: Settings & Collapse Toggle pushed to bottom */}
         <div className="mt-auto p-3.5 border-t border-[#253745] space-y-2 bg-[#06141B]/95 shrink-0 overflow-hidden">
+          {/* Install PWA Button */}
+          <InstallAppButton variant="sidebar" isCollapsed={isSidebarCollapsed} />
+
           {/* Settings Button */}
           <button
             onClick={() => setSettingsOpen(true)}
@@ -456,6 +460,9 @@ export const LeftSidebar: React.FC = () => {
           >
             <Scroll className="w-4 h-4" />
           </button>
+
+          {/* Quick Install PWA */}
+          <InstallAppButton variant="mobile-header" />
 
           <button
             onClick={() => setSettingsOpen(true)}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CoinIcon } from '../ui/CoinIcon';
+import { InstallAppButton } from '../ui/InstallAppButton';
 import { EASING_SPRING } from '../../constants/motion';
 import {
   Lock,
@@ -76,6 +77,11 @@ export const AuthScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full relative flex items-center justify-center p-3 sm:p-6 overflow-hidden bg-[#06141B] thorn-pattern">
+      {/* Nút Cài Đặt PWA Nhanh Ở Góc Màn Hình */}
+      <div className="fixed top-3 right-3 sm:top-5 sm:right-6 z-30">
+        <InstallAppButton variant="auth" />
+      </div>
+
       {/* Ambient background glows */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-gradient-to-tr from-[#253745]/30 via-[#4A5C6A]/20 to-transparent rounded-full blur-[130px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-gradient-to-bl from-[#11212D]/60 via-[#253745]/30 to-transparent rounded-full blur-[120px] pointer-events-none" />
@@ -297,6 +303,12 @@ export const AuthScreen: React.FC = () => {
                     </button>
                   </p>
                 )}
+              </div>
+
+              {/* Lối Tắt Cài Đặt Ứng Dụng Ngay Trên Form */}
+              <div className="mt-4 pt-4 border-t border-[#253745]/70 flex flex-col items-center gap-1.5 sm:hidden">
+                <span className="text-[10px] text-[#9BA8AB]">Muốn mở nhanh như ứng dụng điện thoại?</span>
+                <InstallAppButton variant="auth" />
               </div>
 
             </div>

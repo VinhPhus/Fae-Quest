@@ -3,6 +3,7 @@ import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { playSoundEffect } from '../../utils/soundEffects';
 import { playSound, AmbientType } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
+import { InstallAppButton } from '../ui/InstallAppButton';
 import {
   Settings,
   X,
@@ -764,6 +765,9 @@ export const SettingsModal: React.FC = () => {
                 <p className="text-xs text-parchment/70 leading-relaxed">
                   Ứng dụng biến mục tiêu rèn luyện kỷ luật cá nhân mỗi ngày thành hành trình chinh phục đỉnh cao Thách Đấu. Hoàn thành nhiệm vụ, tích lũy EXP, mở khóa Danh Hiệu và tự thưởng xứng đáng.
                 </p>
+                <div className="pt-2">
+                  <InstallAppButton variant="auth" />
+                </div>
               </div>
 
               {/* Card 2: Donate / Support Developer */}
