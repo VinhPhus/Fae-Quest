@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Smartphone, Share, PlusSquare, X, Check, Laptop } from 'lucide-react';
 import { playSound } from '../../utils/soundEngine';
@@ -112,13 +113,13 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
       return;
     }
 
-    // C. Trường hợp trình duyệt chưa bắn sự kiện hoặc desktop browser
+    // C. Trường hợp trình duyệt chưa kịp bắn sự kiện hoặc desktop browser
     setShowManualModal(true);
   };
 
   return (
     <>
-      {/* 1. NÚT DÀNH CHO THANH SIDEBAR */}
+      {/* 1. NÚT DÀNH CHO THANH SIDEBAR (VỊ TRÍ DUY NHẤT TRONG GIAO DIỆN CHÍNH) */}
       {variant === 'sidebar' && (
         <button
           type="button"
@@ -176,178 +177,164 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
         </button>
       )}
 
-      {/* 4. NÚT DÀNH CHO HEADER / COMPACT PILL */}
-      {variant === 'compact' && (
-        <button
-          type="button"
-          onClick={handleInstall}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-cyan-950/70 via-[#11212D] to-cyan-950/70 hover:from-cyan-900/80 hover:to-[#253745] border border-cyan-400/50 hover:border-cyan-300 text-xs font-bold text-cyan-300 hover:text-white transition shadow-[0_0_15px_rgba(34,211,238,0.2)] active:scale-95 cursor-pointer shrink-0 group ${className}`}
-          title="Cài đặt FaeQuest vào thiết bị (1-chạm PWA)"
-        >
-          <Download className="w-3.5 h-3.5 text-cyan-400 group-hover:-translate-y-0.5 transition-transform" />
-          <span className="hidden sm:inline">Cài Đặt App</span>
-          <span className="sm:hidden">Cài App</span>
-        </button>
-      )}
+      {/* ================= MODALS ĐƯỢC RENDER TRỰC TIẾP LÊN BODY BẰNG CREATEPORTAL ĐỂ KHÔNG BỊ LỖI LỆCH/CẮT XÉN ================= */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <>
+            {/* MODAL HƯỚNG DẪN DÀNH CHO IPHONE / IPAD (iOS SAFARI) */}
+            <AnimatePresence>
+              {showIosModal && (
+                <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.95)] relative overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowIosModal(false)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#06141B] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
 
-      {/* ================= MODAL HƯỚNG DẪN DÀNH CHO IPHONE / IPAD (iOS SAFARI) ================= */}
-      <AnimatePresence>
-        {showIosModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.2 }}
-              className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative overflow-hidden"
-            >
-              {/* Nút Đóng Modal */}
-              <button
-                type="button"
-                onClick={() => setShowIosModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#06141B] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+                    <div className="w-16 h-16 rounded-2xl bg-[#06141B] border-2 border-cyan-400/60 p-1 mx-auto flex items-center justify-center shadow-[0_0_24px_rgba(34,211,238,0.3)] mb-4">
+                      <img
+                        src="/logo.png"
+                        alt="FaeQuest Logo"
+                        className="w-full h-full object-contain [image-rendering:pixelated]"
+                      />
+                    </div>
 
-              {/* Logo Game */}
-              <div className="w-16 h-16 rounded-2xl bg-[#06141B] border-2 border-cyan-400/60 p-1 mx-auto flex items-center justify-center shadow-[0_0_24px_rgba(34,211,238,0.3)] mb-4">
-                <img
-                  src="/logo.png"
-                  alt="FaeQuest Logo"
-                  className="w-full h-full object-contain [image-rendering:pixelated]"
-                />
-              </div>
-
-              {/* Tiêu đề & Giới thiệu */}
-              <h3 className="font-rpg font-bold text-lg text-[#CCD0CF] mb-1">
-                Cài Đặt FaeQuest Trên iOS
-              </h3>
-              <p className="text-xs text-[#9BA8AB] mb-5">
-                Cài đặt ứng dụng trực tiếp từ trình duyệt Safari không cần thông qua App Store:
-              </p>
-
-              {/* 2 Bước Hướng Dẫn Trực Quan */}
-              <div className="space-y-3 text-left mb-6">
-                {/* Bước 1 */}
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <Share className="w-4 h-4 text-cyan-300" />
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-black uppercase text-cyan-400 tracking-wider block">
-                      BƯỚC 1
-                    </span>
-                    <p className="text-xs text-[#CCD0CF] font-medium leading-relaxed">
-                      Bấm biểu tượng <strong>Chia sẻ</strong> (ô vuông có mũi tên lên) ở thanh menu dưới cùng Safari.
+                    <h3 className="font-rpg font-bold text-lg text-[#CCD0CF] mb-1">
+                      Cài Đặt FaeQuest Trên iOS
+                    </h3>
+                    <p className="text-xs text-[#9BA8AB] mb-5">
+                      Cài đặt ứng dụng trực tiếp từ trình duyệt Safari không cần thông qua App Store:
                     </p>
-                  </div>
-                </div>
 
-                {/* Bước 2 */}
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
-                  <div className="w-9 h-9 rounded-xl bg-amber-950/60 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <PlusSquare className="w-4 h-4 text-amber-300" />
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider block">
-                      BƯỚC 2
-                    </span>
-                    <p className="text-xs text-[#CCD0CF] font-medium leading-relaxed">
-                      Cuộn xuống danh sách tùy chọn và nhấn <strong>"Thêm vào MH chính"</strong> (Add to Home Screen).
+                    <div className="space-y-3 text-left mb-6">
+                      <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
+                        <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <Share className="w-4 h-4 text-cyan-300" />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-black uppercase text-cyan-400 tracking-wider block">
+                            BƯỚC 1
+                          </span>
+                          <p className="text-xs text-[#CCD0CF] font-medium leading-relaxed">
+                            Bấm biểu tượng <strong>Chia sẻ</strong> (ô vuông có mũi tên lên) ở thanh dưới cùng Safari.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
+                        <div className="w-9 h-9 rounded-xl bg-amber-950/60 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <PlusSquare className="w-4 h-4 text-amber-300" />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider block">
+                            BƯỚC 2
+                          </span>
+                          <p className="text-xs text-[#CCD0CF] font-medium leading-relaxed">
+                            Cuộn xuống danh sách tùy chọn và nhấn <strong>"Thêm vào MH chính"</strong> (Add to Home Screen).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowIosModal(false)}
+                      className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-[#06141B] font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/25 cursor-pointer"
+                    >
+                      Đã Hiểu & Cài Đặt
+                    </button>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* MODAL HƯỚNG DẪN DÀNH CHO MÁY TÍNH & ANDROID (KHI BROWSER CHƯA TỰ HIỆN PROMPT) */}
+            <AnimatePresence>
+              {showManualModal && (
+                <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.95)] relative overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowManualModal(false)}
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#06141B] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    <div className="w-16 h-16 rounded-2xl bg-[#06141B] border-2 border-cyan-400/60 p-1 mx-auto flex items-center justify-center shadow-[0_0_24px_rgba(34,211,238,0.3)] mb-4">
+                      <img
+                        src="/logo.png"
+                        alt="FaeQuest Logo"
+                        className="w-full h-full object-contain [image-rendering:pixelated]"
+                      />
+                    </div>
+
+                    <h3 className="font-rpg font-bold text-lg text-[#CCD0CF] mb-1">
+                      Cài Đặt Ứng Dụng FaeQuest
+                    </h3>
+                    <p className="text-xs text-[#9BA8AB] mb-5">
+                      Chạy FaeQuest mượt mà ở chế độ cửa sổ riêng biệt như ứng dụng máy tính / điện thoại:
                     </p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Nút Hoàn tất */}
-              <button
-                type="button"
-                onClick={() => setShowIosModal(false)}
-                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-[#06141B] font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/25 cursor-pointer"
-              >
-                Đã Hiểu & Cài Đặt
-              </button>
-            </motion.div>
-          </div>
+                    <div className="space-y-3 text-left mb-6">
+                      <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
+                        <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <Laptop className="w-4 h-4 text-cyan-300" />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-black uppercase text-cyan-400 tracking-wider block">
+                            TRÊN MÁY TÍNH (CHROME / EDGE / BRAVE)
+                          </span>
+                          <p className="text-xs text-[#CCD0CF] leading-relaxed">
+                            Bấm Menu <strong>3 chấm (⋮)</strong> góc trên cùng bên phải trình duyệt ➔ Chọn <strong>"Cài đặt FaeQuest"</strong> (hoặc "Thêm vào ứng dụng").
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
+                        <div className="w-9 h-9 rounded-xl bg-amber-950/60 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                          <Smartphone className="w-4 h-4 text-amber-300" />
+                        </div>
+                        <div>
+                          <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider block">
+                            TRÊN ANDROID (CHROME / CỐC CỐC)
+                          </span>
+                          <p className="text-xs text-[#CCD0CF] leading-relaxed">
+                            Bấm Menu <strong>3 chấm (⋮)</strong> góc trên bên phải ➔ Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào MH chính"</strong>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowManualModal(false)}
+                      className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-[#06141B] font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/25 cursor-pointer"
+                    >
+                      Đã Hiểu
+                    </button>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+          </>,
+          document.body
         )}
-      </AnimatePresence>
-
-      {/* ================= MODAL HƯỚNG DẪN THỦ CÔNG (ANDROID / CHROME / DESKTOP) ================= */}
-      <AnimatePresence>
-        {showManualModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.2 }}
-              className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.9)] relative overflow-hidden"
-            >
-              <button
-                type="button"
-                onClick={() => setShowManualModal(false)}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#06141B] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="w-16 h-16 rounded-2xl bg-[#06141B] border-2 border-cyan-400/60 p-1 mx-auto flex items-center justify-center shadow-[0_0_24px_rgba(34,211,238,0.3)] mb-4">
-                <img
-                  src="/logo.png"
-                  alt="FaeQuest Logo"
-                  className="w-full h-full object-contain [image-rendering:pixelated]"
-                />
-              </div>
-
-              <h3 className="font-rpg font-bold text-lg text-[#CCD0CF] mb-1">
-                Cài Đặt Ứng Dụng FaeQuest
-              </h3>
-              <p className="text-xs text-[#9BA8AB] mb-5">
-                Chạy FaeQuest mượt mà ở chế độ cửa sổ riêng biệt như ứng dụng máy tính / điện thoại:
-              </p>
-
-              <div className="space-y-3 text-left mb-6">
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <Laptop className="w-4 h-4 text-cyan-300" />
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-black uppercase text-cyan-400 tracking-wider block">
-                      TRÊN MÁY TÍNH (CHROME / EDGE)
-                    </span>
-                    <p className="text-xs text-[#CCD0CF] leading-relaxed">
-                      Nhấn vào biểu tượng <strong>Cài đặt</strong> (hoặc icon tải xuống) ở góc phải thanh địa chỉ URL.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-2xl bg-[#06141B] border border-[#253745]">
-                  <div className="w-9 h-9 rounded-xl bg-amber-950/60 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <Smartphone className="w-4 h-4 text-amber-300" />
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider block">
-                      TRÊN ANDROID (CHROME / CỐC CỐC)
-                    </span>
-                    <p className="text-xs text-[#CCD0CF] leading-relaxed">
-                      Bấm Menu <strong>3 chấm (⋮)</strong> góc trên bên phải ➔ Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào MH chính"</strong>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowManualModal(false)}
-                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-[#06141B] font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-cyan-500/25 cursor-pointer"
-              >
-                Đã Hiểu
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </>
   );
 };

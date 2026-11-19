@@ -7,7 +7,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'favicon.png', 'logo.png', 'assets/logo.png'],
+      injectRegister: 'auto',
+      includeAssets: ['favicon.ico', 'favicon.png', 'logo.png', 'logo-192.png', 'logo-512.png', 'assets/logo.png'],
       manifest: {
         name: 'FaeQuest',
         short_name: 'FaeQuest',
@@ -15,19 +16,33 @@ export default defineConfig({
         theme_color: '#06141B',
         background_color: '#06141B',
         display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
         start_url: '/',
         icons: [
           {
-            src: '/logo.png',
+            src: '/logo-192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
+          },
+          {
+            src: '/logo-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/logo-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
           {
             src: '/logo.png',
-            sizes: '512x512',
+            sizes: '64x64',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
           },
         ],
       },
