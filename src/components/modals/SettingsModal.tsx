@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Download,
   Upload,
+  Laptop,
   ShieldAlert,
   Sparkles,
   Check,
@@ -359,6 +360,25 @@ export const SettingsModal: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Mục: Ứng Dụng & Thiết Bị (Cài Đặt App) - Obsidian & Steel */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#11212D] via-[#06141B] to-[#253745]/50 border border-[#253745] shadow-lg space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-cyan-950/50 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-sm shrink-0">
+                    <Laptop className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-rpg font-bold text-sm text-[#CCD0CF]">
+                      Ứng Dụng & Thiết Bị (Cài Đặt App)
+                    </h4>
+                    <p className="text-xs text-[#9BA8AB]">
+                      Cài đặt FaeQuest về máy để sử dụng mượt mà trong chế độ ứng dụng riêng biệt
+                    </p>
+                  </div>
+                </div>
+
+                <InstallAppButton variant="settings" />
+              </div>
 
               {/* Profile Rename Section */}
               <div className="space-y-3">
@@ -766,7 +786,7 @@ export const SettingsModal: React.FC = () => {
                   Ứng dụng biến mục tiêu rèn luyện kỷ luật cá nhân mỗi ngày thành hành trình chinh phục đỉnh cao Thách Đấu. Hoàn thành nhiệm vụ, tích lũy EXP, mở khóa Danh Hiệu và tự thưởng xứng đáng.
                 </p>
                 <div className="pt-2">
-                  <InstallAppButton variant="auth" />
+                  <InstallAppButton variant="settings" />
                 </div>
               </div>
 

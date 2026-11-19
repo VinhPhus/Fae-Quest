@@ -11,7 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export interface InstallAppButtonProps {
-  variant?: 'sidebar' | 'auth' | 'mobile-header' | 'compact';
+  variant?: 'sidebar' | 'auth' | 'mobile-header' | 'compact' | 'settings';
   isCollapsed?: boolean;
   className?: string;
 }
@@ -21,7 +21,7 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
   isCollapsed = false,
   className = '',
 }) => {
-  const { soundEnabled } = useFaeQuestStore();
+  const { soundEnabled, deferredInstallPrompt, isAppStandalone } = useFaeQuestStore();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const [isIos, setIsIos] = useState<boolean>(false);
@@ -51,8 +51,10 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
       (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
     setIsIos(isIosDevice);
 
-    // 3. Khôi phục deferredPrompt nếu đã được bắt trước đó ở window
-    if ((window as any).__faequest_install_prompt) {
+    // 3. Khôi phục deferredPrompt nếu đã được bắt trước đó ở store hoặc window
+    if (deferredInstallPrompt) {
+      setDeferredPrompt(deferredInstallPrompt);
+    } else if ((window as any).__faequest_install_prompt) {
       setDeferredPrompt((window as any).__faequest_install_prompt);
     }
 
@@ -79,10 +81,12 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [deferredInstallPrompt]);
 
-  // Nếu đã chạy ở chế độ Standalone (đã cài đặt), tự động ẩn nút đi
-  if (isStandalone) {
+  const effectiveStandalone = isStandalone || isAppStandalone;
+
+  // Nếu đã chạy ở chế độ Standalone (đã cài đặt) và không phải ở mục Cài Đặt Settings, tự động ẩn nút đi
+  if (effectiveStandalone && variant !== 'settings') {
     return null;
   }
 
@@ -175,6 +179,50 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
           <Download className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <span className="text-[11px]">Cài App</span>
         </button>
+      )}
+
+      {/* 4. MỤC HIỂN THỊ DÀNH CHO BẢNG CÀI ĐẶT (SETTINGS MODAL) */}
+      {variant === 'settings' && effectiveStandalone && (
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#06141B] border border-[#253745] ${className}`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <Check className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-[#CCD0CF]">Trạng Thái Ứng Dụng</h5>
+              <p className="text-[11px] text-[#9BA8AB]">Đang chạy trong môi trường ứng dụng độc lập</p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-xs font-extrabold text-emerald-400 shadow-sm shrink-0 self-start sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Đã cài đặt phiên bản ứng dụng
+          </span>
+        </div>
+      )}
+
+      {variant === 'settings' && !effectiveStandalone && (
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-[#06141B] border border-[#253745] ${className}`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0 shadow-sm">
+              <Download className="w-4 h-4 text-cyan-300" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-[#CCD0CF]">Cài Đặt FaeQuest (PWA)</h5>
+              <p className="text-[11px] text-[#9BA8AB] leading-relaxed">
+                Chạy ứng dụng trong cửa sổ độc lập mượt mà không thanh công cụ trình duyệt
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleInstall}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 via-cyan-500 to-teal-500 hover:from-cyan-500 hover:to-teal-400 text-[#06141B] font-extrabold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,211,238,0.25)] hover:shadow-[0_0_25px_rgba(34,211,238,0.4)] active:scale-95 transition cursor-pointer shrink-0"
+          >
+            <Download className="w-4 h-4 stroke-[2.5]" />
+            <span>Cài đặt FaeQuest về máy</span>
+          </button>
+        </div>
       )}
 
       {/* ================= MODALS ĐƯỢC RENDER TRỰC TIẾP LÊN BODY BẰNG CREATEPORTAL ĐỂ KHÔNG BỊ LỖI LỆCH/CẮT XÉN ================= */}

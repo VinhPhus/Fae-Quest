@@ -60,6 +60,42 @@ export const App: React.FC = () => {
     initAuth();
   }, [initAuth]);
 
+  // Lưu trữ sự kiện cài đặt PWA (beforeinstallprompt) ở cấp độ toàn cục ngay khi trang tải
+  useEffect(() => {
+    const checkStandalone = () => {
+      try {
+        const isStandalone =
+          Boolean(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+          (window.navigator as any).standalone === true;
+        useFaeQuestStore.getState().setIsAppStandalone(isStandalone);
+      } catch {
+        useFaeQuestStore.getState().setIsAppStandalone(false);
+      }
+    };
+
+    checkStandalone();
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      useFaeQuestStore.getState().setDeferredInstallPrompt(e);
+      (window as any).__faequest_install_prompt = e;
+    };
+
+    const handleAppInstalled = () => {
+      useFaeQuestStore.getState().setIsAppStandalone(true);
+      useFaeQuestStore.getState().setDeferredInstallPrompt(null);
+      (window as any).__faequest_install_prompt = null;
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
   const hasCheckedAutoTourRef = useRef(false);
 
   // Tự động kích hoạt chuỗi hướng dẫn tân thủ duy nhất một lần cho account mới tạo sau khi hoàn tất Khế Ước Thợ Săn
@@ -157,12 +193,12 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="thorn-pattern antialiased min-h-screen md:h-screen md:overflow-hidden selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row bg-[#06141B] overflow-x-hidden max-w-[100vw]">
+    <div className="thorn-pattern antialiased min-h-screen md:h-screen md:overflow-hidden selection:bg-fae selection:text-thorn-dark flex flex-col md:flex-row bg-[#06141B] overflow-x-clip max-w-[100vw]">
       {/* 1. Collapsible Left Sidebar on Desktop / Bottom Navigation on Mobile */}
       <LeftSidebar />
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 min-w-0 flex flex-col h-auto md:h-screen overflow-visible md:overflow-hidden bg-[#06141B] overflow-x-hidden max-w-[100vw]">
+      <div className="flex-1 min-w-0 flex flex-col h-auto md:h-screen overflow-visible md:overflow-hidden bg-[#06141B] overflow-x-clip max-w-[100vw]">
         {/* Phân vùng 1: Top Sticky Section (Hồ Sơ & Header - Giữ cố định trên Desktop) */}
         <motion.header
           initial={{ y: -16, opacity: 0 }}
@@ -190,7 +226,7 @@ export const App: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.35, delay: 0.1, ease: EASING_SPRING }}
-          className="flex-1 overflow-visible md:overflow-y-auto px-3 sm:px-6 lg:px-8 pt-4 pb-24 md:pb-8 scroll-smooth [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-[#06141B] [&::-webkit-scrollbar-thumb]:bg-[#253745] hover:[&::-webkit-scrollbar-thumb]:bg-[#4A5C6A] [&::-webkit-scrollbar-thumb]:rounded-full"
+          className="flex-1 overflow-visible md:overflow-y-auto px-3 sm:px-6 lg:px-8 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-8 scroll-smooth [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-[#06141B] [&::-webkit-scrollbar-thumb]:bg-[#253745] hover:[&::-webkit-scrollbar-thumb]:bg-[#4A5C6A] [&::-webkit-scrollbar-thumb]:rounded-full"
         >
           <div className="max-w-7xl w-full mx-auto space-y-5">
             <AnimatePresence mode="wait">

@@ -1,20 +1,16 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { resolveTitleObject } from '../../constants/systemQuests';
-import { Search, X, Scroll, Settings, Plus, Mail, ShieldAlert } from 'lucide-react';
+import { Search, X, Plus, ShieldAlert } from 'lucide-react';
 
 export const TopBentoHeader: React.FC = () => {
   const {
     playerName,
     equippedTitleId,
     setActiveTab,
-    setOathOpen,
-    setSettingsOpen,
     setCreateQuestOpen,
     searchQuery,
     setSearchQuery,
-    unreadMessagesCount,
-    setUserInboxOpen,
     userRole,
   } = useFaeQuestStore();
 
@@ -73,63 +69,28 @@ export const TopBentoHeader: React.FC = () => {
         )}
       </div>
 
-      {/* Right: Search Input + Quick Actions + New Task CTA */}
-      <div className="flex items-center gap-2 sm:gap-2.5 self-end md:self-auto w-full md:w-auto justify-end">
-        {/* Search Input */}
-        <div className="relative flex-1 sm:w-60 md:w-64 max-w-xs">
+      {/* Right: Search Input + New Task CTA */}
+      <div className="flex items-center gap-2 sm:gap-2.5 w-full md:w-auto">
+        {/* Search Input - Expands with flex-1 min-w-0 to show complete placeholder */}
+        <div className="relative flex-1 min-w-0 sm:w-60 md:w-64 max-w-full">
           <Search className="w-3.5 h-3.5 text-[#9BA8AB] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Tìm kiếm nhiệm vụ..."
-            className="w-full pl-9 pr-8 py-2 rounded-full bg-[#06141B] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] focus:ring-1 focus:ring-[#4A5C6A] transition shadow-inner"
+            className="w-full pl-9 pr-8 py-2 rounded-full bg-[#06141B] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/60 focus:outline-none focus:border-[#4A5C6A] focus:ring-1 focus:ring-[#4A5C6A] transition shadow-inner"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9BA8AB] hover:text-[#CCD0CF] p-0.5"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9BA8AB] hover:text-[#CCD0CF] p-0.5 cursor-pointer"
               title="Xóa tìm kiếm"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
-
-        {/* 📬 User Inbox Button with Red Badge */}
-        <button
-          type="button"
-          onClick={() => setUserInboxOpen(true)}
-          className="relative p-2 sm:p-2.5 rounded-full bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white hover:scale-105 active:scale-95 transition shadow-sm cursor-pointer shrink-0"
-          title={unreadMessagesCount > 0 ? `Hộp Thư (${unreadMessagesCount} chưa đọc)` : 'Hộp Thư Thợ Săn'}
-        >
-          <Mail className="w-4 h-4 text-[#CCD0CF]" />
-          {unreadMessagesCount > 0 && (
-            <span className="absolute -top-1 -right-1 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-rose-500 text-white shadow-sm border border-[#06141B] animate-pulse">
-              {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
-            </span>
-          )}
-        </button>
-
-        {/* Hunter's Oath Quick Button (chỉ hiện trên Mobile < md) */}
-        <button
-          type="button"
-          onClick={() => setOathOpen(true)}
-          className="flex md:hidden p-2.5 rounded-full bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:scale-105 active:scale-95 transition shadow-sm cursor-pointer shrink-0"
-          title="Khế Ước Thợ Săn"
-        >
-          <Scroll className="w-4 h-4" />
-        </button>
-
-        {/* Settings Quick Button (chỉ hiện trên Mobile < md) */}
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="flex md:hidden p-2.5 rounded-full bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:scale-105 active:scale-95 transition shadow-sm cursor-pointer shrink-0"
-          title="Cài Đặt Hệ Thống"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
 
         {/* Primary CTA: + Khắc Lệnh Mới Button */}
         <button

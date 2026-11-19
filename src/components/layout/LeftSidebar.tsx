@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
-import { InstallAppButton } from '../ui/InstallAppButton';
 import { EASING_SPRING } from '../../constants/motion';
 import {
   CheckSquare,
@@ -288,9 +287,6 @@ export const LeftSidebar: React.FC = () => {
 
         {/* 4. Footer of Sidebar: Settings & Collapse Toggle pushed to bottom */}
         <div className="mt-auto p-3.5 border-t border-[#253745] space-y-2 bg-[#06141B]/95 shrink-0 overflow-hidden">
-          {/* Install PWA Button */}
-          <InstallAppButton variant="sidebar" isCollapsed={isSidebarCollapsed} />
-
           {/* Settings Button */}
           <button
             onClick={() => setSettingsOpen(true)}
@@ -341,7 +337,7 @@ export const LeftSidebar: React.FC = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.35, ease: EASING_SPRING }}
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-[#06141B] border-t border-[#253745] px-2 flex items-center justify-around shadow-2xl pb-[env(safe-area-inset-bottom,0px)]"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-[calc(4rem+env(safe-area-inset-bottom,0px))] bg-[#06141B]/95 backdrop-blur-md border-t border-[#253745] px-2 pt-1 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] flex items-center justify-around shadow-2xl"
       >
         {mobileBottomMenuItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -392,10 +388,10 @@ export const LeftSidebar: React.FC = () => {
       </motion.nav>
 
       {/* ================= MOBILE TOP HEADER (< 768px) ================= */}
-      <header className="md:hidden sticky top-0 z-30 bg-[#11212D]/95 backdrop-blur-md border-b border-[#253745] px-3.5 py-2.5 flex items-center justify-between">
+      <header className="md:hidden sticky top-0 z-40 bg-[#06141B]/95 backdrop-blur-md border-b border-white/10 px-3 sm:px-3.5 py-2.5 pt-[calc(0.625rem+env(safe-area-inset-top))] flex items-center justify-between gap-1.5">
         {/* Left: Brand Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#06141B] overflow-hidden flex items-center justify-center shadow border border-[#4A5C6A] shrink-0 p-0.5">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#06141B] overflow-hidden flex items-center justify-center shadow border border-[#4A5C6A] shrink-0 p-0.5">
             <img
               src="/assets/logo.png"
               alt="FaeQuest Logo"
@@ -403,36 +399,37 @@ export const LeftSidebar: React.FC = () => {
             />
           </div>
           <div>
-            <h1 className="font-rpg font-extrabold text-sm tracking-wider text-[#CCD0CF]">
+            <h1 className="font-rpg font-extrabold text-xs sm:text-sm tracking-wider text-[#CCD0CF]">
               FAE<span className="text-white">QUEST</span>
             </h1>
           </div>
         </div>
 
         {/* Middle: Coins & Streak */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#06141B] border border-[#253745] text-xs font-bold shadow-sm">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg bg-[#11212D] border border-[#253745] text-[11px] sm:text-xs font-bold shadow-sm">
             <CoinIcon size="xs" />
             <span className="text-[#CCD0CF]">{coins}</span>
           </div>
 
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#06141B] border border-[#253745] text-xs font-bold text-amber-300 shadow-sm">
-            <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+          <div className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg bg-[#11212D] border border-[#253745] text-[11px] sm:text-xs font-bold text-amber-300 shadow-sm">
+            <Flame className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-400 fill-amber-400 shrink-0" />
             <span>{streakDays}N</span>
           </div>
         </div>
 
-        {/* Right: Quick Action Buttons (Thành Tựu, Hộp Thư, Khế Ước & Cài Đặt) */}
-        <div className="flex items-center gap-1.5">
-          {/* Quick Access: Thành Tựu (System Quests) */}
+        {/* Right: Cụm 4 nút tiện ích (Danh Hiệu, Hộp Thư, Cuộn Giấy & Cài Đặt) vừa khít màn hình dọc */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          {/* 1. Quick Access: Danh Hiệu / Thành Tựu (System Quests) */}
           <button
+            type="button"
             onClick={() => setActiveTab('system-quests')}
             className={`p-1.5 rounded-lg border transition shadow-sm relative cursor-pointer ${
               activeTab === 'system-quests'
                 ? 'bg-[#253745] border-[#4A5C6A] text-[#CCD0CF]'
-                : 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF]'
+                : 'bg-[#11212D] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF]'
             }`}
-            title="Thành Tựu & Khế Ước"
+            title="Thành Tựu & Danh Hiệu"
           >
             <Award className="w-4 h-4" />
             {actionableSystemQuestsCount > 0 && (
@@ -442,10 +439,12 @@ export const LeftSidebar: React.FC = () => {
             )}
           </button>
 
+          {/* 2. Hộp Thư Thợ Săn */}
           <button
+            type="button"
             onClick={() => setUserInboxOpen(true)}
-            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm relative cursor-pointer"
-            title="Hộp Thư Thợ Săn"
+            className="p-1.5 rounded-lg bg-[#11212D] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm relative cursor-pointer"
+            title={unreadMessagesCount > 0 ? `Hộp Thư (${unreadMessagesCount} chưa đọc)` : 'Hộp Thư Thợ Săn'}
           >
             <Mail className="w-4 h-4" />
             {unreadMessagesCount > 0 && (
@@ -453,20 +452,21 @@ export const LeftSidebar: React.FC = () => {
             )}
           </button>
 
+          {/* 3. Khế Ước Thợ Săn */}
           <button
+            type="button"
             onClick={() => setOathOpen(true)}
-            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm cursor-pointer"
+            className="p-1.5 rounded-lg bg-[#11212D] border border-[#253745] text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm cursor-pointer"
             title="Khế Ước Thợ Săn"
           >
             <Scroll className="w-4 h-4" />
           </button>
 
-          {/* Quick Install PWA */}
-          <InstallAppButton variant="mobile-header" />
-
+          {/* 4. Cài Đặt Hệ Thống */}
           <button
+            type="button"
             onClick={() => setSettingsOpen(true)}
-            className="p-1.5 rounded-lg bg-[#06141B] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm cursor-pointer"
+            className="p-1.5 rounded-lg bg-[#11212D] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF] hover:border-[#4A5C6A] transition shadow-sm cursor-pointer"
             title="Cài Đặt Hệ Thống"
           >
             <Settings className="w-4 h-4 text-[#CCD0CF]" />

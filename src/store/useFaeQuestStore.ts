@@ -253,6 +253,10 @@ interface FaeQuestState {
   focusTargetMinutes: number;
   isFocusModalOpen: boolean;
   hasSeenTutorial: boolean;
+  deferredInstallPrompt: any | null;
+  setDeferredInstallPrompt: (prompt: any | null) => void;
+  isAppStandalone: boolean;
+  setIsAppStandalone: (isStandalone: boolean) => void;
   isOathOpen: boolean;
   isChangeCoverOpen: boolean;
   selectedRivalForModal: RivalProfileData | null;
@@ -474,6 +478,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isRenameOpen: false,
       isResetOpen: false,
       isSettingsOpen: false,
+      deferredInstallPrompt: null,
+      isAppStandalone: false,
       isChangeCoverOpen: false,
       selectedRivalForModal: null,
       isRivalModalOpen: false,
@@ -2514,6 +2520,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setRenameOpen: (open: boolean) => set({ isRenameOpen: open }),
       setResetOpen: (open: boolean) => set({ isResetOpen: open }),
       setSettingsOpen: (open: boolean) => set({ isSettingsOpen: open }),
+      setDeferredInstallPrompt: (prompt: any | null) => set({ deferredInstallPrompt: prompt }),
+      setIsAppStandalone: (isStandalone: boolean) => set({ isAppStandalone: isStandalone }),
       setChangeCoverOpen: (open: boolean) => set({ isChangeCoverOpen: open }),
       openRivalModal: (data: RivalProfileData) => {
         playSound('ui_click', get().soundEnabled);
