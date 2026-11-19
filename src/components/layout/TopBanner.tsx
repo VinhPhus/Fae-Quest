@@ -24,11 +24,11 @@ export const TopBanner: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3 relative z-10">
         <div className="flex items-center gap-3">
           {/* Emblem Icon */}
-          <div className="w-10 h-10 rounded-xl bg-[#06141B] overflow-hidden flex items-center justify-center shadow-lg border border-[#4A5C6A]">
+          <div className="w-10 h-10 rounded-xl bg-[#06141B] overflow-hidden flex items-center justify-center shadow-lg border border-[#4A5C6A] p-0.5">
             <img
               src="/assets/logo.png"
               alt="FaeQuest Logo"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain [image-rendering:pixelated]"
             />
           </div>
           <div>

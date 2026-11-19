@@ -148,11 +148,11 @@ export const LeftSidebar: React.FC = () => {
             title={isSidebarCollapsed ? 'FaeQuest RPG Todo V2.0' : undefined}
           >
             {/* Logo Emblem Icon */}
-            <div className="w-10 h-10 rounded-xl bg-[#06141B] overflow-hidden flex items-center justify-center shadow-lg border border-[#4A5C6A] shrink-0 relative group">
+            <div className="w-10 h-10 rounded-xl bg-[#06141B] overflow-hidden flex items-center justify-center shadow-lg border border-[#4A5C6A] shrink-0 relative group p-0.5">
               <img
                 src="/assets/logo.png"
                 alt="FaeQuest Logo"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+                className="w-full h-full object-contain [image-rendering:pixelated] group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
               />
             </div>
 
@@ -391,11 +391,11 @@ export const LeftSidebar: React.FC = () => {
       <header className="md:hidden sticky top-0 z-30 bg-[#11212D]/95 backdrop-blur-md border-b border-[#253745] px-3.5 py-2.5 flex items-center justify-between">
         {/* Left: Brand Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#06141B] overflow-hidden flex items-center justify-center shadow border border-[#4A5C6A] shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-[#06141B] overflow-hidden flex items-center justify-center shadow border border-[#4A5C6A] shrink-0 p-0.5">
             <img
               src="/assets/logo.png"
               alt="FaeQuest Logo"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain [image-rendering:pixelated]"
             />
           </div>
           <div>

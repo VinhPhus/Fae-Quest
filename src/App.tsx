@@ -116,11 +116,11 @@ export const App: React.FC = () => {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-thorn-dark thorn-pattern p-4">
         <div className="relative flex flex-col items-center space-y-4">
-          <div className="w-20 h-20 rounded-2xl bg-[#06141B] overflow-hidden border-2 border-[#4A5C6A] flex items-center justify-center shadow-[0_0_35px_rgba(204,208,207,0.35)] rank-pulse-fx relative">
+          <div className="w-20 h-20 rounded-2xl bg-[#06141B] overflow-hidden border-2 border-[#4A5C6A] flex items-center justify-center shadow-[0_0_35px_rgba(204,208,207,0.35)] rank-pulse-fx relative p-1.5">
             <img
               src="/assets/logo.png"
               alt="FaeQuest Logo"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain [image-rendering:pixelated]"
             />
           </div>
           <div className="flex items-center gap-2 text-sm font-bold text-parchment tracking-wide">

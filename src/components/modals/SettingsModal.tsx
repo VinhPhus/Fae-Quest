@@ -756,8 +756,8 @@ export const SettingsModal: React.FC = () => {
               {/* Card 1: App Info */}
               <div className="p-4 rounded-2xl bg-thorn-dark/80 border border-opal/30 space-y-2">
                 <div className="flex items-center gap-2.5 text-sm font-bold text-parchment">
-                  <div className="w-6 h-6 rounded-md bg-[#06141B] overflow-hidden border border-[#4A5C6A] flex items-center justify-center shrink-0">
-                    <img src="/assets/logo.png" alt="FaeQuest" className="w-full h-full object-cover" />
+                  <div className="w-6 h-6 rounded-md bg-[#06141B] overflow-hidden border border-[#4A5C6A] flex items-center justify-center shrink-0 p-0.5">
+                    <img src="/assets/logo.png" alt="FaeQuest" className="w-full h-full object-contain [image-rendering:pixelated]" />
                   </div>
                   <span>FaeQuest — Gamified RPG Todo v2.0</span>
                 </div>
