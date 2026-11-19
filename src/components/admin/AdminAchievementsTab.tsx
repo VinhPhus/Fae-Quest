@@ -555,7 +555,7 @@ export const AdminAchievementsTab: React.FC = () => {
 
                 {/* Live Preview */}
                 <div className="w-14 h-14 rounded-2xl bg-[#11212D] border border-[#4A5C6A] p-1.5 flex items-center justify-center shadow-inner overflow-hidden">
-                  <img src={iconUrl} alt="preview" className="w-full h-full object-contain drop-shadow" />
+                  <img src={iconUrl} alt="preview" className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow" />
                 </div>
               </div>
 
@@ -671,7 +671,7 @@ export const AdminAchievementsTab: React.FC = () => {
                             <img
                               src={asset.url}
                               alt={asset.name}
-                              className="w-10 h-10 object-contain drop-shadow"
+                              className="w-10 h-10 object-contain [image-rendering:pixelated] drop-shadow"
                               onError={(e) => {
                                 (e.currentTarget as HTMLImageElement).src = '/assets/logo.png';
                               }}
@@ -736,7 +736,7 @@ export const AdminAchievementsTab: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] p-2 flex items-center justify-center shrink-0 shadow-inner">
-                    <img src={ach.icon_url} alt={ach.title} className="w-full h-full object-contain drop-shadow" />
+                    <img src={ach.icon_url} alt={ach.title} className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow" />
                   </div>
 
                   <div className="flex flex-col items-end gap-1">

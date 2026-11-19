@@ -41,8 +41,8 @@ export const InventoryHeader: React.FC = () => {
             inventory.length >= 50
               ? 'text-rose-400 font-black'
               : inventory.length >= 40
-              ? 'text-amber-400 font-black'
-              : 'text-[#CCD0CF] font-black'
+                ? 'text-amber-400 font-black'
+                : 'text-[#CCD0CF] font-black'
           }
         >
           {inventory.length} / 50 ô
@@ -148,10 +148,10 @@ export const InventoryList: React.FC = () => {
                 animate={
                   isUsing
                     ? {
-                        scale: 1.04,
-                        opacity: 0,
-                        filter: 'drop-shadow(0 0 16px rgba(204,208,207,0.8))',
-                      }
+                      scale: 1.04,
+                      opacity: 0,
+                      filter: 'drop-shadow(0 0 16px rgba(204,208,207,0.8))',
+                    }
                     : { opacity: 1, scale: 1, filter: 'drop-shadow(0 0 0px rgba(0,0,0,0))' }
                 }
                 exit={{ opacity: 0, scale: 0.85 }}

@@ -316,7 +316,7 @@ export const HeroBentoBanner: React.FC = () => {
                   <img
                     src={titleObj.iconUrl}
                     alt={titleObj.name}
-                    className="w-3.5 h-3.5 object-contain"
+                    className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
                   />
                   <span className="truncate max-w-[150px] sm:max-w-[200px]">{titleObj.name}</span>
                 </button>
@@ -408,7 +408,7 @@ export const HeroBentoBanner: React.FC = () => {
               <img
                 src={titleObj.iconUrl}
                 alt={titleObj.name}
-                className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(204,208,207,0.25)]"
+                className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_0_12px_rgba(204,208,207,0.25)]"
               />
             </div>
 

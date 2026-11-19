@@ -293,7 +293,7 @@ export const AdminAssetVaultTab: React.FC = () => {
                     <img
                       src={assetUrl}
                       alt={assetName || 'Live Preview'}
-                      className="w-full h-full object-contain drop-shadow transition-transform hover:scale-105"
+                      className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow transition-transform hover:scale-105"
                       onError={() => setHasImageError(true)}
                       onLoad={() => setHasImageError(false)}
                     />
@@ -572,7 +572,7 @@ export const AdminAssetVaultTab: React.FC = () => {
                         <img
                           src={asset.url}
                           alt={asset.name}
-                          className="w-full h-full object-contain drop-shadow transition-transform duration-300 group-hover:scale-110"
+                          className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow transition-transform duration-300 group-hover:scale-110"
                           onError={(e) => {
                             (e.currentTarget as HTMLImageElement).src = '/assets/logo.png';
                           }}

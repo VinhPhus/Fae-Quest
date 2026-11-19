@@ -231,7 +231,7 @@ export const RivalProfileModal: React.FC = () => {
                 <img
                   src={matchingTitle.iconUrl}
                   alt={matchingTitle.name}
-                  className="w-4 h-4 object-contain shrink-0 drop-shadow"
+                  className="w-4 h-4 object-contain [image-rendering:pixelated] shrink-0 drop-shadow"
                 />
               ) : (
                 <span className="text-xs shrink-0">{matchingTitle.icon || '🏷️'}</span>

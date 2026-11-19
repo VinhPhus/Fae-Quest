@@ -48,7 +48,7 @@ const renderTitlePill = (titleName?: string) => {
           <img
             src={matchingTitle.iconUrl}
             alt={matchingTitle.name}
-            className="w-3.5 h-3.5 object-contain shrink-0 drop-shadow"
+            className="w-3.5 h-3.5 object-contain [image-rendering:pixelated] shrink-0 drop-shadow"
             loading="lazy"
           />
         ) : (
@@ -347,7 +347,7 @@ export const LeaderboardTable: React.FC = () => {
     }
   };
 
-// 1. Thẻ Độc Tôn Cho Hạng #1 (Sovereign Hero Card)
+  // 1. Thẻ Độc Tôn Cho Hạng #1 (Sovereign Hero Card)
   const renderTop1HeroCard = (c: Combatant | undefined) => {
     if (!c) {
       return (
@@ -369,9 +369,8 @@ export const LeaderboardTable: React.FC = () => {
       <div
         id={isPlayer ? 'my-rank-card' : undefined}
         onClick={() => handleSelectHunter(c, 1)}
-        className={`relative overflow-hidden rounded-2xl border border-amber-400/50 bg-[#11212D] p-4 sm:p-6 cursor-pointer group shadow-[0_12px_40px_rgba(245,158,11,0.12)] hover:border-amber-400/80 transition-all ${
-          isPlayer && highlightMyCard ? 'ring-2 ring-amber-300 scale-[1.01]' : ''
-        }`}
+        className={`relative overflow-hidden rounded-2xl border border-amber-400/50 bg-[#11212D] p-4 sm:p-6 cursor-pointer group shadow-[0_12px_40px_rgba(245,158,11,0.12)] hover:border-amber-400/80 transition-all ${isPlayer && highlightMyCard ? 'ring-2 ring-amber-300 scale-[1.01]' : ''
+          }`}
       >
         {/* 4 Đinh Tán Kim Loại 4 Góc Trong Thẻ */}
         <div className="absolute top-2.5 left-2.5 w-1.5 h-1.5 rounded-full bg-amber-300/40 pointer-events-none" />
@@ -516,9 +515,8 @@ export const LeaderboardTable: React.FC = () => {
       <div
         id={isPlayer ? 'my-rank-card' : undefined}
         onClick={() => handleSelectHunter(c, rankPos)}
-        className={`relative overflow-hidden rounded-2xl bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] ${borderTrimClass} ${bgGradientClass} p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer transition-all group ${
-          isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.01]' : ''
-        }`}
+        className={`relative overflow-hidden rounded-2xl bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] ${borderTrimClass} ${bgGradientClass} p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer transition-all group ${isPlayer && highlightMyCard ? 'ring-2 ring-[#CCD0CF] scale-[1.01]' : ''
+          }`}
       >
         {/* 4 Đinh Tán Kim Loại 4 Góc Trong Thẻ */}
         <div className={`absolute top-2 left-2 w-1.5 h-1.5 rounded-full ${isRank2 ? 'bg-slate-300/40' : 'bg-amber-600/40'} pointer-events-none`} />
@@ -536,20 +534,18 @@ export const LeaderboardTable: React.FC = () => {
 
         {/* Lớp Gradient Chuyển Sắc Từ Tối Sâu Sang Tông Ám Của Hạng */}
         <div
-          className={`absolute inset-0 ${
-            isRank2
+          className={`absolute inset-0 ${isRank2
               ? 'bg-gradient-to-r from-[#06141B] via-[#06141B]/85 to-slate-300/10'
               : 'bg-gradient-to-r from-[#06141B] via-[#06141B]/85 to-amber-700/15'
-          } pointer-events-none`}
+            } pointer-events-none`}
         />
 
         {/* Dải Ánh Sáng Mảnh Lướt Chậm Chu Kỳ 5s */}
         <motion.div
           animate={{ x: ['-100%', '250%'] }}
           transition={{ duration: isRank2 ? 5.5 : 5.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: isRank2 ? 1.5 : 2 }}
-          className={`absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent ${
-            isRank2 ? 'via-slate-100/10' : 'via-amber-500/10'
-          } to-transparent -skew-x-12 pointer-events-none`}
+          className={`absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent ${isRank2 ? 'via-slate-100/10' : 'via-amber-500/10'
+            } to-transparent -skew-x-12 pointer-events-none`}
         />
 
         {/* Trái: Avatar & Huy hiệu + Thông tin người chơi (Mobile Responsive) */}

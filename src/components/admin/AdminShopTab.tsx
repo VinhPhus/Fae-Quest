@@ -442,7 +442,7 @@ export const AdminShopTab: React.FC = () => {
                             <img
                               src={asset.url}
                               alt={asset.name}
-                              className="w-10 h-10 object-contain drop-shadow"
+                              className="w-10 h-10 object-contain [image-rendering:pixelated] drop-shadow"
                               onError={(e) => {
                                 (e.currentTarget as HTMLImageElement).src = '/assets/logo.png';
                               }}

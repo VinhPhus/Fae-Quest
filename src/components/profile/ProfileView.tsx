@@ -363,7 +363,7 @@ export const ProfileView: React.FC = () => {
                     className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-[#06141B]/80 hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] shadow-sm transition cursor-pointer"
                     title="Mở Kho Danh Hiệu để thay đổi danh hiệu"
                   >
-                    <img src={titleObj.iconUrl} alt={titleObj.name} className="w-4 h-4 object-contain" />
+                    <img src={titleObj.iconUrl} alt={titleObj.name} className="w-4 h-4 object-contain [image-rendering:pixelated]" />
                     <span className="truncate max-w-[220px]">{titleObj.name}</span>
                     <span className="text-[10px] text-[#9BA8AB] font-normal">| Đổi</span>
                   </button>
@@ -452,7 +452,7 @@ export const ProfileView: React.FC = () => {
               <img
                 src={titleObj.iconUrl}
                 alt={titleObj.name}
-                className="w-full h-full object-contain drop-shadow-[0_0_12px_rgba(204,208,207,0.25)]"
+                className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_0_12px_rgba(204,208,207,0.25)]"
               />
             </div>
 
@@ -466,15 +466,14 @@ export const ProfileView: React.FC = () => {
               </h5>
               <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 <span
-                  className={`text-[9px] font-black tracking-widest px-2.5 py-0.5 rounded-full bg-[#11212D] border ${
-                    titleObj.rarity === 'legendary'
+                  className={`text-[9px] font-black tracking-widest px-2.5 py-0.5 rounded-full bg-[#11212D] border ${titleObj.rarity === 'legendary'
                       ? 'border-amber-400/50 text-amber-300'
                       : titleObj.rarity === 'epic'
-                      ? 'border-purple-400/50 text-purple-300'
-                      : titleObj.rarity === 'rare'
-                      ? 'border-sky-400/50 text-sky-300'
-                      : 'border-[#4A5C6A] text-[#9BA8AB]'
-                  }`}
+                        ? 'border-purple-400/50 text-purple-300'
+                        : titleObj.rarity === 'rare'
+                          ? 'border-sky-400/50 text-sky-300'
+                          : 'border-[#4A5C6A] text-[#9BA8AB]'
+                    }`}
                 >
                   {titleObj.rarity.toUpperCase()}
                 </span>

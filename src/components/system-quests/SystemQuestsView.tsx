@@ -64,7 +64,7 @@ export const SystemQuestsHeader: React.FC = () => {
           <img
             src={equippedTitle.iconUrl}
             alt={equippedTitle.name}
-            className="w-full h-full object-contain drop-shadow-[0_0_14px_rgba(204,208,207,0.5)] animate-pulse"
+            className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_0_14px_rgba(204,208,207,0.5)] animate-pulse"
           />
         </div>
         <div>
@@ -228,7 +228,7 @@ export const SystemQuestsView: React.FC = () => {
                       <img
                         src={title.iconUrl}
                         alt={title.name}
-                        className={`w-full h-full object-contain transition-all duration-300 drop-shadow-md ${
+                        className={`w-full h-full object-contain [image-rendering:pixelated] transition-all duration-300 drop-shadow-md ${
                           isUnlocked
                             ? 'group-hover:scale-110 group-hover:drop-shadow-[0_0_14px_rgba(204,208,207,0.6)]'
                             : 'grayscale opacity-65 contrast-90 group-hover:opacity-90 group-hover:grayscale-0'

@@ -234,7 +234,7 @@ export const PlayerStatusCard: React.FC = () => {
                 <img
                   src={resolveTitleObject(equippedTitleId).iconUrl}
                   alt={resolveTitleObject(equippedTitleId).name}
-                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain drop-shadow"
+                  className="w-3.5 h-3.5 sm:w-4 sm:h-4 object-contain [image-rendering:pixelated] drop-shadow"
                 />
                 <span className={resolveTitleObject(equippedTitleId).color}>
                   {resolveTitleObject(equippedTitleId).name}

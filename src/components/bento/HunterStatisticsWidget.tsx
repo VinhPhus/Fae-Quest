@@ -64,7 +64,7 @@ export const HunterStatisticsWidget: React.FC = () => {
           <img
             src={titleObj.iconUrl}
             alt={titleObj.name}
-            className="w-full h-full object-contain drop-shadow-[0_0_16px_rgba(204,208,207,0.25)] group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_0_16px_rgba(204,208,207,0.25)] group-hover:scale-110 transition-transform duration-300"
           />
         </div>
 
