@@ -5,6 +5,7 @@ import { AdminShopTab } from './AdminShopTab';
 import { AdminAchievementsTab } from './AdminAchievementsTab';
 import { AdminLiveOpsTab } from './AdminLiveOpsTab';
 import { AdminAnnouncementsTab } from './AdminAnnouncementsTab';
+import { AdminAssetVaultTab } from './AdminAssetVaultTab';
 import {
   ShieldAlert,
   Users,
@@ -15,6 +16,7 @@ import {
   ArrowLeft,
   Megaphone,
   Swords,
+  FolderArchive,
 } from 'lucide-react';
 
 export const AdminPortalHeader: React.FC = () => {
@@ -23,7 +25,7 @@ export const AdminPortalHeader: React.FC = () => {
   if (userRole !== 'admin') return null;
 
   const tabs: {
-    id: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements';
+    id: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets';
     label: string;
     icon: React.ReactNode;
   }[] = [
@@ -41,6 +43,11 @@ export const AdminPortalHeader: React.FC = () => {
       id: 'achievements',
       label: 'Thành Tựu & Danh Hiệu',
       icon: <Trophy className="w-4 h-4 shrink-0" />,
+    },
+    {
+      id: 'assets',
+      label: '🖼️ Kho Tài Nguyên',
+      icon: <FolderArchive className="w-4 h-4 shrink-0" />,
     },
     {
       id: 'analytics',
@@ -144,6 +151,7 @@ export const AdminPortalView: React.FC = () => {
       {adminPortalTab === 'users' && <AdminUsersTab />}
       {adminPortalTab === 'shop' && <AdminShopTab />}
       {adminPortalTab === 'achievements' && <AdminAchievementsTab />}
+      {adminPortalTab === 'assets' && <AdminAssetVaultTab />}
       {adminPortalTab === 'analytics' && <AdminLiveOpsTab />}
       {adminPortalTab === 'announcements' && <AdminAnnouncementsTab />}
     </div>

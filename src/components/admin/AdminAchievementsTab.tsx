@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SystemAchievement } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { playSound } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
   Trophy,
@@ -26,8 +27,28 @@ export const AdminAchievementsTab: React.FC = () => {
     addSystemAchievement,
     updateSystemAchievement,
     deleteSystemAchievement,
+    adminAssets,
+    addAdminAsset,
+    soundEnabled,
     addToast,
   } = useFaeQuestStore();
+
+  const achievementAssets = useMemo(() => {
+    return adminAssets.filter((a) => a.category === 'all' || a.category === 'achievement');
+  }, [adminAssets]);
+
+  const handleSaveToVault = async () => {
+    if (!iconUrl) return;
+    const defaultName = title ? `Danh hiệu ${title}` : 'Biểu tượng Thành tựu mới';
+    const assetName = window.prompt('Nhập tên gợi nhớ để lưu vào Kho Tài Nguyên:', defaultName);
+    if (assetName && assetName.trim()) {
+      await addAdminAsset({
+        name: assetName.trim(),
+        url: iconUrl,
+        category: 'achievement',
+      });
+    }
+  };
 
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [editingAchievement, setEditingAchievement] = useState<SystemAchievement | null>(null);
@@ -485,13 +506,25 @@ export const AdminAchievementsTab: React.FC = () => {
 
               {/* Direct URL input */}
               <div className="space-y-1">
-                <span className="text-[11px] text-[#9BA8AB]">Hoặc dán URL ảnh trực tiếp:</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[#9BA8AB]">Hoặc dán URL ảnh trực tiếp:</span>
+                  {iconUrl && (
+                    <button
+                      type="button"
+                      onClick={handleSaveToVault}
+                      className="text-[10px] text-cyan-300 hover:text-cyan-200 bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                      title="Lưu link ảnh này vào Kho Tài Nguyên"
+                    >
+                      <span>📌 Lưu vào Kho</span>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={iconUrl}
                   onChange={(e) => setIconUrl(e.target.value)}
                   placeholder="https://... hoặc /assets/..."
-                  className="w-full px-3 py-1.5 rounded-lg bg-[#11212D] border border-[#253745] text-xs text-[#CCD0CF]"
+                  className="w-full px-3 py-1.5 rounded-lg bg-[#11212D] border border-[#253745] text-xs text-[#CCD0CF] focus:outline-none focus:border-cyan-500/50"
                 />
               </div>
 
@@ -503,10 +536,13 @@ export const AdminAchievementsTab: React.FC = () => {
                     <button
                       key={t.url}
                       type="button"
-                      onClick={() => setIconUrl(t.url)}
+                      onClick={() => {
+                        setIconUrl(t.url);
+                        playSound('ui_click', soundEnabled);
+                      }}
                       className={`p-1 rounded-xl flex flex-col items-center justify-center gap-1 border transition cursor-pointer ${
                         iconUrl === t.url
-                          ? 'bg-[#253745] border-cyan-400 scale-105 shadow-sm'
+                          ? 'bg-[#253745] border-cyan-400 scale-105 shadow-sm ring-1 ring-cyan-400/40'
                           : 'bg-[#11212D] border-[#253745] hover:bg-[#253745]'
                       }`}
                       title={t.label}
@@ -516,6 +552,58 @@ export const AdminAchievementsTab: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Saved Asset Vault Selector */}
+              <div className="space-y-1.5 pt-2 border-t border-[#253745]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[#9BA8AB] flex items-center gap-1 font-semibold">
+                    <span>🖼️ Kho Tài Nguyên Đã Lưu:</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">({achievementAssets.length})</span>
+                  </span>
+                </div>
+
+                {achievementAssets.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-[#11212D] border border-[#253745] text-center text-[10px] text-[#9BA8AB]">
+                    Chưa có ảnh nào trong kho. Dán link và bấm "📌 Lưu vào Kho"!
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {achievementAssets.map((asset) => {
+                      const isSelected = iconUrl === asset.url;
+                      return (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          onClick={() => {
+                            setIconUrl(asset.url);
+                            playSound('ui_click', soundEnabled);
+                          }}
+                          className={`p-1.5 rounded-xl flex flex-col items-center justify-center gap-1 border transition cursor-pointer ${
+                            isSelected
+                              ? 'border-[#CCD0CF] bg-[#253745]/60 scale-105 shadow-md ring-1 ring-[#CCD0CF]/60'
+                              : 'bg-[#11212D] border-[#253745] hover:bg-[#253745] hover:border-[#4A5C6A]'
+                          }`}
+                          title={asset.name}
+                        >
+                          <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={asset.url}
+                              alt={asset.name}
+                              className="w-10 h-10 object-contain drop-shadow"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = '/assets/logo.png';
+                              }}
+                            />
+                          </div>
+                          <span className="text-[11px] text-[#9BA8AB] truncate w-full text-center font-medium">
+                            {asset.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

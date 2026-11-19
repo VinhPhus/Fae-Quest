@@ -25,6 +25,8 @@ import {
   JournalMood,
   RewardPopupData,
   SeasonAnnouncement,
+  AdminAsset,
+  AdminAssetCategory,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -56,6 +58,44 @@ import {
 } from '../utils/syncManager';
 
 export const MAX_INVENTORY_SLOTS = 50;
+
+export const DEFAULT_ADMIN_ASSETS: AdminAsset[] = [
+  {
+    id: 'default-asset-1',
+    name: 'Logo FaeQuest RPG',
+    url: '/assets/logo.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-asset-2',
+    name: 'Danh Hiệu Tân Binh',
+    url: '/assets/titles/title-tan-binh.png',
+    category: 'achievement',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-asset-3',
+    name: 'Danh Hiệu Thợ Săn',
+    url: '/assets/titles/title-tho-san.png',
+    category: 'achievement',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-asset-4',
+    name: 'Danh Hiệu Chiến Binh',
+    url: '/assets/titles/title-chien-binh.png',
+    category: 'achievement',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'default-asset-5',
+    name: 'Danh Hiệu Thần Thoại',
+    url: '/assets/titles/title-than-thoai.png',
+    category: 'achievement',
+    created_at: new Date().toISOString(),
+  },
+];
 
 interface FaeQuestState {
   playerName: string;
@@ -92,7 +132,8 @@ interface FaeQuestState {
   userRole: UserRole;
   bannedUntil: string | null;
   banReason: string | null;
-  adminPortalTab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements';
+  adminPortalTab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets';
+  adminAssets: AdminAsset[];
   seasonAnnouncements: SeasonAnnouncement[];
   isSeasonAnnouncementsModalOpen: boolean;
   isSeasonResetModalOpen: boolean;
@@ -150,7 +191,10 @@ interface FaeQuestState {
   deleteJournal: (id: string) => Promise<boolean>;
   syncJournalRealtime: (payload: any) => void;
   setUserRole: (role: UserRole) => void;
-  setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements') => void;
+  setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets') => void;
+  fetchAdminAssets: () => Promise<void>;
+  addAdminAsset: (item: { name: string; url: string; category?: AdminAssetCategory }) => Promise<boolean>;
+  deleteAdminAsset: (id: string) => Promise<boolean>;
   setSeasonAnnouncementsModalOpen: (open: boolean) => void;
   setSeasonResetModalOpen: (open: boolean) => void;
   fetchSeasonAnnouncements: () => Promise<void>;
@@ -322,6 +366,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       bannedUntil: null,
       banReason: null,
       adminPortalTab: 'users',
+      adminAssets: DEFAULT_ADMIN_ASSETS,
       seasonAnnouncements: [],
       isSeasonAnnouncementsModalOpen: false,
       isSeasonResetModalOpen: false,
@@ -359,7 +404,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       language: 'vi',
       setLanguage: (lang: string) => set({ language: lang }),
       setUserRole: (role: UserRole) => set({ userRole: role }),
-      setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements') => set({ adminPortalTab: tab }),
+      setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets') => set({ adminPortalTab: tab }),
       setSeasonAnnouncementsModalOpen: (open: boolean) => set({ isSeasonAnnouncementsModalOpen: open }),
       setSeasonResetModalOpen: (open: boolean) => set({ isSeasonResetModalOpen: open }),
       setUserInboxOpen: (open: boolean) => set({ isUserInboxOpen: open }),
@@ -679,6 +724,101 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         } catch (err: any) {
           get().addToast(err.message || 'Lỗi khi dọn dẹp hộp thư', 'error');
           return 0;
+        }
+      },
+
+      fetchAdminAssets: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('admin_assets')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!error && data && data.length > 0) {
+            set({ adminAssets: data as AdminAsset[] });
+          } else {
+            if (typeof window !== 'undefined') {
+              const cached = localStorage.getItem('faequest_local_admin_assets');
+              if (cached) {
+                try {
+                  const parsed = JSON.parse(cached);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    set({ adminAssets: parsed });
+                    return;
+                  }
+                } catch {}
+              }
+            }
+            set({ adminAssets: DEFAULT_ADMIN_ASSETS });
+          }
+        } catch (e) {
+          console.error('Error fetching admin assets:', e);
+          set({ adminAssets: DEFAULT_ADMIN_ASSETS });
+        }
+      },
+
+      addAdminAsset: async ({ name, url, category = 'all' }) => {
+        const cleanName = (name || '').trim();
+        const cleanUrl = (url || '').trim();
+        if (!cleanName || !cleanUrl) {
+          get().addToast('Vui lòng nhập tên và link ảnh!', 'error');
+          return false;
+        }
+
+        const payload = {
+          name: cleanName,
+          url: cleanUrl,
+          category: category || 'all',
+        };
+
+        try {
+          const { error } = await supabase.from('admin_assets').insert([payload]);
+
+          if (error) {
+            console.warn('Supabase add asset warning, using local fallback:', error);
+            const newLocalItem: AdminAsset = {
+              id: `asset_${Date.now()}`,
+              name: cleanName,
+              url: cleanUrl,
+              category: category || 'all',
+              created_at: new Date().toISOString(),
+            };
+            const current = get().adminAssets;
+            const updated = [newLocalItem, ...current];
+            set({ adminAssets: updated });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('faequest_local_admin_assets', JSON.stringify(updated));
+            }
+            get().addToast('Đã lưu tài nguyên vào kho!', 'success');
+            return true;
+          }
+
+          await get().fetchAdminAssets();
+          get().addToast('Đã lưu tài nguyên vào kho thành công!', 'success');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi lưu tài nguyên', 'error');
+          return false;
+        }
+      },
+
+      deleteAdminAsset: async (id: string) => {
+        try {
+          const { error } = await supabase.from('admin_assets').delete().eq('id', id);
+
+          if (error) {
+            console.warn('Supabase delete asset warning, using local fallback:', error);
+          }
+          const updated = get().adminAssets.filter((a) => a.id !== id);
+          set({ adminAssets: updated });
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('faequest_local_admin_assets', JSON.stringify(updated));
+          }
+          get().addToast('Đã xóa tài nguyên khỏi kho', 'info');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi xóa tài nguyên', 'error');
+          return false;
         }
       },
 
@@ -3279,6 +3419,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().fetchSystemAchievements();
             get().fetchJournals();
             get().fetchSeasonAnnouncements();
+            get().fetchAdminAssets();
             get().fetchCommunityProfiles();
             get().fetchJournals();
           } else {
@@ -3695,6 +3836,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().fetchSystemShopItems();
           get().fetchSystemAchievements();
           get().fetchJournals();
+          get().fetchSeasonAnnouncements();
+          get().fetchAdminAssets();
 
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');

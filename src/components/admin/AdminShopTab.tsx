@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SystemShopItem } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { playSound } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
   ShoppingBag,
@@ -21,8 +22,28 @@ export const AdminShopTab: React.FC = () => {
     addSystemShopItem,
     updateSystemShopItem,
     deleteSystemShopItem,
+    adminAssets,
+    addAdminAsset,
+    soundEnabled,
     addToast,
   } = useFaeQuestStore();
+
+  const shopAssets = useMemo(() => {
+    return adminAssets.filter((a) => a.category === 'all' || a.category === 'shop');
+  }, [adminAssets]);
+
+  const handleSaveToVault = async () => {
+    if (!icon || !isIconUrl) return;
+    const defaultName = name ? `Vật phẩm ${name}` : 'Ảnh Vật Phẩm Mới';
+    const assetName = window.prompt('Nhập tên gợi nhớ để lưu vào Kho Tài Nguyên:', defaultName);
+    if (assetName && assetName.trim()) {
+      await addAdminAsset({
+        name: assetName.trim(),
+        url: icon,
+        category: 'shop',
+      });
+    }
+  };
 
   const [isAdding, setIsAdding] = useState<boolean>(false);
   const [editingItem, setEditingItem] = useState<SystemShopItem | null>(null);
@@ -261,7 +282,19 @@ export const AdminShopTab: React.FC = () => {
 
               {/* Custom input string/URL */}
               <div className="space-y-1">
-                <span className="text-[11px] text-[#9BA8AB]">Hoặc dán URL ảnh / nhập Emoji:</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[#9BA8AB]">Hoặc dán URL ảnh / nhập Emoji:</span>
+                  {isIconUrl && (
+                    <button
+                      type="button"
+                      onClick={handleSaveToVault}
+                      className="text-[10px] text-cyan-300 hover:text-cyan-200 bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                      title="Lưu link ảnh này vào Kho Tài Nguyên"
+                    >
+                      <span>📌 Lưu vào Kho</span>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   value={icon}
@@ -279,7 +312,10 @@ export const AdminShopTab: React.FC = () => {
                     <button
                       key={emo}
                       type="button"
-                      onClick={() => setIcon(emo)}
+                      onClick={() => {
+                        setIcon(emo);
+                        playSound('ui_click', soundEnabled);
+                      }}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center text-base transition border cursor-pointer ${
                         icon === emo
                           ? 'bg-[#CCD0CF] border-white scale-110 shadow-sm'
@@ -290,6 +326,58 @@ export const AdminShopTab: React.FC = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Saved Asset Vault Selector */}
+              <div className="space-y-1.5 pt-2 border-t border-[#253745]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[#9BA8AB] flex items-center gap-1 font-semibold">
+                    <span>🖼️ Kho Tài Nguyên Đã Lưu:</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">({shopAssets.length})</span>
+                  </span>
+                </div>
+
+                {shopAssets.length === 0 ? (
+                  <div className="p-3 rounded-xl bg-[#11212D] border border-[#253745] text-center text-[10px] text-[#9BA8AB]">
+                    Chưa có ảnh nào trong kho. Dán link và bấm "📌 Lưu vào Kho"!
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {shopAssets.map((asset) => {
+                      const isSelected = icon === asset.url;
+                      return (
+                        <button
+                          key={asset.id}
+                          type="button"
+                          onClick={() => {
+                            setIcon(asset.url);
+                            playSound('ui_click', soundEnabled);
+                          }}
+                          className={`p-1.5 rounded-xl flex flex-col items-center justify-center gap-1 border transition cursor-pointer ${
+                            isSelected
+                              ? 'border-[#CCD0CF] bg-[#253745]/60 scale-105 shadow-md ring-1 ring-[#CCD0CF]/60'
+                              : 'bg-[#11212D] border-[#253745] hover:bg-[#253745] hover:border-[#4A5C6A]'
+                          }`}
+                          title={asset.name}
+                        >
+                          <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
+                            <img
+                              src={asset.url}
+                              alt={asset.name}
+                              className="w-10 h-10 object-contain drop-shadow"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).src = '/assets/logo.png';
+                              }}
+                            />
+                          </div>
+                          <span className="text-[11px] text-[#9BA8AB] truncate w-full text-center font-medium">
+                            {asset.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>

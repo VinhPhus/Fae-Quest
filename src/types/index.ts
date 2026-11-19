@@ -277,3 +277,14 @@ export interface SeasonAnnouncement {
   created_by?: string;
   created_at: string;
 }
+
+export type AdminAssetCategory = 'all' | 'achievement' | 'shop';
+
+export interface AdminAsset {
+  id: string;
+  name: string;
+  url: string;
+  category: AdminAssetCategory;
+  created_at: string;
+}
+
