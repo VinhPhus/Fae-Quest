@@ -68,6 +68,13 @@ export const DEFAULT_ADMIN_ASSETS: AdminAsset[] = [
     created_at: new Date().toISOString(),
   },
   {
+    id: 'default-asset-coin',
+    name: 'Xu Vàng Pixel',
+    url: '/assets/coin.png',
+    category: 'all',
+    created_at: new Date().toISOString(),
+  },
+  {
     id: 'default-asset-title-tan-binh',
     name: 'Danh Hiệu: Tân Binh Gai Đỏ',
     url: '/assets/titles/title-tan-binh.png',

@@ -85,7 +85,7 @@ export const CoinBurstOverlay: React.FC = () => {
               <img
                 src="/assets/coin.png"
                 alt="coin particle"
-                className="select-none"
+                className="select-none [image-rendering:pixelated] object-contain"
                 style={{
                   width: `${p.size}px`,
                   height: `${p.size}px`,

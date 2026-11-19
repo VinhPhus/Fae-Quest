@@ -55,5 +55,6 @@ VALUES
   ('Danh Hiệu: Học Giả Huyền Bí', '/assets/titles/title-hoc-gia.png', 'achievement'),
   ('Danh Hiệu: Thợ Săn Nhiệm Vụ', '/assets/titles/title-tho-san.png', 'achievement'),
   ('Danh Hiệu: Hiền Nhân Tập Trung', '/assets/titles/title-hien-nhan.png', 'achievement'),
-  ('Danh Hiệu: Độc Cô Cầu Bại', '/assets/titles/title-doc-co.png', 'achievement')
+  ('Danh Hiệu: Độc Cô Cầu Bại', '/assets/titles/title-doc-co.png', 'achievement'),
+  ('Xu Vàng Pixel', '/assets/coin.png', 'all')
 ON CONFLICT DO NOTHING;

@@ -29,7 +29,7 @@ export const CoinIcon: React.FC<CoinIconProps> = ({
     <img
       src="/assets/coin.png"
       alt={alt}
-      className={`inline-block object-contain select-none shrink-0 ${sizeClasses[size]} ${
+      className={`inline-block object-contain [image-rendering:pixelated] select-none shrink-0 ${sizeClasses[size]} ${
         animate ? 'coin-interactive-fx' : ''
       } ${className}`}
       loading="eager"

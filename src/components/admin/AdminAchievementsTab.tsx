@@ -73,6 +73,7 @@ export const AdminAchievementsTab: React.FC = () => {
   // Preset RPG 2D Title Icons
   const presetTitleIcons = [
     { label: 'FaeQuest', url: '/assets/logo.png' },
+    { label: 'Xu Vàng', url: '/assets/coin.png' },
     { label: 'Tân Binh', url: '/assets/titles/title-tan-binh.png' },
     { label: 'Chiến Binh', url: '/assets/titles/title-chien-binh.png' },
     { label: 'Chế Ngự', url: '/assets/titles/title-che-ngu.png' },
