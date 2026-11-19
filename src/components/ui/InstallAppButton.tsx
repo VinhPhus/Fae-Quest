@@ -183,14 +183,14 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
 
       {/* 4. MỤC HIỂN THỊ DÀNH CHO BẢNG CÀI ĐẶT (SETTINGS MODAL) */}
       {variant === 'settings' && effectiveStandalone && (
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#06141B] border border-[#253745] ${className}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${className}`}>
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
               <Check className="w-4 h-4 stroke-[2.5]" />
             </div>
             <div>
-              <h5 className="text-xs font-bold text-[#CCD0CF]">Trạng Thái Ứng Dụng</h5>
-              <p className="text-[11px] text-[#9BA8AB]">Đang chạy trong môi trường ứng dụng độc lập</p>
+              <h4 className="font-rpg font-bold text-sm text-[#CCD0CF]">Trạng Thái Ứng Dụng</h4>
+              <p className="text-xs text-[#9BA8AB]">FaeQuest đang chạy trong môi trường ứng dụng độc lập</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-xs font-extrabold text-emerald-400 shadow-sm shrink-0 self-start sm:self-auto">
@@ -201,15 +201,15 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
       )}
 
       {variant === 'settings' && !effectiveStandalone && (
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-[#06141B] border border-[#253745] ${className}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${className}`}>
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shrink-0 shadow-sm">
-              <Download className="w-4 h-4 text-cyan-300" />
+              <Laptop className="w-4 h-4 text-cyan-300" />
             </div>
             <div>
-              <h5 className="text-xs font-bold text-[#CCD0CF]">Cài Đặt FaeQuest (PWA)</h5>
-              <p className="text-[11px] text-[#9BA8AB] leading-relaxed">
-                Chạy ứng dụng trong cửa sổ độc lập mượt mà không thanh công cụ trình duyệt
+              <h4 className="font-rpg font-bold text-sm text-[#CCD0CF]">Ứng Dụng & Thiết Bị (Cài Đặt App)</h4>
+              <p className="text-xs text-[#9BA8AB] leading-relaxed">
+                Cài đặt FaeQuest về máy để sử dụng mượt mà trong cửa sổ riêng biệt
               </p>
             </div>
           </div>
