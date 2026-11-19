@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: null,
       includeAssets: ['favicon.ico', 'favicon.png', 'logo.png', 'logo-192.png', 'logo-512.png', 'assets/logo.png'],
       manifest: {
         name: 'FaeQuest',
@@ -45,6 +45,13 @@ export default defineConfig({
             purpose: 'any',
           },
         ],
+      },
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,webmanifest}'],
+        navigateFallback: '/index.html',
       },
     }),
   ],
