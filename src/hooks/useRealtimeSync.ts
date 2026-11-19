@@ -219,6 +219,23 @@ export const useRealtimeSync = (): void => {
       )
       .subscribe();
 
+    // 7. Kênh lắng nghe Realtime Thông Báo Mùa Giải (public:season_announcements)
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'season_announcements',
+      },
+      (payload) => {
+        useFaeQuestStore.getState().fetchSeasonAnnouncements();
+        if (payload.eventType === 'INSERT') {
+          playSoundEffect('complete', soundEnabled);
+          addToast('📢 Có thông báo Mùa Giải mới trên Đấu Trường!', 'info');
+        }
+      }
+    );
+
     channel.subscribe();
 
     return () => {

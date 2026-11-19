@@ -24,6 +24,7 @@ import {
   JournalEntry,
   JournalMood,
   RewardPopupData,
+  SeasonAnnouncement,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
@@ -91,7 +92,11 @@ interface FaeQuestState {
   userRole: UserRole;
   bannedUntil: string | null;
   banReason: string | null;
-  adminPortalTab: 'users' | 'shop' | 'achievements' | 'analytics';
+  adminPortalTab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements';
+  seasonAnnouncements: SeasonAnnouncement[];
+  isSeasonAnnouncementsModalOpen: boolean;
+  isSeasonResetModalOpen: boolean;
+  unreadAnnouncementsCount: number;
   systemShopItems: SystemShopItem[];
   systemAchievements: SystemAchievement[];
   userMessages: UserMessage[];
@@ -145,7 +150,16 @@ interface FaeQuestState {
   deleteJournal: (id: string) => Promise<boolean>;
   syncJournalRealtime: (payload: any) => void;
   setUserRole: (role: UserRole) => void;
-  setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => void;
+  setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements') => void;
+  setSeasonAnnouncementsModalOpen: (open: boolean) => void;
+  setSeasonResetModalOpen: (open: boolean) => void;
+  fetchSeasonAnnouncements: () => Promise<void>;
+  addSeasonAnnouncement: (item: Omit<SeasonAnnouncement, 'id' | 'created_at'>) => Promise<boolean>;
+  updateSeasonAnnouncement: (id: string, item: Partial<SeasonAnnouncement>) => Promise<boolean>;
+  deleteSeasonAnnouncement: (id: string) => Promise<boolean>;
+  togglePinSeasonAnnouncement: (id: string, is_pinned: boolean) => Promise<boolean>;
+  resetSeasonRank: (seasonTitle?: string, customNotice?: string) => Promise<{ success: boolean; affectedCount: number; error?: string }>;
+  markAnnouncementsAsRead: () => void;
   setUserInboxOpen: (open: boolean) => void;
   setActiveWarningMessage: (msg: UserMessage | null) => void;
   fetchUserMessages: () => Promise<void>;
@@ -308,6 +322,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       bannedUntil: null,
       banReason: null,
       adminPortalTab: 'users',
+      seasonAnnouncements: [],
+      isSeasonAnnouncementsModalOpen: false,
+      isSeasonResetModalOpen: false,
+      unreadAnnouncementsCount: 0,
       systemShopItems: [],
       systemAchievements: [],
       userMessages: [],
@@ -341,7 +359,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       language: 'vi',
       setLanguage: (lang: string) => set({ language: lang }),
       setUserRole: (role: UserRole) => set({ userRole: role }),
-      setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics') => set({ adminPortalTab: tab }),
+      setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements') => set({ adminPortalTab: tab }),
+      setSeasonAnnouncementsModalOpen: (open: boolean) => set({ isSeasonAnnouncementsModalOpen: open }),
+      setSeasonResetModalOpen: (open: boolean) => set({ isSeasonResetModalOpen: open }),
       setUserInboxOpen: (open: boolean) => set({ isUserInboxOpen: open }),
       setActiveWarningMessage: (msg: UserMessage | null) => set({ activeWarningMessage: msg }),
 
@@ -659,6 +679,248 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         } catch (err: any) {
           get().addToast(err.message || 'Lỗi khi dọn dẹp hộp thư', 'error');
           return 0;
+        }
+      },
+
+      fetchSeasonAnnouncements: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('season_announcements')
+            .select('*')
+            .order('is_pinned', { ascending: false })
+            .order('created_at', { ascending: false });
+
+          if (!error && data) {
+            set({ seasonAnnouncements: data as SeasonAnnouncement[] });
+            const lastSeen = typeof window !== 'undefined' ? localStorage.getItem('faequest_last_seen_announcement_time') : null;
+            if (!lastSeen) {
+              set({ unreadAnnouncementsCount: data.length });
+            } else {
+              const lastTime = new Date(lastSeen).getTime();
+              const unread = data.filter((item) => new Date(item.created_at).getTime() > lastTime).length;
+              set({ unreadAnnouncementsCount: unread });
+            }
+          } else {
+            if (typeof window !== 'undefined') {
+              const cached = localStorage.getItem('faequest_local_season_announcements');
+              if (cached) {
+                try {
+                  const parsed = JSON.parse(cached);
+                  set({ seasonAnnouncements: parsed });
+                } catch {}
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Error fetching season announcements:', e);
+        }
+      },
+
+      addSeasonAnnouncement: async (item) => {
+        try {
+          const payload = {
+            season_tag: item.season_tag || 'Mùa 1',
+            title: item.title,
+            content: item.content,
+            image_url: item.image_url || null,
+            is_pinned: item.is_pinned ?? false,
+            created_by: get().currentUser?.name || get().playerName || 'Quản Trị Viên',
+          };
+
+          const { error } = await supabase
+            .from('season_announcements')
+            .insert([payload]);
+
+          if (error) {
+            console.warn('Supabase add announcement warning, using local fallback:', error);
+            const newLocalItem: SeasonAnnouncement = {
+              id: `local_ann_${Date.now()}`,
+              season_tag: item.season_tag || 'Mùa 1',
+              title: item.title,
+              content: item.content,
+              image_url: item.image_url || null,
+              is_pinned: item.is_pinned ?? false,
+              created_by: get().currentUser?.name || get().playerName || 'Quản Trị Viên',
+              created_at: new Date().toISOString(),
+            };
+            const current = get().seasonAnnouncements;
+            const updated = [newLocalItem, ...current];
+            set({ seasonAnnouncements: updated });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('faequest_local_season_announcements', JSON.stringify(updated));
+            }
+            get().addToast('Đã đăng thông báo mùa giải lên BXH!', 'success');
+            return true;
+          }
+
+          await get().fetchSeasonAnnouncements();
+          get().addToast('Đã đăng thông báo mùa giải lên BXH!', 'success');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi đăng thông báo', 'error');
+          return false;
+        }
+      },
+
+      updateSeasonAnnouncement: async (id, item) => {
+        try {
+          const { error } = await supabase
+            .from('season_announcements')
+            .update(item)
+            .eq('id', id);
+
+          if (error) {
+            console.warn('Supabase update announcement warning, using local fallback:', error);
+            const updated = get().seasonAnnouncements.map((a) =>
+              a.id === id ? { ...a, ...item } : a
+            );
+            set({ seasonAnnouncements: updated });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('faequest_local_season_announcements', JSON.stringify(updated));
+            }
+            get().addToast('Đã cập nhật thông báo thành công!', 'success');
+            return true;
+          }
+
+          await get().fetchSeasonAnnouncements();
+          get().addToast('Đã cập nhật thông báo thành công!', 'success');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi cập nhật thông báo', 'error');
+          return false;
+        }
+      },
+
+      deleteSeasonAnnouncement: async (id) => {
+        try {
+          const { error } = await supabase
+            .from('season_announcements')
+            .delete()
+            .eq('id', id);
+
+          if (error) {
+            console.warn('Supabase delete announcement warning, using local fallback:', error);
+            const updated = get().seasonAnnouncements.filter((a) => a.id !== id);
+            set({ seasonAnnouncements: updated });
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('faequest_local_season_announcements', JSON.stringify(updated));
+            }
+            get().addToast('Đã xóa thông báo mùa giải', 'info');
+            return true;
+          }
+
+          await get().fetchSeasonAnnouncements();
+          get().addToast('Đã xóa thông báo mùa giải', 'info');
+          return true;
+        } catch (e: any) {
+          get().addToast(e.message || 'Lỗi khi xóa thông báo', 'error');
+          return false;
+        }
+      },
+
+      togglePinSeasonAnnouncement: async (id, is_pinned) => {
+        return get().updateSeasonAnnouncement(id, { is_pinned });
+      },
+
+      markAnnouncementsAsRead: () => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('faequest_last_seen_announcement_time', new Date().toISOString());
+        }
+        set({ unreadAnnouncementsCount: 0 });
+      },
+
+      resetSeasonRank: async (seasonTitle = 'Mùa Mới', customNotice) => {
+        try {
+          // 1. Fetch all non-admin profiles from Supabase
+          const { data: profiles, error: pErr } = await supabase
+            .from('profiles')
+            .select('id, username, exp, rank_id, role')
+            .neq('role', 'admin');
+
+          if (pErr) throw pErr;
+
+          if (!profiles || profiles.length === 0) {
+            return { success: true, affectedCount: 0 };
+          }
+
+          let affectedCount = 0;
+          const currentUserId = get().currentUser?.id || get().hunterId;
+
+          // 2. Compute new rank and exp for each player
+          for (const p of profiles) {
+            const currentExp = Number(p.exp) || 0;
+            const currentIdx = getRankIndexByExp(currentExp);
+            const newIdx = Math.max(0, currentIdx - 2);
+            const newExp = RANK_TIERS[newIdx].minExp;
+            const newTierId = RANK_TIERS[newIdx].id;
+
+            // Update public.profiles
+            const { error: updErr } = await supabase
+              .from('profiles')
+              .update({
+                exp: newExp,
+                rank_id: newTierId,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', p.id);
+
+            if (!updErr) {
+              affectedCount++;
+
+              // Update public.user_states if exists
+              try {
+                const { data: userStateRow } = await supabase
+                  .from('user_states')
+                  .select('state_json')
+                  .eq('user_id', p.id)
+                  .maybeSingle();
+
+                if (userStateRow && userStateRow.state_json) {
+                  const updatedState = { ...userStateRow.state_json, exp: newExp };
+                  await supabase
+                    .from('user_states')
+                    .update({
+                      state_json: updatedState,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('user_id', p.id);
+                }
+              } catch (stateErr) {
+                console.warn(`Error updating user_states for ${p.id}:`, stateErr);
+              }
+
+              // If this is the current active player, update local store state
+              if (p.id === currentUserId) {
+                set({ exp: newExp });
+              }
+            }
+          }
+
+          // 3. Automatically post a system announcement
+          const noticeContent =
+            customNotice ||
+            `⚔️ Mùa giải "${seasonTitle}" đã chính thức khởi tranh!\nToàn bộ Thợ Săn trên Đấu Trường đã được giảm 2 bậc Rank để sẵn sàng cho cuộc đua vinh quang mới.\n\nHãy hoàn thành nhiệm vụ mỗi ngày, thắp sáng ngọn lửa kỷ luật và khắc tên bạn lên Bục Vinh Quang!`;
+
+          await get().addSeasonAnnouncement({
+            season_tag: seasonTitle,
+            title: `⚔️ Khởi Tranh Mùa Giải: ${seasonTitle}`,
+            content: noticeContent,
+            is_pinned: true,
+            image_url: null,
+          });
+
+          // 4. Reload leaderboard
+          await get().fetchCommunityProfiles();
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
+          }
+
+          get().addToast(`Đã Reset Rank thành công cho ${affectedCount} Thợ Săn!`, 'success');
+          return { success: true, affectedCount };
+        } catch (err: any) {
+          console.error('Error resetting season rank:', err);
+          get().addToast(err.message || 'Lỗi khi Reset Rank Mùa Giải', 'error');
+          return { success: false, affectedCount: 0, error: err.message };
         }
       },
 
@@ -3016,6 +3278,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().fetchSystemShopItems();
             get().fetchSystemAchievements();
             get().fetchJournals();
+            get().fetchSeasonAnnouncements();
             get().fetchCommunityProfiles();
             get().fetchJournals();
           } else {

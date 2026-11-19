@@ -4,6 +4,7 @@ import { AdminUsersTab } from './AdminUsersTab';
 import { AdminShopTab } from './AdminShopTab';
 import { AdminAchievementsTab } from './AdminAchievementsTab';
 import { AdminLiveOpsTab } from './AdminLiveOpsTab';
+import { AdminAnnouncementsTab } from './AdminAnnouncementsTab';
 import {
   ShieldAlert,
   Users,
@@ -12,15 +13,17 @@ import {
   BarChart2,
   Lock,
   ArrowLeft,
+  Megaphone,
+  Swords,
 } from 'lucide-react';
 
 export const AdminPortalHeader: React.FC = () => {
-  const { adminPortalTab, setAdminPortalTab, setActiveTab, userRole } = useFaeQuestStore();
+  const { adminPortalTab, setAdminPortalTab, setActiveTab, userRole, setSeasonResetModalOpen } = useFaeQuestStore();
 
   if (userRole !== 'admin') return null;
 
   const tabs: {
-    id: 'users' | 'shop' | 'achievements' | 'analytics';
+    id: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements';
     label: string;
     icon: React.ReactNode;
   }[] = [
@@ -44,6 +47,11 @@ export const AdminPortalHeader: React.FC = () => {
       label: 'Tổng Quan Live-Ops',
       icon: <BarChart2 className="w-4 h-4 shrink-0" />,
     },
+    {
+      id: 'announcements',
+      label: 'Thông Báo Mùa Giải',
+      icon: <Megaphone className="w-4 h-4 shrink-0" />,
+    },
   ];
 
   return (
@@ -63,17 +71,30 @@ export const AdminPortalHeader: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab('quests')}
-          className="px-3.5 py-2 rounded-xl bg-[#06141B] hover:bg-[#253745] text-[#CCD0CF] text-xs font-semibold flex items-center gap-1.5 border border-[#253745] hover:border-[#4A5C6A] transition cursor-pointer self-start md:self-auto shadow"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Về Sảnh Đấu Trường</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap self-stretch md:self-auto justify-end">
+          {/* Quick Action: Reset Rank Mùa Giải */}
+          <button
+            type="button"
+            onClick={() => setSeasonResetModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] text-xs font-black flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95"
+            title="Khởi tạo lại bậc Rank cho toàn bộ người chơi khi sang mùa giải mới"
+          >
+            <Swords className="w-3.5 h-3.5 text-[#06141B]" />
+            <span>⚔️ Reset Rank Mùa Giải</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('quests')}
+            className="px-3.5 py-2 rounded-xl bg-[#06141B] hover:bg-[#253745] text-[#CCD0CF] text-xs font-semibold flex items-center gap-1.5 border border-[#253745] hover:border-[#4A5C6A] transition cursor-pointer shadow"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Về Sảnh Đấu Trường</span>
+          </button>
+        </div>
       </div>
 
-      {/* 4 Dedicated Tabs Navigation Bar */}
+      {/* 5 Dedicated Tabs Navigation Bar */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {tabs.map((tab) => {
           const isActive = adminPortalTab === tab.id;
@@ -99,7 +120,7 @@ export const AdminPortalHeader: React.FC = () => {
 };
 
 export const AdminPortalView: React.FC = () => {
-  const { adminPortalTab, setAdminPortalTab, setActiveTab, userRole } = useFaeQuestStore();
+  const { adminPortalTab, userRole } = useFaeQuestStore();
 
   if (userRole !== 'admin') {
     return (
@@ -113,44 +134,9 @@ export const AdminPortalView: React.FC = () => {
         <p className="text-xs sm:text-sm text-[#9BA8AB] max-w-md mx-auto">
           Tài khoản của bạn không có đặc quyền Admin (`role = 'admin'`). Vui lòng quay lại giao diện Thợ Săn.
         </p>
-        <button
-          type="button"
-          onClick={() => setActiveTab('quests')}
-          className="px-5 py-2.5 rounded-full bg-[#CCD0CF] text-[#06141B] font-bold text-xs cursor-pointer hover:bg-white transition"
-        >
-          Quay Về Nhiệm Vụ
-        </button>
       </div>
     );
   }
-
-  const tabs: {
-    id: 'users' | 'shop' | 'achievements' | 'analytics';
-    label: string;
-    icon: React.ReactNode;
-    badge?: string;
-  }[] = [
-    {
-      id: 'users',
-      label: 'Người Dùng & Radar Bất Thường',
-      icon: <Users className="w-4 h-4 shrink-0" />,
-    },
-    {
-      id: 'shop',
-      label: 'Cửa Hàng Hệ Thống',
-      icon: <ShoppingBag className="w-4 h-4 shrink-0" />,
-    },
-    {
-      id: 'achievements',
-      label: 'Thành Tựu & Danh Hiệu',
-      icon: <Trophy className="w-4 h-4 shrink-0" />,
-    },
-    {
-      id: 'analytics',
-      label: 'Tổng Quan Live-Ops',
-      icon: <BarChart2 className="w-4 h-4 shrink-0" />,
-    },
-  ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -159,6 +145,7 @@ export const AdminPortalView: React.FC = () => {
       {adminPortalTab === 'shop' && <AdminShopTab />}
       {adminPortalTab === 'achievements' && <AdminAchievementsTab />}
       {adminPortalTab === 'analytics' && <AdminLiveOpsTab />}
+      {adminPortalTab === 'announcements' && <AdminAnnouncementsTab />}
     </div>
   );
 };

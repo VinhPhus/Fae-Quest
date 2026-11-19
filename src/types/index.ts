@@ -266,3 +266,14 @@ export interface RewardPopupData {
   isLevelUp: boolean;
   newRankName?: string;
 }
+
+export interface SeasonAnnouncement {
+  id: string;
+  season_tag: string;
+  title: string;
+  content: string;
+  image_url?: string | null;
+  is_pinned: boolean;
+  created_by?: string;
+  created_at: string;
+}

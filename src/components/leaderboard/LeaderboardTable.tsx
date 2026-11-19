@@ -11,6 +11,7 @@ import {
   Crown,
   Sparkles,
   ChevronUp,
+  Bell,
 } from 'lucide-react';
 
 interface Combatant {
@@ -61,12 +62,21 @@ const renderTitlePill = (titleName?: string) => {
 };
 
 export const LeaderboardHeader: React.FC = () => {
-  const { userRole, syncToCloud, communityProfiles, fetchCommunityProfiles, hunterId } =
-    useFaeQuestStore();
+  const {
+    userRole,
+    syncToCloud,
+    communityProfiles,
+    fetchCommunityProfiles,
+    hunterId,
+    unreadAnnouncementsCount,
+    setSeasonAnnouncementsModalOpen,
+    setSeasonResetModalOpen,
+    soundEnabled,
+  } = useFaeQuestStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRefresh = async () => {
-    playSound('ui_click');
+    playSound('ui_click', soundEnabled);
     setIsLoading(true);
     await syncToCloud(true);
     await fetchCommunityProfiles();
@@ -110,26 +120,64 @@ export const LeaderboardHeader: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center justify-between w-full md:w-auto gap-2">
+        <div className="flex items-center justify-between w-full md:w-auto gap-2 flex-wrap">
           {/* Thẻ đếm số lượng người chơi thật */}
-          <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#06141B] border border-[#253745] text-[11px] sm:text-xs font-bold text-[#CCD0CF] flex items-center gap-2 shadow-inner">
+          <div className="px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-[#06141B] border border-[#253745] text-[11px] sm:text-xs font-bold text-[#CCD0CF] flex items-center gap-2 shadow-inner shrink-0">
             <Swords className="w-3.5 h-3.5 text-cyan-400" />
             <span>
               <strong className="text-white font-extrabold">{totalRealHunters}</strong> Thợ Săn Đang Thi Đấu
             </span>
           </div>
 
-          {/* Nút Làm Mới */}
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50 shrink-0"
-            title="Tải lại BXH người chơi thật từ Supabase"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>{isLoading ? 'Đang tải...' : 'Làm Mới'}</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Lối tắt Reset Rank Mùa Giải cho Admin */}
+            {userRole === 'admin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('ui_click', soundEnabled);
+                  setSeasonResetModalOpen(true);
+                }}
+                className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] text-xs font-black flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95"
+                title="Khởi tạo lại bậc Rank mùa giải"
+              >
+                <Swords className="w-3.5 h-3.5 text-[#06141B]" />
+                <span className="hidden sm:inline">Reset Rank Mùa Giải</span>
+                <span className="sm:hidden">Reset Rank</span>
+              </button>
+            )}
+
+            {/* Nút Thông Báo Mùa Giải (kèm chấm đỏ/vàng nhấp nháy animate-pulse khi có thông báo mới) */}
+            <button
+              type="button"
+              onClick={() => {
+                playSound('ui_click', soundEnabled);
+                setSeasonAnnouncementsModalOpen(true);
+              }}
+              className="relative px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-[#06141B] hover:bg-[#253745] text-[#CCD0CF] hover:text-white border border-[#253745] hover:border-[#4A5C6A] text-xs font-bold flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95 shrink-0"
+              title="Xem Bảng Tin & Thông Báo Mùa Giải"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-400" />
+              <span>Thông Báo</span>
+              {unreadAnnouncementsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-md">
+                  {unreadAnnouncementsCount > 9 ? '9+' : unreadAnnouncementsCount}
+                </span>
+              )}
+            </button>
+
+            {/* Nút Làm Mới */}
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50 shrink-0"
+              title="Tải lại BXH người chơi thật từ Supabase"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>{isLoading ? 'Đang tải...' : 'Làm Mới'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
