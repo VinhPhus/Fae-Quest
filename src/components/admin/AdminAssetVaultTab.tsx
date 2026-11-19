@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { AdminAssetCategory } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
@@ -15,6 +15,8 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Sparkles,
+  ClipboardPaste,
+  Clipboard,
 } from 'lucide-react';
 
 export const AdminAssetVaultTab: React.FC = () => {
@@ -25,6 +27,7 @@ export const AdminAssetVaultTab: React.FC = () => {
   const [assetUrl, setAssetUrl] = useState('');
   const [assetCategory, setAssetCategory] = useState<AdminAssetCategory>('all');
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [hasImageError, setHasImageError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,29 +37,137 @@ export const AdminAssetVaultTab: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // Cloudinary Upload Handler
+  // Central Image File Processor (handles Local File, Clipboard Paste, Drag & Drop)
+  const processImageFile = useCallback(
+    async (file: File, source: 'file' | 'clipboard' | 'drop' = 'file') => {
+      setIsUploading(true);
+      setHasImageError(false);
+
+      if (source === 'clipboard') {
+        addToast('📋 Đang tải ảnh từ Clipboard lên Cloudinary...', 'info');
+      } else if (source === 'drop') {
+        addToast('✨ Đang tải ảnh kéo thả lên Cloudinary...', 'info');
+      }
+
+      try {
+        const url = await uploadImageToCloudinary(file);
+        setAssetUrl(url);
+        playSound('ui_click', soundEnabled);
+
+        const successMsg =
+          source === 'clipboard'
+            ? '📋 Đã dán và tải ảnh từ Clipboard thành công!'
+            : source === 'drop'
+            ? '✨ Đã kéo thả và tải ảnh thành công!'
+            : 'Tải ảnh lên Cloudinary thành công!';
+        addToast(successMsg, 'success');
+
+        // Tự động gợi ý tên nếu chưa nhập
+        if (!assetName.trim()) {
+          if (source === 'clipboard') {
+            const timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            setAssetName(`Ảnh Dán Lúc ${timeStr}`);
+          } else {
+            const defaultName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+            setAssetName(defaultName.charAt(0).toUpperCase() + defaultName.slice(1));
+          }
+        }
+      } catch (err: any) {
+        addToast(err.message || 'Lỗi khi tải ảnh lên Cloudinary', 'error');
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [assetName, addToast, soundEnabled]
+  );
+
+  // File Upload via Input
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await processImageFile(file, 'file');
+  };
 
-    setIsUploading(true);
-    setHasImageError(false);
+  // Button: Paste from Clipboard (calls navigator.clipboard.read)
+  const handlePasteFromClipboardButton = async () => {
+    if (isUploading) return;
     try {
-      const url = await uploadImageToCloudinary(file);
-      setAssetUrl(url);
-      playSound('ui_click', soundEnabled);
-      addToast('Tải ảnh lên Cloudinary thành công!', 'success');
-      // Tự động gợi ý tên nếu chưa nhập
-      if (!assetName.trim()) {
-        const defaultName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
-        setAssetName(defaultName.charAt(0).toUpperCase() + defaultName.slice(1));
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find((t) => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const ext = imageType.split('/')[1] || 'png';
+            const file = new File([blob], `paste_${Date.now()}.${ext}`, { type: imageType });
+            await processImageFile(file, 'clipboard');
+            return;
+          }
+        }
       }
-    } catch (err: any) {
-      addToast(err.message || 'Lỗi khi tải ảnh lên Cloudinary', 'error');
-    } finally {
-      setIsUploading(false);
+
+      // If no image blob, check if text is a URL
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        const cleanText = text?.trim();
+        if (cleanText && (cleanText.startsWith('http://') || cleanText.startsWith('https://'))) {
+          setAssetUrl(cleanText);
+          setHasImageError(false);
+          playSound('ui_click', soundEnabled);
+          addToast('📋 Đã dán link ảnh từ Clipboard!', 'success');
+          if (!assetName.trim()) {
+            setAssetName('Tài nguyên mới');
+          }
+          return;
+        }
+      }
+
+      addToast('Chưa có ảnh trong Clipboard! Hãy copy ảnh rồi bấm Ctrl + V.', 'info');
+    } catch {
+      addToast('Hãy bấm tổ hợp phím Ctrl + V để dán ảnh trực tiếp!', 'info');
     }
   };
+
+  // Global Paste Listener (Ctrl + V anywhere on this tab)
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // 1. Kiểm tra clipboard data có file ảnh binary không (screenshot, copy image)
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            const blob = items[i].getAsFile();
+            if (blob) {
+              e.preventDefault();
+              const ext = blob.type.split('/')[1] || 'png';
+              const file = new File([blob], `clipboard_${Date.now()}.${ext}`, { type: blob.type });
+              processImageFile(file, 'clipboard');
+              return;
+            }
+          }
+        }
+      }
+
+      // 2. Nếu người dùng copy link URL và đang không focus vào ô Tên
+      const text = e.clipboardData?.getData('text')?.trim();
+      if (text && (text.startsWith('http://') || text.startsWith('https://'))) {
+        const activeElem = document.activeElement;
+        const isInputName = activeElem && activeElem.getAttribute('data-field') === 'name';
+        if (!isInputName && !assetUrl) {
+          setAssetUrl(text);
+          setHasImageError(false);
+          playSound('ui_click', soundEnabled);
+          addToast('📋 Đã dán link ảnh từ Clipboard!', 'success');
+          if (!assetName.trim()) {
+            setAssetName('Tài nguyên mới');
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handleGlobalPaste);
+    return () => window.removeEventListener('paste', handleGlobalPaste);
+  }, [processImageFile, assetName, assetUrl, soundEnabled, addToast]);
 
   // Submit Handler
   const handleSaveAsset = async (e: React.FormEvent) => {
@@ -156,8 +267,27 @@ export const AdminAssetVaultTab: React.FC = () => {
             </h3>
 
             <form onSubmit={handleSaveAsset} className="space-y-4">
-              {/* Live Preview & Error warning */}
-              <div className="flex items-center gap-3.5 bg-[#06141B] p-3 rounded-xl border border-[#253745]">
+              {/* Live Preview & Error warning / Drag-Drop / Paste Zone */}
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const file = e.dataTransfer.files?.[0];
+                  if (file && file.type.startsWith('image/')) {
+                    processImageFile(file, 'drop');
+                  }
+                }}
+                className={`relative flex items-center gap-3.5 p-3 rounded-xl border transition-all ${
+                  isDragging
+                    ? 'bg-cyan-950/40 border-cyan-400 border-dashed ring-2 ring-cyan-400/50 scale-[1.02]'
+                    : 'bg-[#06141B] border-[#253745]'
+                }`}
+              >
                 <div className="w-20 h-20 shrink-0 rounded-xl bg-[#11212D] border border-[#253745] flex items-center justify-center overflow-hidden p-1.5 shadow-inner">
                   {assetUrl && !hasImageError ? (
                     <img
@@ -171,11 +301,20 @@ export const AdminAssetVaultTab: React.FC = () => {
                     <ImageIcon className="w-8 h-8 text-[#4A5C6A]" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[11px] font-semibold text-[#9BA8AB] block mb-1">
-                    Khung Xem Trước
-                  </span>
-                  {hasImageError ? (
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[#9BA8AB] block">
+                      Khung Xem Trước
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#253745] text-cyan-300 font-mono">
+                      Ctrl + V
+                    </span>
+                  </div>
+                  {isDragging ? (
+                    <div className="text-[11px] text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 rounded-lg p-1.5 animate-pulse">
+                      ✨ Thả ảnh vào đây để tải lên!
+                    </div>
+                  ) : hasImageError ? (
                     <div className="text-[11px] text-amber-400 bg-amber-950/40 border border-amber-500/30 rounded-lg p-1.5 leading-tight">
                       ⚠️ Link ảnh không hợp lệ hoặc bị chặn
                     </div>
@@ -184,8 +323,8 @@ export const AdminAssetVaultTab: React.FC = () => {
                       ✓ Ảnh hợp lệ
                     </div>
                   ) : (
-                    <span className="text-[11px] text-[#4A5C6A] italic">
-                      Chưa có link ảnh xem trước
+                    <span className="text-[10px] text-[#4A5C6A] italic block leading-relaxed">
+                      Dán ảnh từ Clipboard (Ctrl + V) hoặc kéo thả ảnh vào đây
                     </span>
                   )}
                 </div>
@@ -199,6 +338,7 @@ export const AdminAssetVaultTab: React.FC = () => {
                 </label>
                 <input
                   type="text"
+                  data-field="name"
                   value={assetName}
                   onChange={(e) => setAssetName(e.target.value)}
                   placeholder="VD: Rương Huyền Thoại, Huy Hiệu Sói Bạc..."
@@ -207,29 +347,48 @@ export const AdminAssetVaultTab: React.FC = () => {
                 />
               </div>
 
-              {/* Upload Cloudinary */}
+              {/* Upload & Paste Buttons */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#CCD0CF] block">
-                  Tải ảnh từ máy tính (Tùy chọn)
-                </label>
-                <label className="w-full py-2 px-3 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] border border-[#4A5C6A] text-xs font-semibold text-white flex items-center justify-center gap-2 cursor-pointer transition">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{isUploading ? 'Đang tải lên Cloudinary...' : 'Tải Ảnh Lên Cloudinary'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#CCD0CF] block">
+                    Thêm ảnh nhanh
+                  </label>
+                  <span className="text-[10px] text-cyan-400 font-mono">Copy rồi Ctrl + V</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="py-2 px-2.5 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] border border-[#4A5C6A] text-xs font-semibold text-white flex items-center justify-center gap-1.5 cursor-pointer transition">
+                    <Upload className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{isUploading ? 'Đang tải...' : 'Tải Từ Máy'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handlePasteFromClipboardButton}
                     disabled={isUploading}
-                  />
-                </label>
+                    className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-cyan-950/60 to-blue-950/60 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 text-xs font-semibold text-cyan-300 flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm"
+                    title="Dán ảnh trực tiếp từ bộ nhớ tạm Clipboard (Ctrl + V)"
+                  >
+                    <ClipboardPaste className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Dán Ảnh (Ctrl+V)</span>
+                  </button>
+                </div>
               </div>
 
               {/* Đường dẫn ảnh (URL) */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#CCD0CF] block">
-                  Đường dẫn ảnh (URL) *
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#CCD0CF] block">
+                    Đường dẫn ảnh (URL) *
+                  </label>
+                  <span className="text-[10px] text-[#4A5C6A]">Tự điền khi dán / tải</span>
+                </div>
                 <input
                   type="text"
                   value={assetUrl}

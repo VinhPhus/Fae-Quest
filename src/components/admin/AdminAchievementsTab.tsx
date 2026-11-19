@@ -19,6 +19,7 @@ import {
   Zap,
   Clock,
   Layers,
+  ClipboardPaste,
 } from 'lucide-react';
 
 export const AdminAchievementsTab: React.FC = () => {
@@ -128,11 +129,76 @@ export const AdminAchievementsTab: React.FC = () => {
     try {
       const url = await uploadImageToCloudinary(file);
       setIconUrl(url);
+      playSound('ui_click', soundEnabled);
       addToast('Tải ảnh biểu tượng lên Cloudinary thành công!', 'success');
     } catch (err: any) {
       addToast(err.message || 'Lỗi khi tải ảnh lên Cloudinary', 'error');
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    if (isUploading) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith('image/'));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const file = new File([blob], `achievement_${Date.now()}.png`, { type: imgType });
+            setIsUploading(true);
+            try {
+              const url = await uploadImageToCloudinary(file);
+              setIconUrl(url);
+              playSound('ui_click', soundEnabled);
+              addToast('📋 Đã dán và tải ảnh từ Clipboard thành công!', 'success');
+            } finally {
+              setIsUploading(false);
+            }
+            return;
+          }
+        }
+      }
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        const cleanText = text?.trim();
+        if (cleanText && (cleanText.startsWith('http://') || cleanText.startsWith('https://'))) {
+          setIconUrl(cleanText);
+          playSound('ui_click', soundEnabled);
+          addToast('📋 Đã dán link ảnh từ Clipboard!', 'success');
+          return;
+        }
+      }
+      addToast('Chưa có ảnh trong Clipboard! Hãy copy ảnh rồi bấm Ctrl + V.', 'info');
+    } catch {
+      addToast('Hãy bấm tổ hợp phím Ctrl + V để dán ảnh trực tiếp!', 'info');
+    }
+  };
+
+  const handleFormPaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const blob = items[i].getAsFile();
+          if (blob) {
+            e.preventDefault();
+            const file = new File([blob], `achievement_${Date.now()}.png`, { type: blob.type });
+            setIsUploading(true);
+            uploadImageToCloudinary(file)
+              .then((url) => {
+                setIconUrl(url);
+                playSound('ui_click', soundEnabled);
+                addToast('📋 Đã dán và tải ảnh từ Clipboard thành công!', 'success');
+              })
+              .catch((err) => addToast(err.message || 'Lỗi tải ảnh Clipboard', 'error'))
+              .finally(() => setIsUploading(false));
+            return;
+          }
+        }
+      }
     }
   };
 
@@ -272,6 +338,7 @@ export const AdminAchievementsTab: React.FC = () => {
         <form
           ref={formRef}
           onSubmit={handleSubmit}
+          onPaste={handleFormPaste}
           className={`bg-[#11212D] border-2 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in duration-200 ${
             editingAchievement
               ? 'border-cyan-400/70 shadow-[0_0_30px_rgba(6,182,212,0.15)]'
@@ -489,11 +556,11 @@ export const AdminAchievementsTab: React.FC = () => {
                 </div>
               </div>
 
-              {/* Upload to Cloudinary */}
-              <div>
-                <label className="w-full py-2 px-3 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] border border-[#4A5C6A] text-xs font-semibold text-white flex items-center justify-center gap-2 cursor-pointer transition">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{isUploading ? 'Đang tải lên Cloudinary...' : 'Tải Ảnh Mới Lên Cloudinary'}</span>
+              {/* Upload to Cloudinary & Paste */}
+              <div className="grid grid-cols-2 gap-2">
+                <label className="py-2 px-2.5 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] border border-[#4A5C6A] text-xs font-semibold text-white flex items-center justify-center gap-1.5 cursor-pointer transition">
+                  <Upload className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{isUploading ? 'Đang tải...' : 'Tải Từ Máy'}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -502,6 +569,17 @@ export const AdminAchievementsTab: React.FC = () => {
                     disabled={isUploading}
                   />
                 </label>
+
+                <button
+                  type="button"
+                  onClick={handlePasteFromClipboard}
+                  disabled={isUploading}
+                  className="py-2 px-2.5 rounded-xl bg-gradient-to-r from-cyan-950/60 to-blue-950/60 hover:from-cyan-900/60 hover:to-blue-900/60 border border-cyan-500/40 text-xs font-semibold text-cyan-300 flex items-center justify-center gap-1.5 transition cursor-pointer shadow-sm"
+                  title="Dán ảnh trực tiếp từ bộ nhớ tạm Clipboard (Ctrl + V)"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Dán Ảnh (Ctrl+V)</span>
+                </button>
               </div>
 
               {/* Direct URL input */}
