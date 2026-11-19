@@ -2,6 +2,7 @@ import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { resolveTitleObject } from '../../constants/systemQuests';
 import { Search, X, Scroll, Settings, Plus, Mail, ShieldAlert } from 'lucide-react';
+import { InstallAppButton } from '../ui/InstallAppButton';
 
 export const TopBentoHeader: React.FC = () => {
   const {
@@ -130,6 +131,9 @@ export const TopBentoHeader: React.FC = () => {
         >
           <Settings className="w-4 h-4" />
         </button>
+
+        {/* Quick 1-Tap Install App Button */}
+        <InstallAppButton variant="compact" />
 
         {/* Primary CTA: + Khắc Lệnh Mới Button */}
         <button

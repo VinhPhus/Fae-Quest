@@ -31,11 +31,14 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
   useEffect(() => {
     // 1. Kiểm tra nếu app đã chạy ở chế độ standalone (đã cài đặt)
     const checkStandalone = () => {
-      const isStandaloneMode =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        (window.navigator as any).standalone === true ||
-        document.referrer.includes('android-app://');
-      setIsStandalone(isStandaloneMode);
+      try {
+        const isStandaloneMode =
+          Boolean(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+          (window.navigator as any).standalone === true;
+        setIsStandalone(isStandaloneMode);
+      } catch {
+        setIsStandalone(false);
+      }
     };
 
     checkStandalone();
@@ -173,15 +176,17 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
         </button>
       )}
 
-      {/* 4. NÚT DÀNG COMPACT / PILL */}
+      {/* 4. NÚT DÀNH CHO HEADER / COMPACT PILL */}
       {variant === 'compact' && (
         <button
           type="button"
           onClick={handleInstall}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#11212D] hover:bg-[#253745] border border-cyan-500/40 hover:border-cyan-300 text-xs font-semibold text-cyan-300 hover:text-white transition cursor-pointer ${className}`}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-cyan-950/70 via-[#11212D] to-cyan-950/70 hover:from-cyan-900/80 hover:to-[#253745] border border-cyan-400/50 hover:border-cyan-300 text-xs font-bold text-cyan-300 hover:text-white transition shadow-[0_0_15px_rgba(34,211,238,0.2)] active:scale-95 cursor-pointer shrink-0 group ${className}`}
+          title="Cài đặt FaeQuest vào thiết bị (1-chạm PWA)"
         >
-          <Download className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Cài App</span>
+          <Download className="w-3.5 h-3.5 text-cyan-400 group-hover:-translate-y-0.5 transition-transform" />
+          <span className="hidden sm:inline">Cài Đặt App</span>
+          <span className="sm:hidden">Cài App</span>
         </button>
       )}
 
