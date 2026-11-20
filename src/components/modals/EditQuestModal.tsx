@@ -4,14 +4,16 @@ import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { TaskCategory, TaskDifficulty } from '../../types';
 import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
 import { CoinIcon } from '../ui/CoinIcon';
-import { X, Pencil, Repeat, Timer, Check } from 'lucide-react';
+import { X, Pencil, Repeat, Timer, Check, Swords, Sunrise } from 'lucide-react';
 import { MODAL_BACKDROP_VARIANTS, MODAL_PANEL_VARIANTS } from '../../constants/motion';
+import { getTodayString, getTomorrowString } from '../../utils/dateUtils';
 
 export const EditQuestModal: React.FC = () => {
   const { editingTask, isEditQuestOpen, setEditingTask, updateTask } = useFaeQuestStore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [targetDateType, setTargetDateType] = useState<'today' | 'tomorrow'>('today');
   const [category, setCategory] = useState<TaskCategory>('hoc-tap');
   const [difficulty, setDifficulty] = useState<TaskDifficulty>('medium');
   const [isDailyRecurring, setIsDailyRecurring] = useState(false);
@@ -23,6 +25,11 @@ export const EditQuestModal: React.FC = () => {
     if (editingTask) {
       setTitle(editingTask.title);
       setDescription(editingTask.description || '');
+      setTargetDateType(
+        editingTask.target_date && editingTask.target_date > getTodayString()
+          ? 'tomorrow'
+          : 'today'
+      );
       setCategory(editingTask.category);
       setDifficulty(editingTask.difficulty);
       setIsDailyRecurring(Boolean(editingTask.isDailyRecurring));
@@ -36,13 +43,16 @@ export const EditQuestModal: React.FC = () => {
     e.preventDefault();
     if (!editingTask || !title.trim()) return;
 
+    const assignedDate = targetDateType === 'today' ? getTodayString() : getTomorrowString();
+
     updateTask(editingTask.id, {
       title,
       description,
       category,
       difficulty,
-      isDailyRecurring,
+      isDailyRecurring: targetDateType === 'today' ? isDailyRecurring : false,
       focusDuration,
+      target_date: assignedDate,
     });
     setEditingTask(null);
   };
@@ -111,6 +121,54 @@ export const EditQuestModal: React.FC = () => {
                   placeholder="VD: Đọc sách, Học từ vựng, Chạy bộ..."
                   className="w-full px-4 py-3 rounded-2xl bg-[#06141B] border border-[#253745] text-sm text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] focus:ring-1 focus:ring-[#4A5C6A] transition shadow-inner"
                 />
+              </div>
+
+              {/* Thời điểm thực hiện: Hôm nay vs Ngày mai */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
+                  Thời điểm thực hiện
+                </label>
+                <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-[#06141B] border border-[#253745]">
+                  <button
+                    type="button"
+                    onClick={() => setTargetDateType('today')}
+                    className={`relative py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      targetDateType === 'today'
+                        ? 'text-[#CCD0CF]'
+                        : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                    }`}
+                  >
+                    {targetDateType === 'today' && (
+                      <motion.div
+                        layoutId="editQuestDateSegment"
+                        className="absolute inset-0 rounded-lg bg-[#253745] border border-[#4A5C6A] shadow-sm z-0"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <Swords className="w-3.5 h-3.5 relative z-10 text-cyan-300" />
+                    <span className="relative z-10">⚔️ Hôm nay</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTargetDateType('tomorrow')}
+                    className={`relative py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                      targetDateType === 'tomorrow'
+                        ? 'text-[#CCD0CF]'
+                        : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                    }`}
+                  >
+                    {targetDateType === 'tomorrow' && (
+                      <motion.div
+                        layoutId="editQuestDateSegment"
+                        className="absolute inset-0 rounded-lg bg-[#253745] border border-[#4A5C6A] shadow-sm z-0"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                    <Sunrise className="w-3.5 h-3.5 relative z-10 text-amber-300" />
+                    <span className="relative z-10">🌅 Ngày mai</span>
+                  </button>
+                </div>
               </div>
 
               {/* 1.5 Description Textarea */}

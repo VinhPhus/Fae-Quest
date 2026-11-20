@@ -19,6 +19,7 @@ export interface Task {
   lastAwardedExp?: number;
   lastAwardedCoins?: number;
   lastRankUpBonus?: number;
+  target_date?: string; // Mốc ngày thực hiện YYYY-MM-DD theo múi giờ địa phương
 }
 
 export interface Rank {

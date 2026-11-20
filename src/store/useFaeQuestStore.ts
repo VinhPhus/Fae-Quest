@@ -29,6 +29,7 @@ import {
   AdminAssetCategory,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
+import { getTodayString, getTomorrowString, isTomorrowOrFutureDate } from '../utils/dateUtils';
 import { RANK_TIERS, getRankIndexByExp } from '../constants/ranks';
 import { DIFFICULTIES } from '../constants/categories';
 import {
@@ -234,6 +235,7 @@ interface FaeQuestState {
   shopSubTab: 'shop' | 'inventory';
   activeCategoryFilter: string;
   activeStatusFilter: string;
+  activeDayTab: 'today' | 'tomorrow';
   rankUpData: { achievedTier: RankTier; bonusCoins: number } | null;
   searchQuery: string;
   isCreateQuestOpen: boolean;
@@ -336,7 +338,16 @@ interface FaeQuestState {
   setShopSubTab: (subTab: 'shop' | 'inventory') => void;
   setCategoryFilter: (cat: string) => void;
   setStatusFilter: (status: string) => void;
-  addTask: (title: string, category: TaskCategory, difficulty: TaskDifficulty, isDailyRecurring?: boolean, focusDuration?: number | null, description?: string) => void;
+  setActiveDayTab: (tab: 'today' | 'tomorrow') => void;
+  addTask: (
+    title: string,
+    category: TaskCategory,
+    difficulty: TaskDifficulty,
+    isDailyRecurring?: boolean,
+    focusDuration?: number | null,
+    description?: string,
+    target_date?: string
+  ) => void;
   updateTaskFocusDuration: (taskId: string, duration: number) => void;
   toggleTask: (id: string, coords?: { x: number; y: number }, forceSkipAgeCheck?: boolean) => Promise<void> | void;
   confirmEarlyTaskCompletion: () => void;
@@ -397,14 +408,6 @@ interface FaeQuestState {
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
-
-const getTodayString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
 
 let autoSyncTimer: any = null;
 let rewardPopupTimer: any = null;
@@ -470,6 +473,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       shopSubTab: 'shop',
       activeCategoryFilter: 'all',
       activeStatusFilter: 'all',
+      activeDayTab: 'today',
+      setActiveDayTab: (tab: 'today' | 'tomorrow') => set({ activeDayTab: tab }),
       searchQuery: '',
       isCreateQuestOpen: false,
       questViewMode: 'bento',
@@ -1803,11 +1808,21 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         set({ activeStatusFilter: status });
       },
 
-      addTask: (title, category, difficulty, isDailyRecurring = false, focusDuration = null, description = '') => {
+      addTask: (
+        title,
+        category = 'ca-nhan',
+        difficulty = 'medium',
+        isDailyRecurring = false,
+        focusDuration = null,
+        description = '',
+        target_date
+      ) => {
         const trimmed = title.trim();
         if (!trimmed) return;
 
         const duration = focusDuration ? Math.min(180, Math.max(5, Number(focusDuration))) : null;
+        const assignedTargetDate = target_date || getTodayString();
+        const isTargetToday = assignedTargetDate === getTodayString();
 
         const newTask: Task = {
           id: 'task_' + Date.now(),
@@ -1817,11 +1832,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           difficulty,
           completed: false,
           rewardClaimed: false,
-          isDailyRecurring,
+          isDailyRecurring: isDailyRecurring && isTargetToday,
           focusDuration: duration,
           pomodoroMinutes: duration,
           focusRewardClaimed: false,
           createdAt: Date.now(),
+          target_date: assignedTargetDate,
         };
 
         set((state) => ({
@@ -1829,7 +1845,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }));
 
         playSound('quest_create', get().soundEnabled);
-        get().addToast('Đã khắc lệnh nhiệm vụ mới lên bảng!', 'success');
+        get().addToast(
+          isTargetToday
+            ? 'Đã khắc lệnh nhiệm vụ mới cho Hôm Nay!'
+            : 'Đã lên lịch nhiệm vụ thành công cho Ngày Mai!',
+          'success'
+        );
         debouncedAutoSync(get());
       },
 
@@ -1855,6 +1876,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               ...(updates.difficulty !== undefined && { difficulty: updates.difficulty }),
               ...(updates.isDailyRecurring !== undefined && { isDailyRecurring: updates.isDailyRecurring }),
               ...(duration !== undefined && { focusDuration: duration, pomodoroMinutes: duration }),
+              ...(updates.target_date !== undefined && { target_date: updates.target_date }),
             };
           }),
           editingTask: null,
@@ -1895,6 +1917,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         if (task.completed) {
           // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành vĩnh viễn
+          return;
+        }
+
+        // Chống gian lận: Khóa hoàn thành đối với nhiệm vụ thuộc Ngày Mai / Tương lai
+        const today = getTodayString();
+        if (task.target_date && task.target_date > today) {
+          playSoundEffect('warning', state.soundEnabled);
+          get().addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
           return;
         }
 
@@ -1993,7 +2023,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }, 1400);
         }
 
-        const today = getTodayString();
         let newStreak = state.streakDays;
         if (state.lastActiveDate !== today) {
           newStreak = state.streakDays + 1;

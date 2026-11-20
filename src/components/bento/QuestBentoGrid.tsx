@@ -16,8 +16,10 @@ import {
   Swords,
   Timer,
   Pencil,
+  Sunrise,
 } from 'lucide-react';
 import { TaskCategory, Task } from '../../types';
+import { getTodayString } from '../../utils/dateUtils';
 
 export const QuestBentoGrid: React.FC = () => {
   const {
@@ -26,6 +28,8 @@ export const QuestBentoGrid: React.FC = () => {
     activeStatusFilter,
     searchQuery,
     questViewMode,
+    activeDayTab,
+    setActiveDayTab,
     setCategoryFilter,
     setStatusFilter,
     setQuestViewMode,
@@ -42,8 +46,28 @@ export const QuestBentoGrid: React.FC = () => {
     toggleTask(task.id, { x: rect.right + 10, y: rect.top });
   };
 
+  const todayStr = getTodayString();
+
+  // Partition tasks by Day:
+  // Tomorrow tasks: target_date is in the future (> todayStr)
+  // Today tasks: no target_date, or target_date <= todayStr
+  const isTomorrowTask = (t: Task) => Boolean(t.target_date && t.target_date > todayStr);
+
+  const todayTasks = tasks.filter((t) => !isTomorrowTask(t));
+  const tomorrowTasks = tasks.filter((t) => isTomorrowTask(t));
+
+  const todayPendingCount = todayTasks.filter((t) => !t.completed).length;
+  const todayCompletedCount = todayTasks.filter((t) => t.completed).length;
+  const todayTotalCount = todayTasks.length;
+
+  const tomorrowPendingCount = tomorrowTasks.filter((t) => !t.completed).length;
+  const tomorrowTotalCount = tomorrowTasks.length;
+
+  // Active base tasks list depending on activeDayTab
+  const currentDayTasks = activeDayTab === 'today' ? todayTasks : tomorrowTasks;
+
   // Filter tasks based on Category, Status, and Search Query
-  const filtered = tasks.filter((task) => {
+  const filtered = currentDayTasks.filter((task) => {
     const matchCat =
       activeCategoryFilter === 'all' || task.category === activeCategoryFilter;
     const matchStatus =
@@ -63,30 +87,86 @@ export const QuestBentoGrid: React.FC = () => {
     return b.createdAt - a.createdAt;
   });
 
-  const totalCount = tasks.length;
-  const completedCount = tasks.filter((t) => t.completed).length;
-
   return (
     <div id="tour-task-grid" className="space-y-4">
-      {/* 1. Header Toolbar: Title, Category Pills, Status & View Toggle */}
+      {/* 1. Header Toolbar: Title, Day Switcher, Category Pills, Status & View Toggle */}
       <div className="flex flex-col gap-3">
         {/* Top Row: Title & Action Controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF] shadow-md">
-              <Swords className="w-4 h-4" />
+              {activeDayTab === 'today' ? (
+                <Swords className="w-4 h-4 text-cyan-400" />
+              ) : (
+                <Sunrise className="w-4 h-4 text-amber-400" />
+              )}
             </div>
             <div>
               <h3 className="font-rpg font-extrabold text-lg sm:text-xl text-[#CCD0CF] tracking-wide flex items-center gap-2">
-                <span>Nhiệm Vụ Chinh Phục</span>
+                <span>{activeDayTab === 'today' ? 'Nhiệm Vụ Chinh Phục' : 'Kế Hoạch Ngày Mai'}</span>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#253745] border border-[#4A5C6A] text-[#CCD0CF]">
-                  {completedCount}/{totalCount}
+                  {activeDayTab === 'today'
+                    ? `${todayCompletedCount}/${todayTotalCount}`
+                    : `${tomorrowTotalCount} lệnh`}
                 </span>
               </h3>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Day Switcher: Hôm nay vs Ngày mai */}
+            <div className="flex items-center p-1 rounded-full bg-[#06141B] border border-[#253745] text-xs relative shadow-inner">
+              <button
+                type="button"
+                onClick={() => setActiveDayTab('today')}
+                className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer relative z-10 flex items-center gap-1.5 ${
+                  activeDayTab === 'today'
+                    ? 'text-[#CCD0CF]'
+                    : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
+              >
+                {activeDayTab === 'today' && (
+                  <motion.div
+                    layoutId="activeDayTabIndicator"
+                    className="absolute inset-0 rounded-full bg-[#253745] border border-[#4A5C6A] shadow-sm z-[-1]"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <Swords className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Hôm nay</span>
+                {todayPendingCount > 0 && (
+                  <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#11212D] text-[#CCD0CF] border border-[#4A5C6A]/50">
+                    {todayPendingCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveDayTab('tomorrow')}
+                className={`px-3 py-1 rounded-full font-bold transition-colors cursor-pointer relative z-10 flex items-center gap-1.5 ${
+                  activeDayTab === 'tomorrow'
+                    ? 'text-[#CCD0CF]'
+                    : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
+              >
+                {activeDayTab === 'tomorrow' && (
+                  <motion.div
+                    layoutId="activeDayTabIndicator"
+                    className="absolute inset-0 rounded-full bg-[#253745] border border-[#4A5C6A] shadow-sm z-[-1]"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+                <Sunrise className="w-3.5 h-3.5 text-amber-400" />
+                <span>Ngày mai</span>
+                {tomorrowPendingCount > 0 && (
+                  <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {tomorrowPendingCount}
+                  </span>
+                )}
+              </button>
+            </div>
+
             {/* Status Filters: Chưa xong / Đã xong / Tất cả */}
             <div className="flex items-center p-1 rounded-full bg-[#06141B] border border-[#253745] text-xs relative">
               {(
@@ -217,15 +297,23 @@ export const QuestBentoGrid: React.FC = () => {
       {sorted.length === 0 ? (
         <div className="rounded-[28px] p-8 sm:p-10 bg-[#11212D] border border-[#253745] text-center space-y-3.5 shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] mx-auto flex items-center justify-center text-[#CCD0CF]">
-            <Sparkles className="w-7 h-7" />
+            {activeDayTab === 'today' ? (
+              <Sparkles className="w-7 h-7 text-cyan-300" />
+            ) : (
+              <Sunrise className="w-7 h-7 text-amber-300" />
+            )}
           </div>
           <h4 className="text-base font-extrabold text-[#CCD0CF]">
             {searchQuery
               ? `Không tìm thấy nhiệm vụ phù hợp với "${searchQuery}"`
-              : 'Chưa có nhiệm vụ nào trong mục này'}
+              : activeDayTab === 'today'
+              ? 'Chưa có nhiệm vụ nào hôm nay'
+              : 'Chưa có nhiệm vụ nào được lên lịch cho ngày mai'}
           </h4>
           <p className="text-xs text-[#9BA8AB] max-w-sm mx-auto">
-            Hãy bắt đầu khắc lệnh nhiệm vụ mới để tích lũy EXP và thăng hạng Thợ Săn ngay hôm nay!
+            {activeDayTab === 'today'
+              ? 'Hãy bắt đầu khắc lệnh nhiệm vụ mới để tích lũy EXP và thăng hạng Thợ Săn ngay hôm nay!'
+              : 'Lên lịch trước các mục tiêu ngày mai để sẵn sàng bứt phá ngay khi thức dậy!'}
           </p>
           <button
             type="button"
@@ -233,7 +321,7 @@ export const QuestBentoGrid: React.FC = () => {
             className="px-5 py-2.5 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs inline-flex items-center gap-1.5 shadow-lg shadow-black/40 hover:brightness-105 active:scale-95 transition cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Khắc Lệnh Đầu Tiên</span>
+            <span>{activeDayTab === 'today' ? 'Khắc Lệnh Đầu Tiên' : 'Lên Lịch Ngày Mai'}</span>
           </button>
         </div>
       ) : questViewMode === 'bento' ? (
@@ -243,6 +331,7 @@ export const QuestBentoGrid: React.FC = () => {
             {sorted.map((task) => {
               const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
               const cat = CATEGORIES[task.category] || CATEGORIES['ca-nhan'];
+              const isTomorrow = isTomorrowTask(task);
 
               return (
                 <motion.div
@@ -260,6 +349,12 @@ export const QuestBentoGrid: React.FC = () => {
                   {/* Phần trên thẻ: Category + Difficulty + Focus Duration + Reward Badges */}
                   <div className="flex items-center justify-between gap-2 shrink-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
+                      {isTomorrow && (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg border bg-amber-950/60 border-amber-500/40 text-amber-300 flex items-center gap-1 shadow-sm">
+                          <Sunrise className="w-3 h-3 text-amber-400" />
+                          <span>Ngày mai</span>
+                        </span>
+                      )}
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border ${cat.badgeBg}`}
                       >
@@ -338,6 +433,14 @@ export const QuestBentoGrid: React.FC = () => {
                       <span className="text-[11px] text-[#9BA8AB] italic select-none">
                         Nhiệm vụ đã hoàn tất
                       </span>
+                    ) : isTomorrow ? (
+                      <div
+                        className="h-8 px-3 rounded-full bg-[#06141B] border border-amber-500/30 text-amber-300/80 font-bold text-xs flex items-center gap-1.5 cursor-not-allowed select-none shadow-sm"
+                        title="Nhiệm vụ của ngày mai — sẽ tự động mở khóa khi sang ngày mới"
+                      >
+                        <Sunrise className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Sắp mở khóa (Ngày mai)</span>
+                      </div>
                     ) : (
                       <motion.button
                         whileTap={{ scale: 0.94 }}
@@ -352,8 +455,8 @@ export const QuestBentoGrid: React.FC = () => {
                     )}
 
                     <div className="flex items-center gap-2 ml-auto">
-                      {/* Play Focus Button */}
-                      {!task.completed && Boolean(task.focusDuration) && (
+                      {/* Play Focus Button (chỉ cho nhiệm vụ hôm nay) */}
+                      {!task.completed && !isTomorrow && Boolean(task.focusDuration) && (
                         <motion.button
                           whileTap={{ scale: 0.94 }}
                           type="button"
@@ -401,6 +504,7 @@ export const QuestBentoGrid: React.FC = () => {
             {sorted.map((task) => {
               const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
               const cat = CATEGORIES[task.category] || CATEGORIES['ca-nhan'];
+              const isTomorrow = isTomorrowTask(task);
 
               return (
                 <motion.div
@@ -418,6 +522,13 @@ export const QuestBentoGrid: React.FC = () => {
                     {task.completed ? (
                       <div className="w-6 h-6 rounded-lg bg-[#253745] border border-[#4A5C6A] flex items-center justify-center shrink-0 text-emerald-400">
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      </div>
+                    ) : isTomorrow ? (
+                      <div
+                        className="w-6 h-6 rounded-lg border border-amber-500/40 bg-[#06141B] flex items-center justify-center shrink-0 text-amber-400/80 cursor-not-allowed"
+                        title="Sắp mở khóa (Ngày mai)"
+                      >
+                        <Sunrise className="w-3.5 h-3.5" />
                       </div>
                     ) : (
                       <motion.button
@@ -445,6 +556,11 @@ export const QuestBentoGrid: React.FC = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-1.5 text-[10px]">
+                        {isTomorrow && (
+                          <span className="text-amber-300 font-bold flex items-center gap-0.5">
+                            <Sunrise className="w-2.5 h-2.5" /> Ngày mai •
+                          </span>
+                        )}
                         <span className="text-[#CCD0CF] font-semibold">{cat.label}</span>
                         <span className="text-[#9BA8AB]">•</span>
                         <span className="text-amber-300 font-semibold">{diff.label}</span>
@@ -458,13 +574,18 @@ export const QuestBentoGrid: React.FC = () => {
                         <Check className="w-2.5 h-2.5 stroke-[3] text-emerald-400" />
                         <span>Đã chinh phục</span>
                       </span>
+                    ) : isTomorrow ? (
+                      <div className="text-right px-2.5 py-1 rounded-xl bg-[#06141B] border border-amber-500/30 flex items-center gap-1">
+                        <Sunrise className="w-3 h-3 text-amber-400" />
+                        <span className="text-[11px] font-bold text-amber-300">Khóa (Mai)</span>
+                      </div>
                     ) : (
                       <div className="text-right px-2.5 py-1 rounded-xl bg-[#06141B] border border-[#253745]">
                         <span className="text-xs font-black text-[#CCD0CF]">+{diff.exp} EXP</span>
                       </div>
                     )}
 
-                    {!task.completed && Boolean(task.focusDuration) && (
+                    {!task.completed && !isTomorrow && Boolean(task.focusDuration) && (
                       <motion.button
                         whileTap={{ scale: 0.94 }}
                         type="button"
@@ -491,6 +612,7 @@ export const QuestBentoGrid: React.FC = () => {
                       type="button"
                       onClick={() => deleteTask(task.id)}
                       className="p-1.5 rounded-lg text-[#9BA8AB] hover:text-rose-300 transition"
+                      title="Xóa nhiệm vụ"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </motion.button>
