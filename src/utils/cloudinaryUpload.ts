@@ -1,4 +1,5 @@
 import { CLOUDINARY_UPLOAD_URL, CLOUDINARY_UPLOAD_PRESET } from '../constants/cloudinary';
+import { compressImage } from './imageCompression';
 
 export interface CloudinaryUploadResult {
   url: string;
@@ -7,11 +8,15 @@ export interface CloudinaryUploadResult {
 
 /**
  * Tải ảnh trực tiếp lên Cloudinary sử dụng Unsigned Upload Preset
- * Hỗ trợ tạo URL ảnh icon / thành tựu / shop item với độ phân giải cao và CDN cực nhanh
+ * Tự động nén qua HTML5 Canvas (max width 1280px, WebP quality 0.8) để tiết kiệm 8x dung lượng
  */
 export const uploadImageToCloudinary = async (file: File): Promise<string> => {
+  // 1. Tự động nén ảnh client-side trước khi upload
+  const processedFile = await compressImage(file, 1280, 0.8);
+
+  // 2. Chuẩn bị FormData với unsigned preset
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append('file', processedFile);
   formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
   const response = await fetch(CLOUDINARY_UPLOAD_URL, {

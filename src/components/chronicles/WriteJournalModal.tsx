@@ -6,6 +6,7 @@ import { JournalMood } from '../../types';
 import { RichTextEditor } from './RichTextEditor';
 import { WheelDatePicker } from './WheelDatePicker';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { playSound } from '../../utils/soundEngine';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
@@ -108,6 +109,12 @@ export const WriteJournalModal: React.FC = () => {
   };
 
   const handleRemoveImage = (indexToRemove: number) => {
+    const removedUrl = images[indexToRemove];
+    if (removedUrl && (removedUrl.includes('cloudinary.com') || removedUrl.includes('res.cloudinary.com'))) {
+      deleteCloudinaryImages([removedUrl]).catch((err) =>
+        console.warn('Lỗi xóa ảnh Cloudinary khi gỡ đính kèm:', err)
+      );
+    }
     setImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 

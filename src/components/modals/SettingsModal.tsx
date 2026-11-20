@@ -36,6 +36,10 @@ import {
   CloudRain,
   Radio,
   Compass,
+  HardDrive,
+  Trash2,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { startOnboardingTour } from '../../utils/onboardingTour';
 
@@ -60,6 +64,7 @@ export const SettingsModal: React.FC = () => {
     lastSyncedAt,
     syncToCloud,
     restoreFromCloud,
+    clearAllJournalsAndImages,
   } = useFaeQuestStore();
 
   const [activeTab, setActiveTab] = useState<'general' | 'data' | 'about'>('general');
@@ -70,11 +75,63 @@ export const SettingsModal: React.FC = () => {
   const [copiedHunterId, setCopiedHunterId] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [deleteJournalsStep, setDeleteJournalsStep] = useState<0 | 1 | 2>(0);
+  const [isDeletingJournals, setIsDeletingJournals] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useBodyScrollLock(isSettingsOpen);
 
   if (!isSettingsOpen || typeof document === 'undefined') return null;
+
+  const handleClearCache = async () => {
+    setIsClearingCache(true);
+    try {
+      // 1. Xóa Service Worker Cache & Dynamic Cache
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((k) => caches.delete(k)));
+      }
+
+      // 2. Dọn localStorage an toàn, BẢO TOÀN phiên đăng nhập Supabase và ID Thợ Săn
+      if (typeof window !== 'undefined') {
+        const preserved: Record<string, string> = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (
+            key &&
+            (key.startsWith('sb-') ||
+              key.includes('supabase.auth.token') ||
+              key.startsWith('faequest_hunter_id') ||
+              key.startsWith('faequest_tour_'))
+          ) {
+            preserved[key] = localStorage.getItem(key) || '';
+          }
+        }
+        localStorage.clear();
+        Object.entries(preserved).forEach(([k, v]) => localStorage.setItem(k, v));
+      }
+
+      addToast('✨ Đã dọn sạch bộ nhớ đệm và giải phóng dung lượng cache thành công!', 'success');
+    } catch (err) {
+      console.error('Lỗi dọn dẹp cache:', err);
+      addToast('Không thể dọn dẹp bộ nhớ đệm, vui lòng thử lại!', 'error');
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const handleConfirmDeleteJournals = async () => {
+    setIsDeletingJournals(true);
+    try {
+      const ok = await clearAllJournalsAndImages();
+      if (ok) {
+        setDeleteJournalsStep(0);
+      }
+    } finally {
+      setIsDeletingJournals(false);
+    }
+  };
 
   const handleLogout = async () => {
     setSettingsOpen(false);
@@ -742,27 +799,95 @@ export const SettingsModal: React.FC = () => {
                 </div>
               </div>
 
+              {/* Quản lý Bộ nhớ & Dữ liệu Tài khoản */}
+              <div className="space-y-3 pt-4 border-t border-[#253745]">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#CCD0CF] flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-cyan-400" />
+                  <span>Bộ Nhớ & Dữ Liệu Tài Khoản</span>
+                </label>
+                <p className="text-xs text-[#9BA8AB] leading-relaxed">
+                  Tối ưu dung lượng lưu trữ trên thiết bị, dọn dẹp các tệp bộ nhớ tạm hoặc giải phóng hình ảnh trên đám mây:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {/* Action 1: Dọn dẹp cache */}
+                  <div className="p-3.5 rounded-2xl bg-[#06141B] border border-[#253745] flex flex-col justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#CCD0CF]">
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Dọn dẹp bộ nhớ đệm (Cache)</span>
+                      </div>
+                      <p className="text-[11px] text-[#9BA8AB] leading-relaxed">
+                        Làm sạch Service Worker cache và dữ liệu tạm thời để app luôn nhẹ mượt (không làm mất phiên đăng nhập).
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleClearCache}
+                      disabled={isClearingCache}
+                      className="w-full py-2 px-3 rounded-xl bg-[#11212D] hover:bg-[#253745] border border-[#4A5C6A] text-xs font-bold text-[#CCD0CF] hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {isClearingCache ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                          <span>Đang dọn dẹp...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>Dọn Dẹp Cache Ngay</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Action 2: Xóa toàn bộ Nhật ký & Ảnh */}
+                  <div className="p-3.5 rounded-2xl bg-[#06141B] border border-amber-500/20 flex flex-col justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                        <Trash2 className="w-4 h-4 text-amber-400" />
+                        <span>Xóa toàn bộ Nhật Ký & Ảnh</span>
+                      </div>
+                      <p className="text-[11px] text-[#9BA8AB] leading-relaxed">
+                        Xóa sạch toàn bộ bài viết Nhật Ký và giải phóng 100% dung lượng ảnh đã tải lên Cloudinary.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeleteJournalsStep(1)}
+                      className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Xóa Hết Nhật Ký & Ảnh</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Danger Zone: Reset Data */}
               <div className="space-y-3 pt-4 border-t border-rose-900/40">
                 <label className="block text-xs font-bold uppercase tracking-wider text-rose-300 flex items-center gap-2">
                   <ShieldAlert className="w-4 h-4 text-rose-400" />
-                  <span>Vùng Nguy Hiểm (Khởi Tạo Lại Hành Trình)</span>
+                  <span>Vùng Nguy Hiểm (Đặt Lại Tiến Trình)</span>
                 </label>
 
                 <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-3">
-                  <p className="text-xs text-parchment/75 leading-relaxed">
-                    Xóa toàn bộ tiến độ nhiệm vụ, điểm EXP, bậc Rank, Xu vàng và túi đồ để bắt đầu lại từ đầu như tài khoản mới.
+                  <p className="text-xs text-[#9BA8AB] leading-relaxed">
+                    Xóa toàn bộ ảnh cá nhân trên Cloudinary, đặt lại điểm EXP, Rank Đồng, xóa toàn bộ nhiệm vụ, lịch sử mua đồ và đưa dữ liệu về ban đầu (yêu cầu nhập chữ <strong className="text-rose-400">XAC NHAN</strong>).
                   </p>
 
                   <button
+                    type="button"
                     onClick={() => {
                       setSettingsOpen(false);
                       setResetOpen(true);
                     }}
-                    className="px-4 py-2.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 border border-rose-400/50 font-bold text-xs text-white flex items-center gap-2 transition shadow-lg"
+                    className="px-4 py-2.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 border border-rose-400/50 font-bold text-xs text-white flex items-center gap-2 transition shadow-lg cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    <span>Đặt Lại Toàn Bộ Dữ Liệu Gốc</span>
+                    <span>Đặt Lại Tiến Trình / Xóa Dữ Liệu</span>
                   </button>
                 </div>
               </div>
@@ -934,6 +1059,99 @@ export const SettingsModal: React.FC = () => {
             >
               Đóng Xem Lại
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2-Step Confirmation Modal: Xóa toàn bộ Nhật Ký & Ảnh */}
+      {deleteJournalsStep > 0 && (
+        <div
+          className="fixed inset-0 w-screen h-[100dvh] z-[120] bg-[#06141B]/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => !isDeletingJournals && setDeleteJournalsStep(0)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-[#11212D] border border-amber-500/40 p-5 sm:p-6 space-y-4 text-center shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 mx-auto flex items-center justify-center text-amber-300 shadow">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            {deleteJournalsStep === 1 ? (
+              <>
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    Bước 1 / 2
+                  </span>
+                  <h3 className="font-bold text-base text-[#CCD0CF]">
+                    Xác Nhận Xóa Toàn Bộ Nhật Ký?
+                  </h3>
+                  <p className="text-xs text-[#9BA8AB] leading-relaxed">
+                    Toàn bộ bài viết cùng tất cả hình ảnh đính kèm sẽ được xóa sạch trên Supabase và Cloudinary để giải phóng dung lượng.
+                  </p>
+                </div>
+
+                <div className="flex justify-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteJournalsStep(0)}
+                    className="px-4 py-2 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] text-xs font-semibold text-[#CCD0CF] transition cursor-pointer"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteJournalsStep(2)}
+                    className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-xs font-bold text-[#06141B] transition shadow cursor-pointer"
+                  >
+                    Tiếp Tục ➔
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-rose-400 uppercase tracking-widest bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/30">
+                    Bước 2 / 2 • Xác Nhận Cuối
+                  </span>
+                  <h3 className="font-bold text-base text-rose-300">
+                    Bạn Có Chắc Chắn 100% Không?
+                  </h3>
+                  <p className="text-xs text-[#9BA8AB] leading-relaxed">
+                    Hành động này <strong className="text-rose-400">KHÔNG THỂ hoàn tác</strong>! Sau khi xóa, tất cả ảnh và bài viết sẽ vĩnh viễn biến mất khỏi đám mây.
+                  </p>
+                </div>
+
+                <div className="flex justify-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    disabled={isDeletingJournals}
+                    onClick={() => setDeleteJournalsStep(1)}
+                    className="px-4 py-2 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] text-xs font-semibold text-[#CCD0CF] transition cursor-pointer disabled:opacity-50"
+                  >
+                    Quay Lại
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isDeletingJournals}
+                    onClick={handleConfirmDeleteJournals}
+                    className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-xs font-bold text-white transition shadow flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isDeletingJournals ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Đang xóa sạch...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Xóa Sạch Toàn Bộ</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

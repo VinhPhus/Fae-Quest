@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { resolveTitleObject } from '../../constants/systemQuests';
-import { CLOUDINARY_UPLOAD_PRESET, CLOUDINARY_UPLOAD_URL } from '../../constants/cloudinary';
+import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
 import { CoinIcon } from '../ui/CoinIcon';
 import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
@@ -157,8 +158,8 @@ export const ProfileView: React.FC = () => {
     if (!file) return;
     e.target.value = '';
 
-    if (file.size > 5 * 1024 * 1024) {
-      addToast('Dung lượng ảnh tối đa 5MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+    if (file.size > 10 * 1024 * 1024) {
+      addToast('Dung lượng ảnh tối đa 10MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
       return;
     }
     if (!file.type.startsWith('image/')) {
@@ -166,43 +167,28 @@ export const ProfileView: React.FC = () => {
       return;
     }
 
+    const oldAvatar = avatarUrl;
+
     try {
       setIsUploading(true);
-      addToast('Đang tối ưu và cập nhật ảnh đại diện...', 'info');
+      addToast('Đang nén và cập nhật ảnh đại diện...', 'info');
 
-      const localDataUrl = await compressImageToDataUrl(file).catch(() => null);
+      const uploadedUrl = await uploadImageToCloudinary(file);
+      await setAvatarUrl(uploadedUrl);
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-      const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        if (localDataUrl) {
-          setAvatarUrl(localDataUrl);
-          addToast('Đã lưu ảnh đại diện thành công!', 'success');
-        } else {
-          addToast('Tải ảnh đại diện thất bại, vui lòng thử lại!', 'error');
-        }
-        return;
+      // Tự động xóa ảnh đại diện cũ trên Cloudinary để giải phóng bộ nhớ
+      if (oldAvatar && oldAvatar.includes('cloudinary.com') && oldAvatar !== uploadedUrl) {
+        deleteCloudinaryImages([oldAvatar]).catch((err) =>
+          console.warn('Không thể xóa avatar cũ trên Cloudinary:', err)
+        );
       }
 
-      const data = await response.json();
-      if (data.secure_url) {
-        setAvatarUrl(data.secure_url);
-        addToast('Cập nhật ảnh đại diện Thợ Săn thành công!', 'success');
-      } else if (localDataUrl) {
-        setAvatarUrl(localDataUrl);
-        addToast('Đã lưu ảnh đại diện thành công!', 'success');
-      }
-    } catch {
+      addToast('Cập nhật ảnh đại diện Thợ Săn thành công!', 'success');
+    } catch (err: any) {
+      console.warn('Lỗi tải ảnh Cloudinary, chuyển sang fallback:', err);
       try {
         const localDataUrl = await compressImageToDataUrl(file);
-        setAvatarUrl(localDataUrl);
+        await setAvatarUrl(localDataUrl);
         addToast('Đã lưu ảnh đại diện trực tiếp!', 'success');
       } catch {
         addToast('Không thể xử lý hình ảnh. Vui lòng thử lại!', 'error');

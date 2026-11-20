@@ -7,13 +7,16 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 export const ResetModal: React.FC = () => {
   const { isResetOpen, setResetOpen, resetAllData } = useFaeQuestStore();
   const [isResetting, setIsResetting] = useState(false);
+  const [confirmInput, setConfirmInput] = useState('');
 
   useBodyScrollLock(isResetOpen);
 
   if (!isResetOpen || typeof document === 'undefined') return null;
 
+  const isConfirmed = confirmInput.trim().toUpperCase() === 'XAC NHAN';
+
   const handleResetAllData = async () => {
-    if (isResetting) return;
+    if (!isConfirmed || isResetting) return;
     setIsResetting(true);
 
     try {
@@ -36,6 +39,7 @@ export const ResetModal: React.FC = () => {
 
   const handleClose = () => {
     if (isResetting) return; // Khóa đóng modal khi đang đồng bộ ghi đè lên Supabase
+    setConfirmInput('');
     setResetOpen(false);
   };
 
@@ -69,14 +73,29 @@ export const ResetModal: React.FC = () => {
             Khởi Tạo Lại Toàn Bộ Hành Trình?
           </h3>
           <p className="text-xs text-[#9BA8AB] leading-relaxed">
-            Hành động này sẽ ghi đè trực tiếp lên máy chủ Supabase: đưa EXP về 0, đặt lại Rank Đồng, xóa toàn bộ nhiệm vụ và túi đồ để bắt đầu lại từ đầu như tài khoản mới.
+            Hành động này sẽ xóa sạch toàn bộ ảnh cá nhân trên Cloudinary, xóa toàn bộ nhiệm vụ, nhật ký, lịch sử mua đồ và đưa chỉ số EXP, Xu, Rank về ban đầu như tài khoản mới.
           </p>
+        </div>
+
+        {/* Input xác nhận chống bấm nhầm */}
+        <div className="space-y-1.5 text-left pt-1">
+          <label className="block text-[11px] font-bold text-[#9BA8AB] uppercase tracking-wider">
+            Nhập chính xác chữ <span className="text-rose-400 font-black">XAC NHAN</span> để tiếp tục:
+          </label>
+          <input
+            type="text"
+            value={confirmInput}
+            onChange={(e) => setConfirmInput(e.target.value)}
+            placeholder="XAC NHAN"
+            disabled={isResetting}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-[#06141B] border border-rose-500/40 text-center text-sm font-bold tracking-widest text-white placeholder:text-[#9BA8AB]/30 focus:outline-none focus:border-rose-500 transition"
+          />
         </div>
 
         {isResetting && (
           <div className="py-2.5 px-3 rounded-xl bg-[#06141B]/80 border border-[#253745] flex items-center justify-center gap-2.5 text-xs text-rose-300 animate-pulse">
             <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
-            <span>Đang ghi đè dữ liệu gốc lên Supabase...</span>
+            <span>Đang giải phóng ảnh Cloudinary & đặt lại Supabase...</span>
           </div>
         )}
 
@@ -89,9 +108,9 @@ export const ResetModal: React.FC = () => {
             Giữ lại
           </button>
           <button
-            disabled={isResetting}
+            disabled={!isConfirmed || isResetting}
             onClick={handleResetAllData}
-            className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-60 disabled:cursor-not-allowed text-xs font-bold text-white transition shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-bold text-white transition shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
             {isResetting ? (
               <>

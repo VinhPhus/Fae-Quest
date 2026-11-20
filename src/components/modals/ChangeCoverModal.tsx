@@ -3,10 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
-import {
-  CLOUDINARY_UPLOAD_PRESET,
-  CLOUDINARY_UPLOAD_URL,
-} from '../../constants/cloudinary';
+import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { compressCoverImageToDataUrl } from '../../utils/imageCompressor';
 import { MODAL_BACKDROP_VARIANTS, MODAL_PANEL_VARIANTS } from '../../constants/motion';
 import {
@@ -74,6 +72,10 @@ export const ChangeCoverModal: React.FC = () => {
   const currentCover = coverUrl || DEFAULT_COVER_URL;
 
   const handleSelectPreset = async (url: string, title: string) => {
+    const oldCover = coverUrl;
+    if (oldCover && oldCover.includes('cloudinary.com') && oldCover !== url) {
+      deleteCloudinaryImages([oldCover]).catch((e) => console.warn('Lỗi xóa ảnh bìa cũ Cloudinary:', e));
+    }
     await setCoverUrl(url);
     addToast(`Đã chọn ảnh bìa: "${title}" (Đã đồng bộ thời gian thực)`, 'success');
   };
@@ -88,6 +90,11 @@ export const ChangeCoverModal: React.FC = () => {
       return;
     }
 
+    const oldCover = coverUrl;
+    if (oldCover && oldCover.includes('cloudinary.com') && oldCover !== trimmed) {
+      deleteCloudinaryImages([oldCover]).catch((e) => console.warn('Lỗi xóa ảnh bìa cũ Cloudinary:', e));
+    }
+
     await setCoverUrl(trimmed);
     setCustomUrl('');
     addToast('Đã cập nhật ảnh bìa từ liên kết URL thành công!', 'success');
@@ -98,8 +105,8 @@ export const ChangeCoverModal: React.FC = () => {
     if (!file) return;
     e.target.value = '';
 
-    if (file.size > 12 * 1024 * 1024) {
-      addToast('Dung lượng ảnh tối đa 12MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
+    if (file.size > 15 * 1024 * 1024) {
+      addToast('Dung lượng ảnh tối đa 15MB. Vui lòng chọn ảnh nhỏ hơn!', 'error');
       return;
     }
     if (!file.type.startsWith('image/')) {
@@ -107,39 +114,35 @@ export const ChangeCoverModal: React.FC = () => {
       return;
     }
 
+    const oldCover = coverUrl;
+
     try {
       setIsUploading(true);
-      addToast('Đang tối ưu ảnh bìa tỉ lệ ngang và đồng bộ...', 'info');
-
-      // Nén ảnh bìa ngang chất lượng cao HD (~1400px, 60KB - 80KB)
-      const localDataUrl = await compressCoverImageToDataUrl(file, 1400, 600).catch(() => null);
+      addToast('Đang nén và tải ảnh bìa lên Cloudinary...', 'info');
 
       let uploadedUrl: string | null = null;
-
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.secure_url) {
-            uploadedUrl = data.secure_url;
-          }
-        }
+        uploadedUrl = await uploadImageToCloudinary(file);
       } catch (cloudErr) {
         console.warn('Cloudinary upload bypassed/failed, falling back to local HD data URL:', cloudErr);
       }
+
+      const localDataUrl = !uploadedUrl
+        ? await compressCoverImageToDataUrl(file, 1400, 600).catch(() => null)
+        : null;
 
       const finalUrl = uploadedUrl || localDataUrl;
 
       if (finalUrl) {
         await setCoverUrl(finalUrl);
+
+        // Tự động xóa ảnh bìa cũ trên Cloudinary để giải phóng dung lượng
+        if (oldCover && oldCover.includes('cloudinary.com') && oldCover !== finalUrl) {
+          deleteCloudinaryImages([oldCover]).catch((e) =>
+            console.warn('Lỗi xóa ảnh bìa cũ Cloudinary:', e)
+          );
+        }
+
         addToast('Cập nhật ảnh bìa Real-time thành công! Người chơi khác sẽ thấy ngay lập tức.', 'success');
       } else {
         addToast('Không thể xử lý hình ảnh. Vui lòng thử lại!', 'error');
@@ -152,6 +155,10 @@ export const ChangeCoverModal: React.FC = () => {
   };
 
   const handleResetDefault = async () => {
+    const oldCover = coverUrl;
+    if (oldCover && oldCover.includes('cloudinary.com')) {
+      deleteCloudinaryImages([oldCover]).catch((e) => console.warn('Lỗi xóa ảnh bìa cũ Cloudinary:', e));
+    }
     await setCoverUrl('');
     addToast('Đã khôi phục ảnh bìa mặc định!', 'info');
   };

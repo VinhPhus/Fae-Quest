@@ -48,6 +48,7 @@ import {
 import { playSoundEffect } from '../utils/soundEffects';
 import { playSound, setMasterVolume, startFocusAmbient, stopFocusAmbient, AmbientType } from '../utils/soundEngine';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
+import { deleteCloudinaryImages } from '../utils/cloudinaryDelete';
 import {
   syncProfileAndStateToCloud,
   restoreUserStateFromCloud,
@@ -279,6 +280,7 @@ interface FaeQuestState {
   fetchJournals: () => Promise<void>;
   saveJournal: (entry: { id?: string; date: string; mood: JournalMood; content: string; images: string[] }) => Promise<boolean>;
   deleteJournal: (id: string) => Promise<boolean>;
+  clearAllJournalsAndImages: () => Promise<boolean>;
   syncJournalRealtime: (payload: any) => void;
   setUserRole: (role: UserRole) => void;
   setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets') => void;
@@ -622,6 +624,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const currentUser = get().currentUser;
         if (!currentUser?.id) return false;
 
+        const targetJournal = get().journals.find((j) => j.id === id);
+
         try {
           const { error } = await supabase
             .from('journals')
@@ -635,14 +639,66 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             return false;
           }
 
+          // Tự động xóa các ảnh đính kèm của bài viết trên Cloudinary
+          if (targetJournal?.images && targetJournal.images.length > 0) {
+            deleteCloudinaryImages(targetJournal.images).catch((e) =>
+              console.warn('Lỗi tự động dọn dẹp ảnh Cloudinary khi xóa nhật ký:', e)
+            );
+          }
+
           set((state) => ({
             journals: state.journals.filter((j) => j.id !== id),
           }));
-          get().addToast('Đã xóa bài nhật ký!', 'info');
+          get().addToast('Đã xóa bài nhật ký và dọn dẹp ảnh đính kèm!', 'info');
           return true;
         } catch (err: any) {
           console.error('Exception deleting journal:', err);
           get().addToast('Lỗi khi xóa bài nhật ký!', 'error');
+          return false;
+        }
+      },
+
+      clearAllJournalsAndImages: async (): Promise<boolean> => {
+        const currentUser = get().currentUser;
+        if (!currentUser?.id) return false;
+
+        try {
+          // 1. Gom tất cả URL ảnh từ toàn bộ bài nhật ký của user
+          const allImages: string[] = [];
+          get().journals.forEach((j) => {
+            if (Array.isArray(j.images)) {
+              j.images.forEach((img) => {
+                if (img) allImages.push(img);
+              });
+            }
+          });
+
+          // 2. Xóa các ảnh trên Cloudinary song song
+          if (allImages.length > 0) {
+            await deleteCloudinaryImages(allImages).catch((e) =>
+              console.warn('Lỗi dọn dẹp ảnh nhật ký trên Cloudinary:', e)
+            );
+          }
+
+          // 3. Xóa toàn bộ bản ghi journals trên Supabase
+          const { error } = await supabase
+            .from('journals')
+            .delete()
+            .eq('user_id', currentUser.id);
+
+          if (error) {
+            console.error('Lỗi khi xóa tất cả nhật ký trên Supabase:', error);
+            get().addToast('Lỗi khi xóa nhật ký trên máy chủ!', 'error');
+            return false;
+          }
+
+          // 4. Cập nhật state
+          set({ journals: [] });
+          get().addToast('Đã xóa sạch toàn bộ Nhật Ký và giải phóng bộ nhớ ảnh!', 'success');
+          return true;
+        } catch (err) {
+          console.error('Lỗi ngoại lệ khi xóa toàn bộ nhật ký:', err);
+          get().addToast('Không thể hoàn tất dọn dẹp nhật ký!', 'error');
           return false;
         }
       },
@@ -841,7 +897,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                     set({ adminAssets: parsed });
                     return;
                   }
-                } catch {}
+                } catch { }
               }
             }
             set({ adminAssets: DEFAULT_ADMIN_ASSETS });
@@ -942,7 +998,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 try {
                   const parsed = JSON.parse(cached);
                   set({ seasonAnnouncements: parsed });
-                } catch {}
+                } catch { }
               }
             }
           }
@@ -2740,6 +2796,28 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         const nowIso = new Date().toISOString();
 
+        // 0. Gom và dọn sạch toàn bộ ảnh cá nhân trên Cloudinary (Avatar, Cover, Ảnh bài viết nhật ký)
+        try {
+          const personalImages: string[] = [];
+          if (state.avatarUrl) personalImages.push(state.avatarUrl);
+          if (state.coverUrl) personalImages.push(state.coverUrl);
+          state.journals.forEach((j) => {
+            if (Array.isArray(j.images)) {
+              j.images.forEach((img) => {
+                if (img) personalImages.push(img);
+              });
+            }
+          });
+
+          if (personalImages.length > 0) {
+            deleteCloudinaryImages(personalImages).catch((e) =>
+              console.warn('Lỗi dọn dẹp ảnh Cloudinary khi reset tài khoản:', e)
+            );
+          }
+        } catch (e) {
+          console.warn('Lỗi trích xuất ảnh khi reset:', e);
+        }
+
         // 1. Quy trình Database-First: Ghi đè trực tiếp lên Supabase trước nếu đã đăng nhập
         if (hunterId && currentUser) {
           try {
@@ -2766,6 +2844,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                   stars: 0,
                   rank_id: 'dong',
                   equipped_title: 'title_tan_binh_gai_do',
+                  avatar_url: null,
+                  cover_url: null,
                   streak: 0,
                   completed_tasks_count: 0,
                   updated_at: nowIso,
@@ -2790,8 +2870,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             // C. Ghi đè snapshot public.user_states về cấu trúc mặc định (chủ sở hữu luôn có toàn quyền)
             const freshStateJson: UserStateCloud & { resetAt: string } = {
               playerName: currentUser.name || state.playerName || 'Thợ Săn Fae',
-              avatarUrl: state.avatarUrl || '',
-              coverUrl: state.coverUrl || '',
+              avatarUrl: '',
+              coverUrl: '',
               exp: 0,
               coins: 25,
               stars: 0,
@@ -2887,6 +2967,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         // 3. Cập nhật Zustand Store về giá trị khởi điểm ban đầu
         set({
           playerName: currentUser?.name || state.playerName || 'Thợ Săn Fae',
+          avatarUrl: '',
+          coverUrl: '',
           exp: 0,
           coins: 25,
           stars: 0,
@@ -3406,7 +3488,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             const isLocallySeen = typeof window !== 'undefined' && hunterId
               ? (localStorage.getItem('faequest_tour_seen_' + hunterId) === 'true' ||
-                 localStorage.getItem('faequest_tour_completed_' + hunterId) === 'true')
+                localStorage.getItem('faequest_tour_completed_' + hunterId) === 'true')
               : false;
 
             if (stateRow?.state_json) {
@@ -3421,10 +3503,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isLocallySeen
                   ? true
                   : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
-                  ? Boolean(profile.has_seen_tutorial)
-                  : s?.hasSeenTutorial !== undefined
-                  ? Boolean(s.hasSeenTutorial)
-                  : isVeteranPlayer;
+                    ? Boolean(profile.has_seen_tutorial)
+                    : s?.hasSeenTutorial !== undefined
+                      ? Boolean(s.hasSeenTutorial)
+                      : isVeteranPlayer;
 
               set({
                 currentUser: { id: user.id, email: user.email || '', name: hunterName },
@@ -3525,8 +3607,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                   isLocallySeen
                     ? true
                     : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
-                    ? Boolean(profile.has_seen_tutorial)
-                    : false,
+                      ? Boolean(profile.has_seen_tutorial)
+                      : false,
                 cloudSyncStatus: 'synced',
                 authLoading: false,
               });
@@ -3825,7 +3907,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           const isLocallySeen = typeof window !== 'undefined' && userId
             ? (localStorage.getItem('faequest_tour_seen_' + userId) === 'true' ||
-               localStorage.getItem('faequest_tour_completed_' + userId) === 'true')
+              localStorage.getItem('faequest_tour_completed_' + userId) === 'true')
             : false;
 
           if (stateRow?.state_json) {
@@ -3840,10 +3922,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               isLocallySeen
                 ? true
                 : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
-                ? Boolean(profile.has_seen_tutorial)
-                : s?.hasSeenTutorial !== undefined
-                ? Boolean(s.hasSeenTutorial)
-                : isVeteranPlayer;
+                  ? Boolean(profile.has_seen_tutorial)
+                  : s?.hasSeenTutorial !== undefined
+                    ? Boolean(s.hasSeenTutorial)
+                    : isVeteranPlayer;
 
             set({
               currentUser: { id: userId, email: cleanEmail, name: hunterName },
@@ -3944,8 +4026,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 isLocallySeen
                   ? true
                   : (profile?.has_seen_tutorial !== undefined && profile?.has_seen_tutorial !== null)
-                  ? Boolean(profile.has_seen_tutorial)
-                  : false,
+                    ? Boolean(profile.has_seen_tutorial)
+                    : false,
               cloudSyncStatus: 'synced',
               authLoading: false,
             });
