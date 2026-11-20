@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
@@ -27,6 +27,9 @@ export const CreateQuestDrawer: React.FC = () => {
   const [difficulty, setDifficulty] = useState<TaskDifficulty>('medium');
   const [focusDuration, setFocusDuration] = useState<number | null>(null);
 
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const formScrollRef = useRef<HTMLFormElement>(null);
+
   // Responsive state for Bottom Sheet vs Centered Modal
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -39,6 +42,42 @@ export const CreateQuestDrawer: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Cuộn về đỉnh khi mở modal & chỉ autoFocus trên Desktop (chuột)
+  useEffect(() => {
+    if (isCreateQuestOpen) {
+      if (formScrollRef.current) {
+        formScrollRef.current.scrollTop = 0;
+      }
+
+      // Chỉ focus tự động trên Desktop có chuột, không mở bàn phím ảo trên Mobile
+      const isDesktopPointer =
+        typeof window !== 'undefined' &&
+        window.innerWidth >= 768 &&
+        window.matchMedia('(pointer: fine)').matches;
+
+      if (isDesktopPointer) {
+        const timer = setTimeout(() => {
+          titleInputRef.current?.focus();
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isCreateQuestOpen]);
+
+  // Tự động hạ bàn phím ảo khi chạm vào vùng trống bên trong Modal
+  const handleDismissKeyboard = (e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      !target.closest('input') &&
+      !target.closest('textarea') &&
+      !target.closest('button') &&
+      !target.closest('a')
+    ) {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +137,10 @@ export const CreateQuestDrawer: React.FC = () => {
                 ? 'rounded-t-3xl max-h-[90dvh] pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-white/10'
                 : 'max-w-md rounded-3xl max-h-[88vh] border border-white/10'
             } bg-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDismissKeyboard(e);
+            }}
           >
             {/* Drag Handle on Mobile */}
             {isMobile && (
@@ -133,16 +175,21 @@ export const CreateQuestDrawer: React.FC = () => {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto overscroll-contain touch-pan-y space-y-3.5 flex-1">
+            <form
+              ref={formScrollRef}
+              onSubmit={handleSubmit}
+              onClick={handleDismissKeyboard}
+              className="p-4 sm:p-5 overflow-y-auto overscroll-contain touch-pan-y space-y-3.5 flex-1"
+            >
               {/* Dòng 1 — Tên nhiệm vụ (text-base chống Safari iOS auto-zoom) */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
                   Nhiệm vụ cần chinh phục *
                 </label>
                 <input
+                  ref={titleInputRef}
                   type="text"
                   required
-                  autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="VD: Đọc 20 trang sách, Giải 3 bài LeetCode..."
@@ -306,7 +353,7 @@ export const CreateQuestDrawer: React.FC = () => {
                       }
                     }}
                     placeholder="Điền số phút muốn tập trung (VD: 25, 45...)"
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#11212D] border border-[#253745] focus:border-[#4A5C6A] text-base text-[#CCD0CF] placeholder:text-[#9BA8AB]/40 outline-none transition font-medium pr-12"
+                    className="w-full pl-3.5 pr-14 py-2 rounded-xl bg-[#11212D] border border-[#253745] focus:border-[#4A5C6A] text-base text-[#CCD0CF] placeholder:text-[#9BA8AB]/40 outline-none transition font-medium"
                   />
                   <span className="absolute right-3.5 text-xs font-bold text-[#9BA8AB] pointer-events-none select-none">
                     phút

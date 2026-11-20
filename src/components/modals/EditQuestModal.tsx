@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
@@ -64,10 +64,49 @@ export const EditQuestModal: React.FC = () => {
     setEditingTask(null);
   };
 
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const formScrollRef = useRef<HTMLFormElement>(null);
+
   const selectedDiff = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
   const isOpen = Boolean(isEditQuestOpen && editingTask);
 
   useBodyScrollLock(isOpen);
+
+  // Cuộn về đỉnh khi mở modal & chỉ autoFocus trên Desktop (chuột)
+  useEffect(() => {
+    if (isOpen) {
+      if (formScrollRef.current) {
+        formScrollRef.current.scrollTop = 0;
+      }
+
+      // Chỉ focus tự động trên Desktop có chuột, không mở bàn phím ảo trên Mobile
+      const isDesktopPointer =
+        typeof window !== 'undefined' &&
+        window.innerWidth >= 768 &&
+        window.matchMedia('(pointer: fine)').matches;
+
+      if (isDesktopPointer) {
+        const timer = setTimeout(() => {
+          titleInputRef.current?.focus();
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isOpen]);
+
+  // Tự động hạ bàn phím ảo khi chạm vào vùng trống bên trong Modal
+  const handleDismissKeyboard = (e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      !target.closest('input') &&
+      !target.closest('textarea') &&
+      !target.closest('button') &&
+      !target.closest('a')
+    ) {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+  };
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -91,7 +130,10 @@ export const EditQuestModal: React.FC = () => {
             animate="visible"
             exit="exit"
             className="w-[94vw] max-w-md rounded-3xl bg-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.9)] border border-white/10 overflow-hidden flex flex-col max-h-[90dvh]"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDismissKeyboard(e);
+            }}
           >
             {/* Header */}
             <div className="px-5 py-3.5 border-b border-[#253745] flex items-center justify-between shrink-0 bg-[#06141B]">
@@ -119,16 +161,21 @@ export const EditQuestModal: React.FC = () => {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto overscroll-contain touch-pan-y space-y-3.5 flex-1">
+            <form
+              ref={formScrollRef}
+              onSubmit={handleSubmit}
+              onClick={handleDismissKeyboard}
+              className="p-4 sm:p-5 overflow-y-auto overscroll-contain touch-pan-y space-y-3.5 flex-1"
+            >
               {/* Tên nhiệm vụ */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
                   Nhiệm vụ cần chinh phục *
                 </label>
                 <input
+                  ref={titleInputRef}
                   type="text"
                   required
-                  autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="VD: Đọc sách, Học từ vựng, Chạy bộ..."
@@ -145,11 +192,10 @@ export const EditQuestModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setTargetDateType('today')}
-                    className={`relative py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${
-                      targetDateType === 'today'
+                    className={`relative py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${targetDateType === 'today'
                         ? 'text-[#CCD0CF]'
                         : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
-                    }`}
+                      }`}
                   >
                     {targetDateType === 'today' && (
                       <motion.div
@@ -164,11 +210,10 @@ export const EditQuestModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setTargetDateType('tomorrow')}
-                    className={`relative py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${
-                      targetDateType === 'tomorrow'
+                    className={`relative py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center cursor-pointer ${targetDateType === 'tomorrow'
                         ? 'text-[#CCD0CF]'
                         : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
-                    }`}
+                      }`}
                   >
                     {targetDateType === 'tomorrow' && (
                       <motion.div
@@ -217,11 +262,10 @@ export const EditQuestModal: React.FC = () => {
                         type="button"
                         key={catKey}
                         onClick={() => setCategory(catKey)}
-                        className={`py-1.5 px-0.5 rounded-lg text-[11px] sm:text-xs font-bold transition cursor-pointer text-center truncate ${
-                          isSelected
+                        className={`py-1.5 px-0.5 rounded-lg text-[11px] sm:text-xs font-bold transition cursor-pointer text-center truncate ${isSelected
                             ? 'bg-[#253745] text-[#CCD0CF] border border-[#4A5C6A] shadow-sm font-black'
                             : 'bg-[#11212D] border border-[#253745] text-[#9BA8AB] hover:text-[#CCD0CF] hover:border-[#4A5C6A]'
-                        }`}
+                          }`}
                         title={cat.label}
                       >
                         {cat.label}
@@ -244,11 +288,10 @@ export const EditQuestModal: React.FC = () => {
                         type="button"
                         key={item.key}
                         onClick={() => setDifficulty(item.key)}
-                        className={`py-2 px-1 rounded-xl text-xs font-bold transition text-center cursor-pointer border ${
-                          isSelected
+                        className={`py-2 px-1 rounded-xl text-xs font-bold transition text-center cursor-pointer border ${isSelected
                             ? 'bg-[#253745] border-[#CCD0CF] shadow-sm font-black'
                             : 'bg-[#11212D] border-[#253745] hover:border-[#4A5C6A]'
-                        }`}
+                          }`}
                       >
                         <span className={isSelected ? 'text-[#CCD0CF]' : item.color}>
                           {item.label}
@@ -293,7 +336,7 @@ export const EditQuestModal: React.FC = () => {
                       }
                     }}
                     placeholder="Điền số phút (VD: 25, 45...)"
-                    className="w-full px-3.5 py-2 rounded-xl bg-[#11212D] border border-[#253745] focus:border-[#4A5C6A] text-base text-[#CCD0CF] placeholder:text-[#9BA8AB]/40 outline-none transition font-medium pr-12"
+                    className="w-full pl-3.5 pr-14 py-2 rounded-xl bg-[#11212D] border border-[#253745] focus:border-[#4A5C6A] text-base text-[#CCD0CF] placeholder:text-[#9BA8AB]/40 outline-none transition font-medium"
                   />
                   <span className="absolute right-3.5 text-xs font-bold text-[#9BA8AB] pointer-events-none select-none">
                     phút

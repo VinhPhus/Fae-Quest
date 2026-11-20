@@ -38,6 +38,31 @@ export const WriteJournalModal: React.FC = () => {
   } = useFaeQuestStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const modalScrollRef = useRef<HTMLDivElement>(null);
+
+  // Đặt lại vị trí cuộn về đầu khi mở modal
+  useEffect(() => {
+    if (isWriteJournalOpen) {
+      if (modalScrollRef.current) {
+        modalScrollRef.current.scrollTop = 0;
+      }
+    }
+  }, [isWriteJournalOpen]);
+
+  // Tự động hạ bàn phím ảo khi chạm vào vùng trống bên trong Modal
+  const handleDismissKeyboard = (e: React.MouseEvent | React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      !target.closest('input') &&
+      !target.closest('textarea') &&
+      !target.closest('button') &&
+      !target.closest('a') &&
+      !target.closest('.ProseMirror')
+    ) {
+      (document.activeElement as HTMLElement)?.blur();
+    }
+  };
 
   const [date, setDate] = useState<string>(() => {
     const d = new Date();
@@ -159,7 +184,11 @@ export const WriteJournalModal: React.FC = () => {
         className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
       >
         <motion.div
-          onClick={(e) => e.stopPropagation()}
+          ref={modalScrollRef}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDismissKeyboard(e);
+          }}
           initial={{ opacity: 0, scale: 0.93, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 16 }}
