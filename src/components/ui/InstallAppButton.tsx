@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Smartphone, Share, PlusSquare, X, Check, Laptop } from 'lucide-react';
 import { playSound } from '../../utils/soundEngine';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -28,6 +29,8 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
   const [showIosModal, setShowIosModal] = useState<boolean>(false);
   const [showManualModal, setShowManualModal] = useState<boolean>(false);
   const [installSuccess, setInstallSuccess] = useState<boolean>(false);
+
+  useBodyScrollLock(showIosModal || showManualModal);
 
   useEffect(() => {
     // 1. Kiểm tra nếu app đã chạy ở chế độ standalone (đã cài đặt)
@@ -232,13 +235,20 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
             {/* MODAL HƯỚNG DẪN DÀNH CHO IPHONE / IPAD (iOS SAFARI) */}
             <AnimatePresence>
               {showIosModal && (
-                <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <div
+                  onClick={() => setShowIosModal(false)}
+                  onTouchMove={(e) => {
+                    if (e.target === e.currentTarget) e.preventDefault();
+                  }}
+                  className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-4"
+                >
                   <motion.div
+                    onClick={(e) => e.stopPropagation()}
                     initial={{ opacity: 0, scale: 0.95, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 15 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.95)] relative overflow-hidden"
+                    className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.95)] relative overflow-hidden overscroll-contain touch-pan-y max-h-[90dvh] overflow-y-auto"
                   >
                     <button
                       type="button"
@@ -308,13 +318,20 @@ export const InstallAppButton: React.FC<InstallAppButtonProps> = ({
             {/* MODAL HƯỚNG DẪN DÀNH CHO MÁY TÍNH & ANDROID (KHI BROWSER CHƯA TỰ HIỆN PROMPT) */}
             <AnimatePresence>
               {showManualModal && (
-                <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                <div
+                  onClick={() => setShowManualModal(false)}
+                  onTouchMove={(e) => {
+                    if (e.target === e.currentTarget) e.preventDefault();
+                  }}
+                  className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-4"
+                >
                   <motion.div
+                    onClick={(e) => e.stopPropagation()}
                     initial={{ opacity: 0, scale: 0.95, y: 15 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 15 }}
                     transition={{ duration: 0.2 }}
-                    className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.95)] relative overflow-hidden"
+                    className="bg-[#11212D] border border-[#4A5C6A] rounded-3xl max-w-sm w-full p-6 text-center shadow-[0_20px_60px_rgba(0,0,0,0.95)] relative overflow-hidden overscroll-contain touch-pan-y max-h-[90dvh] overflow-y-auto"
                   >
                     <button
                       type="button"

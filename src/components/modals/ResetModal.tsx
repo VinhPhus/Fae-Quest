@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { AlertTriangle, X, Loader2, RotateCcw } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const ResetModal: React.FC = () => {
   const { isResetOpen, setResetOpen, resetAllData } = useFaeQuestStore();
   const [isResetting, setIsResetting] = useState(false);
 
-  if (!isResetOpen) return null;
+  useBodyScrollLock(isResetOpen);
+
+  if (!isResetOpen || typeof document === 'undefined') return null;
 
   const handleResetAllData = async () => {
     if (isResetting) return;
@@ -35,9 +39,18 @@ export const ResetModal: React.FC = () => {
     setResetOpen(false);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#06141B]/85 backdrop-blur-md">
-      <div className="rounded-2xl sm:rounded-3xl max-w-sm w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-5 sm:p-6 space-y-4 bg-[#11212D] border border-rose-500/30 text-center shadow-[0_12px_40px_rgba(0,0,0,0.7)] relative animate-in fade-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      onClick={handleClose}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-2xl sm:rounded-3xl max-w-sm w-[94vw] sm:w-full max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y p-5 sm:p-6 space-y-4 bg-[#11212D] border border-rose-500/30 text-center shadow-[0_12px_40px_rgba(0,0,0,0.7)] relative animate-in fade-in zoom-in-95 duration-200"
+      >
         {!isResetting && (
           <button
             onClick={handleClose}
@@ -94,6 +107,7 @@ export const ResetModal: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

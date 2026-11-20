@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SeasonAnnouncement } from '../../types';
 import { playSound } from '../../utils/soundEngine';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   X,
   Megaphone,
@@ -33,7 +35,9 @@ export const SeasonAnnouncementsModal: React.FC = () => {
     }
   }, [isSeasonAnnouncementsModalOpen]);
 
-  if (!isSeasonAnnouncementsModalOpen) return null;
+  useBodyScrollLock(isSeasonAnnouncementsModalOpen);
+
+  if (!isSeasonAnnouncementsModalOpen || typeof document === 'undefined') return null;
 
   const handleClose = () => {
     playSound('ui_click', soundEnabled);
@@ -49,16 +53,23 @@ export const SeasonAnnouncementsModal: React.FC = () => {
     }
   };
 
-  return (
+  return createPortal(
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto">
+        <div
+          onClick={handleClose}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-5"
+        >
           <motion.div
+            onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.2 }}
-            className="relative w-full max-w-2xl bg-[#11212D] border border-[#4A5C6A] rounded-3xl p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] my-auto max-h-[90vh] flex flex-col text-[#CCD0CF] overflow-hidden"
+            className="relative w-full max-w-2xl bg-[#11212D] border border-[#4A5C6A] rounded-3xl p-5 sm:p-7 shadow-[0_25px_70px_rgba(0,0,0,0.85)] my-auto max-h-[90dvh] flex flex-col text-[#CCD0CF] overflow-hidden overscroll-contain touch-pan-y"
           >
             {/* Top Accent Strip */}
             <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-cyan-500 via-amber-400 to-cyan-500" />
@@ -222,6 +233,7 @@ export const SeasonAnnouncementsModal: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
-    </>
+    </>,
+    document.body
   );
 };

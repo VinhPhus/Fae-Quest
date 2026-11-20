@@ -1,19 +1,33 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RankEmblemSvg } from '../hero/RankEmblemSvg';
 import { CoinIcon } from '../ui/CoinIcon';
 import { Sparkles, Trophy } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const RankUpModal: React.FC = () => {
   const { rankUpData, closeRankUpModal } = useFaeQuestStore();
+  const isOpen = Boolean(rankUpData);
 
-  if (!rankUpData) return null;
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || !rankUpData || typeof document === 'undefined') return null;
 
   const { achievedTier, bonusCoins } = rankUpData;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-5 sm:p-7 text-center relative overflow-hidden border-2 border-fae shadow-2xl animate-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      onClick={closeRankUpModal}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y p-5 sm:p-7 text-center relative overflow-hidden border-2 border-fae shadow-2xl animate-in zoom-in-95 duration-200"
+      >
         {/* Glow rays */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 bg-fae/30 rounded-full blur-3xl pointer-events-none" />
 
@@ -68,6 +82,7 @@ export const RankUpModal: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

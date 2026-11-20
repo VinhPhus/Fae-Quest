@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { TaskCategory, TaskDifficulty } from '../../types';
@@ -7,6 +8,7 @@ import { CoinIcon } from '../ui/CoinIcon';
 import { X, Pencil, Timer, Check, Sparkles } from 'lucide-react';
 import { MODAL_BACKDROP_VARIANTS, MODAL_PANEL_VARIANTS } from '../../constants/motion';
 import { getTodayString, getTomorrowString } from '../../utils/dateUtils';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const DIFFICULTY_OPTIONS: { key: TaskDifficulty; label: string; color: string }[] = [
   { key: 'easy', label: 'Dễ', color: 'text-emerald-400' },
@@ -63,16 +65,24 @@ export const EditQuestModal: React.FC = () => {
   };
 
   const selectedDiff = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
+  const isOpen = Boolean(isEditQuestOpen && editingTask);
 
-  return (
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
-      {isEditQuestOpen && editingTask && (
+      {isOpen && (
         <motion.div
           variants={MODAL_BACKDROP_VARIANTS}
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
           onClick={handleClose}
         >
           <motion.div
@@ -80,7 +90,7 @@ export const EditQuestModal: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-[94vw] max-w-md rounded-3xl bg-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.9)] border border-white/10 overflow-hidden flex flex-col max-h-[88vh]"
+            className="w-[94vw] max-w-md rounded-3xl bg-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.9)] border border-white/10 overflow-hidden flex flex-col max-h-[90dvh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -109,7 +119,7 @@ export const EditQuestModal: React.FC = () => {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto overscroll-contain touch-pan-y space-y-3.5 flex-1">
               {/* Tên nhiệm vụ */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
@@ -322,6 +332,7 @@ export const EditQuestModal: React.FC = () => {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

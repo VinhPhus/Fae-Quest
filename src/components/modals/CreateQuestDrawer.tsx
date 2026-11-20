@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { TaskCategory, TaskDifficulty } from '../../types';
@@ -7,6 +8,7 @@ import { CoinIcon } from '../ui/CoinIcon';
 import { X, Plus, Timer, Sparkles } from 'lucide-react';
 import { MODAL_BACKDROP_VARIANTS, EASING_SPRING } from '../../constants/motion';
 import { getTodayString, getTomorrowString } from '../../utils/dateUtils';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const DIFFICULTY_OPTIONS: { key: TaskDifficulty; label: string; color: string }[] = [
   { key: 'easy', label: 'Dễ', color: 'text-emerald-400' },
@@ -68,7 +70,11 @@ export const CreateQuestDrawer: React.FC = () => {
 
   const selectedDiff = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
 
-  return (
+  useBodyScrollLock(isCreateQuestOpen);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isCreateQuestOpen && (
         <motion.div
@@ -76,7 +82,10 @@ export const CreateQuestDrawer: React.FC = () => {
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-black/80 backdrop-blur-md"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-end md:items-center justify-center p-0 md:p-4"
           onClick={handleClose}
         >
           <motion.div
@@ -124,7 +133,7 @@ export const CreateQuestDrawer: React.FC = () => {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 overflow-y-auto overscroll-contain touch-pan-y space-y-3.5 flex-1">
               {/* Dòng 1 — Tên nhiệm vụ (text-base chống Safari iOS auto-zoom) */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
@@ -315,6 +324,7 @@ export const CreateQuestDrawer: React.FC = () => {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

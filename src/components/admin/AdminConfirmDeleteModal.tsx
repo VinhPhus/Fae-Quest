@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { AdminUserOverview } from '../../types';
 import { Trash2, X, AlertOctagon } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface Props {
   user: AdminUserOverview | null;
@@ -12,6 +14,8 @@ export const AdminConfirmDeleteModal: React.FC<Props> = ({ user, onClose }) => {
   const { adminDeleteUser, addToast } = useFaeQuestStore();
   const [confirmText, setConfirmText] = useState<string>('');
   const [deleting, setDeleting] = useState<boolean>(false);
+
+  useBodyScrollLock(!!user);
 
   if (!user) return null;
 
@@ -31,9 +35,18 @@ export const AdminConfirmDeleteModal: React.FC<Props> = ({ user, onClose }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-[#11212D] border-2 border-rose-600 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-[#CCD0CF]">
+  return createPortal(
+    <div
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#06141B]/80 backdrop-blur-md animate-in fade-in duration-200 touch-none overscroll-none"
+      onClick={onClose}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+    >
+      <div
+        className="relative w-full max-w-md bg-[#11212D] border-2 border-rose-600 rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden text-[#CCD0CF] overscroll-contain touch-pan-y"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-5 sm:px-6 py-4 border-b border-[#253745] flex items-center justify-between bg-rose-950/40">
           <div className="flex items-center gap-3">
@@ -103,6 +116,7 @@ export const AdminConfirmDeleteModal: React.FC<Props> = ({ user, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

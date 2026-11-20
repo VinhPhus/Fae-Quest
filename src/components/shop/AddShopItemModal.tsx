@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CoinIcon } from '../ui/CoinIcon';
 import { Plus, X } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const AddShopItemModal: React.FC = () => {
   const { isAddShopItemOpen, setAddShopItemOpen, addShopItem } = useFaeQuestStore();
@@ -13,7 +15,9 @@ export const AddShopItemModal: React.FC = () => {
 
   const popularEmojis = ['🎁', '🍜', '🧋', '🎮', '🎬', '🛍️', '🏖️', '🍕', '💆', '🍦', '☕', '🎧'];
 
-  if (!isAddShopItemOpen) return null;
+  useBodyScrollLock(isAddShopItemOpen);
+
+  if (!isAddShopItemOpen || typeof document === 'undefined') return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +31,18 @@ export const AddShopItemModal: React.FC = () => {
     setEmoji('🎁');
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-5 sm:p-7 space-y-4 border border-fae/50 shadow-2xl relative">
+  return createPortal(
+    <div
+      onClick={() => setAddShopItemOpen(false)}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rpg-card rounded-2xl sm:rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y p-5 sm:p-7 space-y-4 border border-fae/50 shadow-2xl relative"
+      >
         <button
           onClick={() => setAddShopItemOpen(false)}
           className="absolute top-4 right-4 text-parchment/40 hover:text-parchment p-1 transition"
@@ -153,6 +166,7 @@ export const AddShopItemModal: React.FC = () => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

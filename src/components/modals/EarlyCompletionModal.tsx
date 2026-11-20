@@ -1,7 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { DIFFICULTIES } from '../../constants/categories';
 import { Clock, AlertTriangle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const EarlyCompletionModal: React.FC = () => {
   const {
@@ -10,7 +12,10 @@ export const EarlyCompletionModal: React.FC = () => {
     cancelEarlyTaskConfirmation,
   } = useFaeQuestStore();
 
-  if (!confirmEarlyTask) return null;
+  const isOpen = Boolean(confirmEarlyTask);
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || !confirmEarlyTask || typeof document === 'undefined') return null;
 
   const { task } = confirmEarlyTask;
   const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
@@ -19,9 +24,18 @@ export const EarlyCompletionModal: React.FC = () => {
     Math.floor((Date.now() - (task.createdAt || Date.now())) / 1000)
   );
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-3xl max-w-md w-full p-6 sm:p-7 relative overflow-hidden border-2 border-amber-500/60 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4">
+  return createPortal(
+    <div
+      onClick={cancelEarlyTaskConfirmation}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rpg-card rounded-3xl max-w-md w-full max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y p-6 sm:p-7 relative overflow-hidden border-2 border-amber-500/60 shadow-2xl animate-in zoom-in-95 duration-200 space-y-4"
+      >
         {/* Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -73,6 +87,7 @@ export const EarlyCompletionModal: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

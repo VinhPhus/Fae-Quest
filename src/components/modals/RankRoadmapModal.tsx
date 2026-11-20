@@ -1,14 +1,18 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { RankEmblemSvg } from '../hero/RankEmblemSvg';
 import { CoinIcon } from '../ui/CoinIcon';
 import { X, Trophy, CheckCircle, Lock, Star, Sparkles } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const RankRoadmapModal: React.FC = () => {
   const { isRoadmapOpen, setRoadmapOpen, exp, playerName } = useFaeQuestStore();
 
-  if (!isRoadmapOpen) return null;
+  useBodyScrollLock(isRoadmapOpen);
+
+  if (!isRoadmapOpen || typeof document === 'undefined') return null;
 
   const currentIdx = getRankIndexByExp(exp);
   const currentTier = RANK_TIERS[currentIdx];
@@ -23,9 +27,18 @@ export const RankRoadmapModal: React.FC = () => {
     expNeeded = nextTier.minExp - exp;
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-3xl w-[94vw] sm:w-full max-h-[88vh] flex flex-col overflow-hidden border border-fae/50 shadow-2xl animate-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      onClick={() => setRoadmapOpen(false)}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rpg-card rounded-2xl sm:rounded-3xl max-w-3xl w-[94vw] sm:w-full max-h-[90dvh] flex flex-col overflow-hidden overscroll-contain touch-pan-y border border-fae/50 shadow-2xl animate-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-parchment/10 flex items-center justify-between bg-thorn-dark/70 shrink-0">
           <div className="flex items-center gap-3">
@@ -196,6 +209,7 @@ export const RankRoadmapModal: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

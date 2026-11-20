@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { playSoundEffect } from '../../utils/soundEffects';
 import { playSound, AmbientType } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import { InstallAppButton } from '../ui/InstallAppButton';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   Settings,
   X,
@@ -70,7 +72,9 @@ export const SettingsModal: React.FC = () => {
   const [isRestoring, setIsRestoring] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isSettingsOpen) return null;
+  useBodyScrollLock(isSettingsOpen);
+
+  if (!isSettingsOpen || typeof document === 'undefined') return null;
 
   const handleLogout = async () => {
     setSettingsOpen(false);
@@ -222,9 +226,18 @@ export const SettingsModal: React.FC = () => {
   const vietQrFallbackUrl =
     'https://img.vietqr.io/image/VBA-6511259236164-compact2.png?accountName=DOAN%20PHAN%20VINH%20PHU&addInfo=Ung%20ho%20FaeQuest';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-thorn-dark/85 backdrop-blur-md">
-      <div className="rpg-card rounded-2xl sm:rounded-3xl max-w-xl w-[94vw] sm:w-full max-h-[86vh] flex flex-col overflow-hidden border border-[#253745] shadow-2xl relative">
+  return createPortal(
+    <div
+      onClick={() => setSettingsOpen(false)}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rpg-card rounded-2xl sm:rounded-3xl max-w-xl w-[94vw] sm:w-full max-h-[90dvh] flex flex-col overflow-hidden overscroll-contain touch-pan-y border border-[#253745] shadow-2xl relative"
+      >
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-parchment/10 flex items-center justify-between bg-thorn-dark/70 shrink-0">
           <div className="flex items-center gap-3">
@@ -924,6 +937,7 @@ export const SettingsModal: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 };

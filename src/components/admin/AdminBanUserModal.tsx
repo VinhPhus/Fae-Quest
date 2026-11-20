@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { AdminUserOverview } from '../../types';
 import { ShieldAlert, X, Lock, Unlock, AlertTriangle, Clock } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface Props {
   user: AdminUserOverview | null;
@@ -24,6 +26,8 @@ export const AdminBanUserModal: React.FC<Props> = ({
     defaultReason || user?.ban_reason || 'Tốc độ hoàn thành nhiệm vụ nhanh bất thường (Nghi vấn spam)'
   );
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  useBodyScrollLock(!!user);
 
   if (!user) return null;
 
@@ -54,9 +58,18 @@ export const AdminBanUserModal: React.FC<Props> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-[#11212D] border-2 border-rose-500/40 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-[#CCD0CF]">
+  return createPortal(
+    <div
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] flex items-center justify-center p-3 sm:p-4 bg-[#06141B]/80 backdrop-blur-md animate-in fade-in duration-200 touch-none overscroll-none"
+      onClick={onClose}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+    >
+      <div
+        className="relative w-full max-w-md bg-[#11212D] border-2 border-rose-500/40 rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden text-[#CCD0CF] overscroll-contain touch-pan-y"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-5 sm:px-6 py-4 border-b border-[#253745] flex items-center justify-between bg-[#06141B]/70">
           <div className="flex items-center gap-3">
@@ -172,6 +185,7 @@ export const AdminBanUserModal: React.FC<Props> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

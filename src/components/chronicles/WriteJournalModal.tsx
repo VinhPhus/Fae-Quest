@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { JournalMood } from '../../types';
@@ -6,6 +7,7 @@ import { RichTextEditor } from './RichTextEditor';
 import { WheelDatePicker } from './WheelDatePicker';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
 import { playSound } from '../../utils/soundEngine';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   X,
   Calendar,
@@ -132,21 +134,30 @@ export const WriteJournalModal: React.FC = () => {
     }
   };
 
-  if (!isWriteJournalOpen) return null;
+  useBodyScrollLock(isWriteJournalOpen);
+
+  if (!isWriteJournalOpen || typeof document === 'undefined') return null;
 
   // Format date display
   const [year, month, day] = date.split('-').map(Number);
   const formattedDisplayDate = `${day}/${month}/${year}`;
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 bg-[#06141B]/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div
+        onClick={() => setWriteJournalOpen(false)}
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
+        className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+      >
         <motion.div
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.93, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.93, y: 16 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="w-[94vw] max-w-[700px] max-h-[86vh] overflow-y-auto bg-[#11212D] border border-[#253745] rounded-[32px] p-4 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto scroll-smooth no-scrollbar"
+          className="w-[94vw] max-w-[700px] max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y bg-[#11212D] border border-[#253745] rounded-[32px] p-4 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto scroll-smooth no-scrollbar"
         >
           {/* Subtle Ambient Light Glow */}
           <div className="absolute top-0 right-1/4 w-72 h-32 bg-[#4A5C6A]/10 rounded-full blur-3xl pointer-events-none" />
@@ -337,6 +348,7 @@ export const WriteJournalModal: React.FC = () => {
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

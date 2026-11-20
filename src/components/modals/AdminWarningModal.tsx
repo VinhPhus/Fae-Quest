@@ -1,11 +1,16 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { ShieldAlert, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const AdminWarningModal: React.FC = () => {
   const { activeWarningMessage, setActiveWarningMessage, markMessageAsRead } = useFaeQuestStore();
 
-  if (!activeWarningMessage) return null;
+  const isOpen = Boolean(activeWarningMessage);
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || !activeWarningMessage || typeof document === 'undefined') return null;
 
   const handleAcknowledge = async () => {
     if (activeWarningMessage.id) {
@@ -22,9 +27,17 @@ export const AdminWarningModal: React.FC = () => {
     year: 'numeric',
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#11212D] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-7 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-[#CCD0CF] space-y-5 overflow-hidden">
+  return createPortal(
+    <div
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-4 animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y bg-[#11212D] border-2 border-amber-500/50 rounded-3xl p-6 sm:p-7 shadow-[0_0_50px_rgba(245,158,11,0.2)] text-[#CCD0CF] space-y-5"
+      >
         {/* Glow Header FX */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -72,6 +85,7 @@ export const AdminWarningModal: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,9 +1,16 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { JournalEntry, JournalMood } from '../../types';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { JournalEntry, JournalMood } from '../../types';
 import { playSound } from '../../utils/soundEngine';
-import { X, Calendar, Edit3, Trash2, BookOpen } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import {
+  X,
+  Calendar,
+  Trash2,
+  Edit3,
+} from 'lucide-react';
 
 interface JournalDetailModalProps {
   journal: JournalEntry | null;
@@ -15,36 +22,36 @@ const MOOD_MAP: Record<JournalMood, { emoji: string; label: string; badgeClass: 
   'Tuyệt vời': {
     emoji: '🤩',
     label: 'Tuyệt vời',
-    badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-    dotClass: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]',
+    badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
+    dotClass: 'bg-emerald-400',
   },
   'Tốt': {
     emoji: '😊',
     label: 'Tốt',
-    badgeClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30',
-    dotClass: 'bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.6)]',
+    badgeClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40',
+    dotClass: 'bg-cyan-400',
   },
   'Bình thường': {
     emoji: '😐',
     label: 'Bình thường',
-    badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-    dotClass: 'bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.6)]',
+    badgeClass: 'bg-blue-500/15 text-blue-300 border-blue-500/40',
+    dotClass: 'bg-blue-400',
   },
   'Căng thẳng': {
     emoji: '😫',
     label: 'Căng thẳng',
-    badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
-    dotClass: 'bg-purple-400 shadow-[0_0_10px_rgba(192,132,252,0.6)]',
+    badgeClass: 'bg-purple-500/15 text-purple-300 border-purple-500/40',
+    dotClass: 'bg-purple-400',
   },
   'Tệ': {
     emoji: '😞',
     label: 'Tệ',
-    badgeClass: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-    dotClass: 'bg-rose-400 shadow-[0_0_10px_rgba(251,113,133,0.6)]',
+    badgeClass: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
+    dotClass: 'bg-rose-400',
   },
 };
 
-const formatDetailDate = (dateStr: string): string => {
+const formatDetailDate = (dateStr: string) => {
   try {
     const [year, month, day] = dateStr.split('-').map(Number);
     const d = new Date(year, month - 1, day);
@@ -62,8 +69,11 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
   onEdit,
 }) => {
   const { deleteJournal } = useFaeQuestStore();
+  const isOpen = Boolean(journal);
 
-  if (!journal) return null;
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || !journal || typeof document === 'undefined') return null;
 
   const moodConfig = MOOD_MAP[journal.mood] || MOOD_MAP['Bình thường'];
 
@@ -74,15 +84,22 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 bg-[#06141B]/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div
+        onClick={onClose}
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
+        className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+      >
         <motion.div
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.94, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="max-w-[650px] w-full max-h-[90vh] overflow-y-auto bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative my-auto space-y-5 scroll-smooth no-scrollbar"
+          className="max-w-[650px] w-full max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y bg-[#11212D] border border-[#253745] rounded-[32px] p-5 sm:p-7 shadow-[0_24px_70px_rgba(0,0,0,0.95)] relative space-y-5 no-scrollbar"
         >
           {/* Header */}
           <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#253745]">
@@ -101,6 +118,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
 
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => {
                   playSound('ui_click');
                   onEdit(journal);
@@ -113,6 +131,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
               </button>
 
               <button
+                type="button"
                 onClick={handleDelete}
                 className="p-2 rounded-full bg-[#06141B] border border-[#253745] text-rose-400 hover:text-rose-300 hover:border-rose-500/50 transition cursor-pointer"
                 title="Xóa nhật ký"
@@ -121,6 +140,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   playSound('ui_click');
                   onClose();
@@ -135,7 +155,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
 
           {/* Nội dung Rich Text */}
           <div
-            className="text-sm text-[#CCD0CF] leading-relaxed max-h-[350px] overflow-y-auto pr-2 space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-white [&_p]:mb-2"
+            className="text-sm text-[#CCD0CF] leading-relaxed max-h-[350px] overflow-y-auto overscroll-contain touch-pan-y pr-2 space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-white [&_p]:mb-2"
             dangerouslySetInnerHTML={{ __html: journal.content }}
           />
 
@@ -145,7 +165,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
               <div className="text-xs font-bold text-[#9BA8AB] uppercase tracking-wider">
                 Ảnh đính kèm ({journal.images.length})
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[250px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[250px] overflow-y-auto overscroll-contain touch-pan-y pr-1">
                 {journal.images.map((imgUrl, idx) => (
                   <a
                     key={idx}
@@ -168,6 +188,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
           {/* Footer */}
           <div className="pt-2 flex justify-end">
             <button
+              type="button"
               onClick={() => {
                 playSound('ui_click');
                 onClose();
@@ -179,6 +200,7 @@ export const JournalDetailModal: React.FC<JournalDetailModalProps> = ({
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

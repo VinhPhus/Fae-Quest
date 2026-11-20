@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   CLOUDINARY_UPLOAD_PRESET,
   CLOUDINARY_UPLOAD_URL,
@@ -154,7 +156,11 @@ export const ChangeCoverModal: React.FC = () => {
     addToast('Đã khôi phục ảnh bìa mặc định!', 'info');
   };
 
-  return (
+  useBodyScrollLock(isChangeCoverOpen);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isChangeCoverOpen && (
         <motion.div
@@ -162,7 +168,10 @@ export const ChangeCoverModal: React.FC = () => {
           initial="hidden"
           animate="visible"
           exit="exit"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
           onClick={() => setChangeCoverOpen(false)}
         >
           <motion.div
@@ -170,7 +179,7 @@ export const ChangeCoverModal: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="w-full max-w-2xl rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[92vh]"
+            className="w-full max-w-2xl rounded-[28px] bg-gradient-to-b from-[#11212D] via-[#11212D] to-[#06141B] shadow-[0_25px_60px_rgba(0,0,0,0.85)] border border-[#253745] overflow-hidden flex flex-col max-h-[90dvh] overscroll-contain touch-pan-y"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Hidden file input */}
@@ -380,6 +389,7 @@ export const ChangeCoverModal: React.FC = () => {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

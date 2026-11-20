@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { SYSTEM_TITLES, resolveTitleObject } from '../../constants/systemQuests';
 import { DEFAULT_COVER_URL } from './ChangeCoverModal';
 import { EASING_SPRING } from '../../constants/motion';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   X,
   Trophy,
@@ -36,8 +38,11 @@ export const RivalProfileModal: React.FC = () => {
   } = useFaeQuestStore();
 
   const [isComparing, setIsComparing] = useState(false);
+  const isOpen = Boolean(isRivalModalOpen && rival);
 
-  if (!isRivalModalOpen || !rival) return null;
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || !rival || typeof document === 'undefined') return null;
 
   const rivalRankIdx = getRankIndexByExp(rival.exp);
   const rivalTier = RANK_TIERS[rivalRankIdx];
@@ -116,11 +121,14 @@ export const RivalProfileModal: React.FC = () => {
     );
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+        className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
         onClick={closeRivalModal}
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.92, y: 12 }}
@@ -128,7 +136,7 @@ export const RivalProfileModal: React.FC = () => {
           exit={{ opacity: 0, scale: 0.94, y: 8 }}
           transition={{ duration: 0.28, ease: EASING_SPRING }}
           onClick={(e) => e.stopPropagation()}
-          className="w-[94vw] max-w-[400px] bg-[#11212D] border border-[#253745] rounded-[32px] p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden max-h-[86vh] overflow-y-auto no-scrollbar"
+          className="w-[94vw] max-w-[400px] bg-[#11212D] border border-[#253745] rounded-[32px] p-4 sm:p-5 shadow-[0_24px_60px_rgba(0,0,0,0.85)] relative flex flex-col overflow-hidden max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y no-scrollbar"
         >
           {/* Phần 1 — Ảnh Bìa Lọt Lòng & Nút Đóng (Inset Cover Banner) */}
           <div className="h-36 w-full rounded-[22px] overflow-hidden relative bg-[#06141B] shrink-0 border border-[#253745]">
@@ -365,6 +373,7 @@ export const RivalProfileModal: React.FC = () => {
           </motion.button>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

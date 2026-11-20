@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { DIFFICULTIES } from '../../constants/categories';
 import { CoinIcon } from '../ui/CoinIcon';
 import { Timer, Play, Pause, RotateCcw, X, Check, Sparkles, Info, Minimize2 } from 'lucide-react';
 import { AmbientType } from '../../utils/soundEngine';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 const FOCUS_PRESETS = [10, 15, 25, 45, 60];
 
@@ -53,7 +55,10 @@ export const PomodoroTimerModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFocusModalOpen]);
 
-  if (!isFocusModalOpen || !activeFocusTaskId || !task) return null;
+  const isOpen = Boolean(isFocusModalOpen && activeFocusTaskId && task);
+  useBodyScrollLock(isOpen);
+
+  if (!isOpen || !task || typeof document === 'undefined') return null;
 
   const targetMinutes = focusTargetMinutes || 25;
   const totalSeconds = targetMinutes * 60;
@@ -106,14 +111,17 @@ export const PomodoroTimerModal: React.FC = () => {
     }
   };
 
-  return (
+  return createPortal(
     <div
       onClick={handleClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#06141B]/85 backdrop-blur-sm cursor-pointer"
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4 cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[88vh] overflow-y-auto p-4 sm:p-7 text-center relative border border-[#4A5C6A] bg-[#11212D] shadow-2xl animate-in zoom-in-95 duration-200 custom-scrollbar cursor-default"
+        className="rounded-3xl max-w-md w-[94vw] sm:w-full max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y p-4 sm:p-7 text-center relative border border-[#4A5C6A] bg-[#11212D] shadow-2xl animate-in zoom-in-95 duration-200 custom-scrollbar cursor-default"
       >
         {/* Ambient Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-64 bg-[#CCD0CF]/10 rounded-full blur-3xl pointer-events-none" />
@@ -368,6 +376,7 @@ export const PomodoroTimerModal: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

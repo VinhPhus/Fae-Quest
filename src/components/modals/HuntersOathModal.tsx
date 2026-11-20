@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CoinIcon } from '../ui/CoinIcon';
 import { playSoundEffect } from '../../utils/soundEffects';
 import confetti from 'canvas-confetti';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   Scroll,
   Swords,
@@ -42,8 +44,11 @@ export const HuntersOathModal: React.FC = () => {
     }
   }, [isOathOpen]);
 
+  const isOpen = Boolean(isOathOpen && userRole !== 'admin');
+  useBodyScrollLock(isOpen);
+
   // Tài khoản Admin được bỏ qua hoàn toàn bước tuyên thệ Cuộn Khế Ước 3D
-  if (!isOathOpen || userRole === 'admin') return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
   // Handle 3D Mouse Tilt over the closed scroll
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -111,8 +116,16 @@ export const HuntersOathModal: React.FC = () => {
     }, 950);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#06141B]/85 backdrop-blur-md overflow-y-auto">
+  return createPortal(
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setOathOpen(false);
+      }}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/85 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain touch-pan-y"
+    >
       {/* Background ambient lighting */}
       <div className="fixed inset-0 pointer-events-none flex items-center justify-center">
         <div className="w-[500px] h-[500px] bg-gradient-to-r from-[#253745]/30 via-[#4A5C6A]/20 to-transparent rounded-full blur-[100px] opacity-70 animate-pulse" />
@@ -394,6 +407,7 @@ export const HuntersOathModal: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

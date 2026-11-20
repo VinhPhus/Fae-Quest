@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { UserMessage } from '../../types';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   Mail,
   X,
@@ -37,7 +39,9 @@ export const UserInboxModal: React.FC = () => {
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  if (!isUserInboxOpen) return null;
+  useBodyScrollLock(isUserInboxOpen);
+
+  if (!isUserInboxOpen || typeof document === 'undefined') return null;
 
   const filteredMessages = userMessages.filter((msg) => {
     if (activeTab === 'all') return true;
@@ -97,9 +101,18 @@ export const UserInboxModal: React.FC = () => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#11212D] border border-[#253745] rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-[#CCD0CF]">
+  return createPortal(
+    <div
+      onClick={() => setUserInboxOpen(false)}
+      onTouchMove={(e) => {
+        if (e.target === e.currentTarget) e.preventDefault();
+      }}
+      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-2xl bg-[#11212D] border border-[#253745] rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden overscroll-contain touch-pan-y text-[#CCD0CF]"
+      >
         {/* Header */}
         <div className="px-5 sm:px-6 py-4.5 border-b border-[#253745] flex items-center justify-between bg-[#06141B]/60">
           <div className="flex items-center gap-3">
@@ -475,6 +488,7 @@ export const UserInboxModal: React.FC = () => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { supabase } from '../../utils/supabaseClient';
 import { playSound } from '../../utils/soundEngine';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   X,
   Swords,
@@ -106,15 +108,26 @@ export const SeasonResetModal: React.FC = () => {
     }
   };
 
-  return (
+  useBodyScrollLock(isSeasonResetModalOpen);
+
+  if (!isSeasonResetModalOpen || typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+      <div
+        onClick={handleClose}
+        onTouchMove={(e) => {
+          if (e.target === e.currentTarget) e.preventDefault();
+        }}
+        className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+      >
         <motion.div
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full max-w-2xl bg-[#11212D] border border-amber-500/40 rounded-3xl p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] my-auto overflow-hidden text-[#CCD0CF]"
+          className="relative w-full max-w-2xl bg-[#11212D] border border-amber-500/40 rounded-3xl p-5 sm:p-7 shadow-[0_20px_60px_rgba(0,0,0,0.8)] my-auto max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y text-[#CCD0CF]"
         >
           {/* Header Glow */}
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
@@ -277,6 +290,7 @@ export const SeasonResetModal: React.FC = () => {
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

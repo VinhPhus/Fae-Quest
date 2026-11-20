@@ -1,14 +1,17 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
 import { Sparkles, X, Shield, Swords } from 'lucide-react';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const RewardPopupOverlay: React.FC = () => {
   const { rewardPopup, closeRewardPopup } = useFaeQuestStore();
 
   const isOpen = Boolean(rewardPopup?.isOpen);
+  useBodyScrollLock(isOpen);
 
   // Safety fallback timer (3 seconds) in component as well
   useEffect(() => {
@@ -19,7 +22,7 @@ export const RewardPopupOverlay: React.FC = () => {
     return () => clearTimeout(timer);
   }, [isOpen, closeRewardPopup]);
 
-  if (!rewardPopup) return null;
+  if (!rewardPopup || typeof document === 'undefined') return null;
 
   const {
     avatarUrl,
@@ -52,7 +55,7 @@ export const RewardPopupOverlay: React.FC = () => {
   const initialOffset = circumference * (1 - oldPercent / 100);
   const finalOffset = circumference * (1 - newPercent / 100);
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -62,7 +65,10 @@ export const RewardPopupOverlay: React.FC = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
           onClick={closeRewardPopup}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#06141B]/60 backdrop-blur-sm select-none"
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 w-screen h-[100dvh] z-[100] flex items-center justify-center p-4 bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none select-none"
         >
           {/* Main Card Modal */}
           <motion.div
@@ -285,6 +291,7 @@ export const RewardPopupOverlay: React.FC = () => {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
