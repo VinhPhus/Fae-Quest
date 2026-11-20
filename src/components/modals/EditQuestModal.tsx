@@ -182,11 +182,11 @@ export const EditQuestModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* Ghi chú chi tiết (Tùy chọn) */}
+              {/* Mô tả nhiệm vụ (Tùy chọn) */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
-                    Ghi chú chi tiết
+                    Mô tả nhiệm vụ (Tùy chọn)
                   </label>
                   <span className="text-[10px] text-[#9BA8AB]">
                     {description.length}/220
@@ -197,8 +197,8 @@ export const EditQuestModal: React.FC = () => {
                   maxLength={220}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Thêm ghi chú cụ thể cho mục tiêu..."
-                  className="w-full px-3 py-2 rounded-xl bg-[#11212D] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] transition shadow-inner resize-none"
+                  placeholder="Thêm mô tả hoặc ghi chú cụ thể cho nhiệm vụ..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#11212D] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] transition shadow-inner resize-none leading-relaxed"
                 />
               </div>
 

@@ -196,6 +196,26 @@ export const CreateQuestDrawer: React.FC = () => {
                 </div>
               </div>
 
+              {/* Dòng 2.5 — Mô tả nhiệm vụ (Tùy chọn) */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
+                    Mô tả nhiệm vụ (Tùy chọn)
+                  </label>
+                  <span className="text-[10px] text-[#9BA8AB]">
+                    {description.length}/220
+                  </span>
+                </div>
+                <textarea
+                  rows={2}
+                  maxLength={220}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Thêm mô tả hoặc ghi chú cụ thể cho nhiệm vụ..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#11212D] border border-[#253745] text-xs text-[#CCD0CF] placeholder-[#9BA8AB]/50 focus:outline-none focus:border-[#4A5C6A] transition shadow-inner resize-none leading-relaxed"
+                />
+              </div>
+
               {/* Dòng 3 — Phân loại: 5 cột xếp gọn gàng trên 1 hàng ngang */}
               <div className="space-y-1">
                 <label className="block text-[11px] font-black uppercase tracking-wider text-[#9BA8AB]">
