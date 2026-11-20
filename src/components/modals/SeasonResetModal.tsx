@@ -58,12 +58,12 @@ export const SeasonResetModal: React.FC = () => {
         const { data, error } = await supabase
           .from('profiles')
           .select('id, username, avatar_url, exp, role')
-          .neq('role', 'admin')
           .order('exp', { ascending: false })
-          .limit(10);
+          .limit(25);
 
         if (!error && data) {
-          const mapped: PreviewHunter[] = data.map((p) => {
+          const validProfiles = data.filter((p) => p.role !== 'admin').slice(0, 10);
+          const mapped: PreviewHunter[] = validProfiles.map((p) => {
             const curExp = Number(p.exp) || 0;
             const curIdx = getRankIndexByExp(curExp);
             const newIdx = Math.max(0, curIdx - 2);

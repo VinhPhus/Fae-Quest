@@ -1115,91 +1115,129 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       resetSeasonRank: async (seasonTitle = 'Mùa Mới', customNotice) => {
         try {
-          // 1. Fetch all non-admin profiles from Supabase
-          const { data: profiles, error: pErr } = await supabase
-            .from('profiles')
-            .select('id, username, exp, rank_id, role')
-            .neq('role', 'admin');
-
-          if (pErr) throw pErr;
-
-          if (!profiles || profiles.length === 0) {
-            return { success: true, affectedCount: 0 };
-          }
-
-          let affectedCount = 0;
           const currentUserId = get().currentUser?.id || get().hunterId;
 
-          // 2. Compute new rank and exp for each player
-          for (const p of profiles) {
-            const currentExp = Number(p.exp) || 0;
-            const currentIdx = getRankIndexByExp(currentExp);
-            const newIdx = Math.max(0, currentIdx - 2);
-            const newExp = RANK_TIERS[newIdx].minExp;
-            const newTierId = RANK_TIERS[newIdx].id;
+          // 1. Thử gọi RPC public.rpc_admin_reset_season_rank trên Supabase (chạy với quyền SECURITY DEFINER)
+          let rpcSuccess = false;
+          let affectedCount = 0;
 
-            // Update public.profiles
-            const { error: updErr } = await supabase
-              .from('profiles')
-              .update({
-                exp: newExp,
-                rank_id: newTierId,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', p.id);
-
-            if (!updErr) {
-              affectedCount++;
-
-              // Update public.user_states if exists
-              try {
-                const { data: userStateRow } = await supabase
-                  .from('user_states')
-                  .select('state_json')
-                  .eq('user_id', p.id)
-                  .maybeSingle();
-
-                if (userStateRow && userStateRow.state_json) {
-                  const updatedState = { ...userStateRow.state_json, exp: newExp };
-                  await supabase
-                    .from('user_states')
-                    .update({
-                      state_json: updatedState,
-                      updated_at: new Date().toISOString(),
-                    })
-                    .eq('user_id', p.id);
-                }
-              } catch (stateErr) {
-                console.warn(`Error updating user_states for ${p.id}:`, stateErr);
+          try {
+            const { data: rpcData, error: rpcErr } = await supabase.rpc(
+              'rpc_admin_reset_season_rank',
+              {
+                p_season_title: seasonTitle,
+                p_custom_notice: customNotice || null,
+                p_admin_id: currentUserId,
               }
+            );
 
-              // If this is the current active player, update local store state
-              if (p.id === currentUserId) {
-                set({ exp: newExp });
-              }
+            if (!rpcErr && rpcData && rpcData.success) {
+              rpcSuccess = true;
+              affectedCount = rpcData.affected_count || 0;
+            } else if (rpcErr) {
+              console.warn('RPC rpc_admin_reset_season_rank warning, attempting client fallback:', rpcErr);
             }
+          } catch (rpcEx) {
+            console.warn('Exception calling rpc_admin_reset_season_rank:', rpcEx);
           }
 
-          // 3. Automatically post a system announcement
-          const noticeContent =
-            customNotice ||
-            `⚔️ Mùa giải "${seasonTitle}" đã chính thức khởi tranh!\nToàn bộ Thợ Săn trên Đấu Trường đã được giảm 2 bậc Rank để sẵn sàng cho cuộc đua vinh quang mới.\n\nHãy hoàn thành nhiệm vụ mỗi ngày, thắp sáng ngọn lửa kỷ luật và khắc tên bạn lên Bục Vinh Quang!`;
+          // 2. Cập nhật Rank của chính người chơi hiện tại (Local State & Sync)
+          const myExp = get().exp || 0;
+          const myCurIdx = getRankIndexByExp(myExp);
+          const myNewIdx = Math.max(0, myCurIdx - 2);
+          const myNewExp = RANK_TIERS[myNewIdx].minExp;
+          const myNewTierId = RANK_TIERS[myNewIdx].id;
 
-          await get().addSeasonAnnouncement({
-            season_tag: seasonTitle,
-            title: `⚔️ Khởi Tranh Mùa Giải: ${seasonTitle}`,
-            content: noticeContent,
-            is_pinned: true,
-            image_url: null,
-          });
+          set({ exp: myNewExp });
+          debouncedAutoSync(get());
 
-          // 4. Reload leaderboard
+          // 3. Nếu RPC chưa được nạp lên Supabase SQL, thực hiện Fallback cập nhật tốt nhất có thể
+          if (!rpcSuccess) {
+            // Lấy danh sách profiles mà KHÔNG dùng .neq('role', 'admin') ở cấp SQL (tránh rơi mất dòng có role IS NULL)
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, username, exp, rank_id, role');
+
+            if (profiles && profiles.length > 0) {
+              const targetProfiles = profiles.filter((p) => p.role !== 'admin');
+              for (const p of targetProfiles) {
+                const currentExp = Number(p.exp) || 0;
+                const currentIdx = getRankIndexByExp(currentExp);
+                const newIdx = Math.max(0, currentIdx - 2);
+                const newExp = RANK_TIERS[newIdx].minExp;
+                const newTierId = RANK_TIERS[newIdx].id;
+
+                const { error: updErr } = await supabase
+                  .from('profiles')
+                  .update({
+                    exp: newExp,
+                    rank_id: newTierId,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', p.id);
+
+                if (!updErr) {
+                  affectedCount++;
+                }
+              }
+            }
+
+            // Đăng thông báo mùa giải nếu RPC chưa tạo
+            const noticeContent =
+              customNotice ||
+              `⚔️ Mùa giải "${seasonTitle}" đã chính thức khởi tranh!\nToàn bộ Thợ Săn trên Đấu Trường đã được giảm 2 bậc Rank để sẵn sàng cho cuộc đua vinh quang mới.\n\nHãy hoàn thành nhiệm vụ mỗi ngày, thắp sáng ngọn lửa kỷ luật và khắc tên bạn lên Bục Vinh Quang!`;
+
+            await get().addSeasonAnnouncement({
+              season_tag: seasonTitle,
+              title: `⚔️ Khởi Tranh Mùa Giải: ${seasonTitle}`,
+              content: noticeContent,
+              is_pinned: true,
+              image_url: null,
+            });
+          }
+
+          // 4. Đồng bộ profile của chính mình lên Supabase
+          if (get().currentUser) {
+            await supabase
+              .from('profiles')
+              .update({
+                exp: myNewExp,
+                rank_id: myNewTierId,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', get().currentUser!.id);
+          }
+
+          // 5. Làm mới ngay lập tức danh sách communityProfiles trong store để giao diện cập nhật tức thì
+          set((prev) => ({
+            communityProfiles: prev.communityProfiles.map((p) => {
+              if (p.role === 'admin') return p;
+              const pExp = Number(p.exp) || 0;
+              const pIdx = getRankIndexByExp(pExp);
+              const pNewIdx = Math.max(0, pIdx - 2);
+              return {
+                ...p,
+                exp: RANK_TIERS[pNewIdx].minExp,
+                rank_id: RANK_TIERS[pNewIdx].id,
+              };
+            }),
+          }));
+
+          // Tải lại BXH từ máy chủ
           await get().fetchCommunityProfiles();
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
           }
 
-          get().addToast(`Đã Reset Rank thành công cho ${affectedCount} Thợ Săn!`, 'success');
+          if (rpcSuccess) {
+            get().addToast(`⚔️ Đã Reset Rank thành công cho ${affectedCount} Thợ Săn!`, 'success');
+          } else {
+            get().addToast(
+              `⚔️ Đã Reset Rank cho tài khoản của bạn! Hãy chạy file SQL "supabase_reset_season_rank.sql" trên Supabase để hoàn tất cho toàn bộ Thợ Săn khác.`,
+              'info'
+            );
+          }
+
           return { success: true, affectedCount };
         } catch (err: any) {
           console.error('Error resetting season rank:', err);
