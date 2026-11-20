@@ -18,19 +18,17 @@ import {
   Pencil,
   Sunrise,
 } from 'lucide-react';
-import { TaskCategory, Task } from '../../types';
+import { Task } from '../../types';
 import { getTodayString } from '../../utils/dateUtils';
 
 export const QuestBentoGrid: React.FC = () => {
   const {
     tasks,
-    activeCategoryFilter,
     activeStatusFilter,
     searchQuery,
     questViewMode,
     activeDayTab,
     setActiveDayTab,
-    setCategoryFilter,
     setStatusFilter,
     setQuestViewMode,
     toggleTask,
@@ -66,10 +64,8 @@ export const QuestBentoGrid: React.FC = () => {
   // Active base tasks list depending on activeDayTab
   const currentDayTasks = activeDayTab === 'today' ? todayTasks : tomorrowTasks;
 
-  // Filter tasks based on Category, Status, and Search Query
+  // Filter tasks based on Status and Search Query (Category row removed per user request)
   const filtered = currentDayTasks.filter((task) => {
-    const matchCat =
-      activeCategoryFilter === 'all' || task.category === activeCategoryFilter;
     const matchStatus =
       activeStatusFilter === 'all' ||
       (activeStatusFilter === 'pending' && !task.completed) ||
@@ -78,7 +74,7 @@ export const QuestBentoGrid: React.FC = () => {
       !searchQuery.trim() ||
       task.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
 
-    return matchCat && matchStatus && matchSearch;
+    return matchStatus && matchSearch;
   });
 
   // Sort: Pending first, then newest
@@ -89,7 +85,7 @@ export const QuestBentoGrid: React.FC = () => {
 
   return (
     <div id="tour-task-grid" className="space-y-4">
-      {/* 1. Header Toolbar: Title, Day Switcher, Category Pills, Status & View Toggle */}
+      {/* 1. Header Toolbar: Title, Day Switcher, Status Filters & View Toggle */}
       <div className="flex flex-col gap-3">
         {/* Top Row: Title & Action Controls */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -114,7 +110,7 @@ export const QuestBentoGrid: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Day Switcher: Hôm nay vs Ngày mai */}
+            {/* Day Switcher: Hôm nay vs Ngày mai (Gọn gàng, không icon trùng lặp) */}
             <div className="flex items-center p-1 rounded-full bg-[#06141B] border border-[#253745] text-xs relative shadow-inner">
               <button
                 type="button"
@@ -132,7 +128,6 @@ export const QuestBentoGrid: React.FC = () => {
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
-                <Swords className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Hôm nay</span>
                 {todayPendingCount > 0 && (
                   <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#11212D] text-[#CCD0CF] border border-[#4A5C6A]/50">
@@ -157,7 +152,6 @@ export const QuestBentoGrid: React.FC = () => {
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
-                <Sunrise className="w-3.5 h-3.5 text-amber-400" />
                 <span>Ngày mai</span>
                 {tomorrowPendingCount > 0 && (
                   <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -243,53 +237,6 @@ export const QuestBentoGrid: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* Bottom Row: Category Horizontal Scrolling Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar relative">
-          <button
-            type="button"
-            onClick={() => setCategoryFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer relative z-10 ${
-              activeCategoryFilter === 'all'
-                ? 'text-[#CCD0CF]'
-                : 'bg-[#06141B] text-[#9BA8AB] hover:text-[#CCD0CF] border border-[#253745]'
-            }`}
-          >
-            {activeCategoryFilter === 'all' && (
-              <motion.div
-                layoutId="taskCategoryPill"
-                className="absolute inset-0 rounded-full bg-[#253745] border border-[#4A5C6A] shadow-sm z-[-1]"
-                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-              />
-            )}
-            <span>Tất cả</span>
-          </button>
-          {(Object.keys(CATEGORIES) as TaskCategory[]).map((catKey) => {
-            const cat = CATEGORIES[catKey];
-            const isSelected = activeCategoryFilter === catKey;
-            return (
-              <button
-                key={catKey}
-                type="button"
-                onClick={() => setCategoryFilter(catKey)}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors cursor-pointer relative z-10 ${
-                  isSelected
-                    ? 'text-[#CCD0CF]'
-                    : 'bg-[#06141B] text-[#9BA8AB] hover:text-[#CCD0CF] border border-[#253745]'
-                }`}
-              >
-                {isSelected && (
-                  <motion.div
-                    layoutId="taskCategoryPill"
-                    className="absolute inset-0 rounded-full bg-[#253745] border border-[#4A5C6A] shadow-sm z-[-1]"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
         </div>
       </div>
 
