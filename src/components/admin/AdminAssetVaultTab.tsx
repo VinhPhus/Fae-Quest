@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { AdminAssetCategory } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { localizeError } from '../../utils/errorLocalization';
 import { playSound } from '../../utils/soundEngine';
 import {
   FolderArchive,
@@ -44,9 +45,9 @@ export const AdminAssetVaultTab: React.FC = () => {
       setHasImageError(false);
 
       if (source === 'clipboard') {
-        addToast('📋 Đang tải ảnh từ Clipboard lên Cloudinary...', 'info');
+        addToast('📋 Đang tải ảnh từ Clipboard lên...', 'info');
       } else if (source === 'drop') {
-        addToast('✨ Đang tải ảnh kéo thả lên Cloudinary...', 'info');
+        addToast('✨ Đang tải ảnh kéo thả lên...', 'info');
       }
 
       try {
@@ -59,7 +60,7 @@ export const AdminAssetVaultTab: React.FC = () => {
             ? '📋 Đã dán và tải ảnh từ Clipboard thành công!'
             : source === 'drop'
             ? '✨ Đã kéo thả và tải ảnh thành công!'
-            : 'Tải ảnh lên Cloudinary thành công!';
+            : 'Tải ảnh lên thành công!';
         addToast(successMsg, 'success');
 
         // Tự động gợi ý tên nếu chưa nhập
@@ -73,7 +74,7 @@ export const AdminAssetVaultTab: React.FC = () => {
           }
         }
       } catch (err: any) {
-        addToast(err.message || 'Lỗi khi tải ảnh lên Cloudinary', 'error');
+        addToast(localizeError(err, 'Lỗi khi tải ảnh lên'), 'error');
       } finally {
         setIsUploading(false);
       }

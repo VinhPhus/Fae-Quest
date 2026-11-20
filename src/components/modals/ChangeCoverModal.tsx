@@ -118,7 +118,7 @@ export const ChangeCoverModal: React.FC = () => {
 
     try {
       setIsUploading(true);
-      addToast('Đang nén và tải ảnh bìa lên Cloudinary...', 'info');
+      addToast('Đang nén và tải ảnh bìa lên...', 'info');
 
       let uploadedUrl: string | null = null;
       try {

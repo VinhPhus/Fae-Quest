@@ -117,7 +117,7 @@ export const HeroBentoBanner: React.FC = () => {
       const data = await response.json();
       if (data.secure_url) {
         setAvatarUrl(data.secure_url);
-        addToast('Cập nhật ảnh đại diện lên Cloudinary thành công!', 'success');
+        addToast('Cập nhật ảnh đại diện thành công!', 'success');
       } else if (localDataUrl) {
         setAvatarUrl(localDataUrl);
         addToast('Đã lưu ảnh đại diện vào hệ thống!', 'success');

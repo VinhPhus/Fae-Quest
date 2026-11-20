@@ -26,7 +26,7 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Lỗi tải ảnh lên Cloudinary (${response.status})`);
+    throw new Error(errorData.error?.message || `Lỗi tải ảnh lên kho lưu trữ (${response.status})`);
   }
 
   const data = await response.json();

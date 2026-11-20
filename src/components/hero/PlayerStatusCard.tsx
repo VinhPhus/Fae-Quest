@@ -114,11 +114,11 @@ export const PlayerStatusCard: React.FC = () => {
         if (localDataUrl) {
           setAvatarUrl(localDataUrl);
           addToast(
-            `Đã lưu ảnh đại diện trực tiếp trên trình duyệt! (Lưu ý: Cloudinary báo "${errMsg}")`,
+            'Đã lưu ảnh đại diện trực tiếp trên trình duyệt!',
             'info'
           );
         } else {
-          addToast(`Tải ảnh thất bại: ${errMsg}`, 'error');
+          addToast('Không thể tải ảnh lên kho lưu trữ. Vui lòng thử lại!', 'error');
         }
         return;
       }
@@ -126,7 +126,7 @@ export const PlayerStatusCard: React.FC = () => {
       const data = await response.json();
       if (data.secure_url) {
         setAvatarUrl(data.secure_url);
-        addToast('Cập nhật ảnh đại diện lên Cloudinary thành công!', 'success');
+        addToast('Cập nhật ảnh đại diện thành công!', 'success');
       } else if (localDataUrl) {
         setAvatarUrl(localDataUrl);
         addToast('Đã lưu ảnh đại diện vào hệ thống!', 'success');

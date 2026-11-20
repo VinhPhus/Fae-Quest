@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SystemShopItem } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { localizeError } from '../../utils/errorLocalization';
 import { playSound } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
@@ -89,9 +90,9 @@ export const AdminShopTab: React.FC = () => {
       const url = await uploadImageToCloudinary(file);
       setIcon(url);
       playSound('ui_click', soundEnabled);
-      addToast('Tải ảnh biểu tượng lên Cloudinary thành công!', 'success');
+      addToast('Tải ảnh biểu tượng thành công!', 'success');
     } catch (err: any) {
-      addToast(err.message || 'Lỗi khi tải ảnh lên Cloudinary', 'error');
+      addToast(localizeError(err, 'Lỗi khi tải ảnh biểu tượng'), 'error');
     } finally {
       setIsUploading(false);
     }
@@ -152,7 +153,7 @@ export const AdminShopTab: React.FC = () => {
                 playSound('ui_click', soundEnabled);
                 addToast('📋 Đã dán và tải ảnh từ Clipboard thành công!', 'success');
               })
-              .catch((err) => addToast(err.message || 'Lỗi tải ảnh Clipboard', 'error'))
+              .catch((err) => addToast(localizeError(err, 'Lỗi tải ảnh từ bộ nhớ tạm'), 'error'))
               .finally(() => setIsUploading(false));
             return;
           }
@@ -319,7 +320,7 @@ export const AdminShopTab: React.FC = () => {
             <div className="space-y-3.5 bg-[#06141B] p-4 rounded-2xl border border-[#253745]">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-[#9BA8AB] block">
-                  Biểu Tượng (Emoji hoặc Ảnh Cloudinary)
+                  Biểu Tượng (Emoji hoặc Ảnh Tải Lên)
                 </label>
 
                 {/* Live Preview Box */}

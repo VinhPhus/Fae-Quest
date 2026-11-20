@@ -254,7 +254,7 @@ export const SeasonResetModal: React.FC = () => {
           <div className="flex items-start gap-3 p-3 sm:p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 mb-6">
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div className="text-xs text-rose-200/90 leading-relaxed">
-              <strong>Lưu ý quan trọng:</strong> Thao tác này sẽ cập nhật điểm EXP khởi đầu của toàn bộ Thợ Săn trên Supabase và tạo thông báo mùa mới. Sau khi reset, thứ hạng sẽ được tính toán lại theo mùa mới.
+              <strong>Lưu ý quan trọng:</strong> Thao tác này sẽ cập nhật điểm EXP khởi đầu của toàn bộ Thợ Săn trên máy chủ và tạo thông báo mùa mới. Sau khi reset, thứ hạng sẽ được tính toán lại theo mùa mới.
             </div>
           </div>
 

@@ -73,7 +73,7 @@ export const ResetModal: React.FC = () => {
             Khởi Tạo Lại Toàn Bộ Hành Trình?
           </h3>
           <p className="text-xs text-[#9BA8AB] leading-relaxed">
-            Hành động này sẽ xóa sạch toàn bộ ảnh cá nhân trên Cloudinary, xóa toàn bộ nhiệm vụ, nhật ký, lịch sử mua đồ và đưa chỉ số EXP, Xu, Rank về ban đầu như tài khoản mới.
+            Hành động này sẽ giải phóng toàn bộ ảnh đã lưu, xóa toàn bộ nhiệm vụ, nhật ký, lịch sử mua đồ và đưa chỉ số EXP, Xu, Rank về ban đầu như tài khoản mới.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export const ResetModal: React.FC = () => {
         {isResetting && (
           <div className="py-2.5 px-3 rounded-xl bg-[#06141B]/80 border border-[#253745] flex items-center justify-center gap-2.5 text-xs text-rose-300 animate-pulse">
             <Loader2 className="w-4 h-4 animate-spin text-rose-400" />
-            <span>Đang giải phóng ảnh Cloudinary & đặt lại Supabase...</span>
+            <span>Đang giải phóng ảnh & làm mới dữ liệu máy chủ...</span>
           </div>
         )}
 

@@ -49,6 +49,7 @@ import { playSoundEffect } from '../utils/soundEffects';
 import { playSound, setMasterVolume, startFocusAmbient, stopFocusAmbient, AmbientType } from '../utils/soundEngine';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import { deleteCloudinaryImages } from '../utils/cloudinaryDelete';
+import { localizeError } from '../utils/errorLocalization';
 import {
   syncProfileAndStateToCloud,
   restoreUserStateFromCloud,
@@ -563,11 +564,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (error || !data) {
               console.error('Supabase update journal error:', error);
-              const isSchemaError = error?.message?.includes('schema cache') || (error as any)?.code === 'PGRST205';
-              const errorMsg = isSchemaError
-                ? "Chưa tạo bảng 'journals' trên Supabase. Vui lòng chạy file 'supabase_journals.sql' trong SQL Editor!"
-                : (error?.message || 'Lỗi khi cập nhật nhật ký lên máy chủ!');
-              get().addToast(errorMsg, 'error');
+              get().addToast(localizeError(error, 'Lỗi khi cập nhật nhật ký lên máy chủ!'), 'error');
               return false;
             }
 
@@ -596,11 +593,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (error || !data) {
               console.error('Supabase insert journal error:', error);
-              const isSchemaError = error?.message?.includes('schema cache') || (error as any)?.code === 'PGRST205';
-              const errorMsg = isSchemaError
-                ? "Chưa tạo bảng 'journals' trên Supabase. Vui lòng chạy file 'supabase_journals.sql' trong SQL Editor!"
-                : (error?.message || 'Lỗi khi lưu nhật ký lên máy chủ!');
-              get().addToast(errorMsg, 'error');
+              get().addToast(localizeError(error, 'Lỗi khi lưu nhật ký lên máy chủ!'), 'error');
               return false;
             }
 
@@ -615,7 +608,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
         } catch (err: any) {
           console.error('Exception saving journal to Supabase:', err);
-          get().addToast(err?.message || 'Lỗi kết nối máy chủ khi lưu nhật ký!', 'error');
+          get().addToast(localizeError(err, 'Lỗi kết nối máy chủ khi lưu nhật ký!'), 'error');
           return false;
         }
       },
@@ -832,7 +825,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('🗑️ Đã xóa thư khỏi hộp thư.', 'info');
           return true;
         } catch (err: any) {
-          get().addToast(err.message || 'Lỗi khi xóa thư', 'error');
+          get().addToast(localizeError(err, 'Lỗi khi xóa thư'), 'error');
           return false;
         }
       },
@@ -873,7 +866,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast(`🗑️ Đã dọn dẹp ${ids.length} thư khỏi hộp thư thành công!`, 'success');
           return ids.length;
         } catch (err: any) {
-          get().addToast(err.message || 'Lỗi khi dọn dẹp hộp thư', 'error');
+          get().addToast(localizeError(err, 'Lỗi khi dọn dẹp hộp thư'), 'error');
           return 0;
         }
       },
@@ -948,7 +941,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã lưu tài nguyên vào kho thành công!', 'success');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi lưu tài nguyên', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi lưu tài nguyên'), 'error');
           return false;
         }
       },
@@ -968,7 +961,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã xóa tài nguyên khỏi kho', 'info');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi xóa tài nguyên', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi xóa tài nguyên'), 'error');
           return false;
         }
       },
@@ -1048,7 +1041,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã đăng thông báo mùa giải lên BXH!', 'success');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi đăng thông báo', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi đăng thông báo'), 'error');
           return false;
         }
       },
@@ -1077,7 +1070,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã cập nhật thông báo thành công!', 'success');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi cập nhật thông báo', 'error');
+          get().addToast(localizeError(e, 'Lỗi cập nhật thông báo'), 'error');
           return false;
         }
       },
@@ -1104,7 +1097,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã xóa thông báo mùa giải', 'info');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi xóa thông báo', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi xóa thông báo'), 'error');
           return false;
         }
       },
@@ -1210,7 +1203,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return { success: true, affectedCount };
         } catch (err: any) {
           console.error('Error resetting season rank:', err);
-          get().addToast(err.message || 'Lỗi khi Reset Rank Mùa Giải', 'error');
+          get().addToast(localizeError(err, 'Lỗi khi Reset Rank Mùa Giải'), 'error');
           return { success: false, affectedCount: 0, error: err.message };
         }
       },
@@ -1239,7 +1232,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           await get().fetchSystemShopItems();
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi thêm vật phẩm hệ thống', 'error');
+          get().addToast(localizeError(e, 'Lỗi thêm vật phẩm hệ thống'), 'error');
           return false;
         }
       },
@@ -1254,7 +1247,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           await get().fetchSystemShopItems();
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi cập nhật vật phẩm', 'error');
+          get().addToast(localizeError(e, 'Lỗi cập nhật vật phẩm'), 'error');
           return false;
         }
       },
@@ -1270,7 +1263,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã xóa vật phẩm khỏi Cửa Hàng Hệ Thống', 'info');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi xóa vật phẩm', 'error');
+          get().addToast(localizeError(e, 'Lỗi xóa vật phẩm'), 'error');
           return false;
         }
       },
@@ -1470,7 +1463,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           await get().fetchSystemAchievements();
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi tạo thành tựu mới', 'error');
+          get().addToast(localizeError(e, 'Lỗi tạo thành tựu mới'), 'error');
           return false;
         }
       },
@@ -1485,7 +1478,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           await get().fetchSystemAchievements();
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi cập nhật thành tựu', 'error');
+          get().addToast(localizeError(e, 'Lỗi cập nhật thành tựu'), 'error');
           return false;
         }
       },
@@ -1526,7 +1519,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast('Đã xóa thành tựu khỏi hệ thống', 'info');
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi xóa thành tựu', 'error');
+          get().addToast(localizeError(e, 'Lỗi xóa thành tựu'), 'error');
           return false;
         }
       },
@@ -1570,7 +1563,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi gửi thư', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi gửi thư'), 'error');
           return false;
         }
       },
@@ -1602,8 +1595,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           if (error) {
-            get().addToast(`⚠️ Lỗi khi nhận quà: ${error.message}`, 'error');
-            return { success: false, error: error.message };
+            get().addToast(localizeError(error, 'Lỗi khi nhận quà từ thư'), 'error');
+            return { success: false, error: localizeError(error) };
           }
 
           const newExp = data?.new_exp ?? (state.exp + (msg.reward_exp || 0));
@@ -1644,8 +1637,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           debouncedAutoSync(get());
           return { success: true };
         } catch (err: any) {
-          get().addToast(err.message || 'Lỗi khi nhận thưởng', 'error');
-          return { success: false, error: err.message };
+          get().addToast(localizeError(err, 'Lỗi khi nhận thưởng'), 'error');
+          return { success: false, error: localizeError(err) };
         }
       },
 
@@ -1673,7 +1666,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khóa tài khoản', 'error');
+          get().addToast(localizeError(e, 'Lỗi khóa tài khoản'), 'error');
           return false;
         }
       },
@@ -1707,7 +1700,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             const { error: delProfileErr } = await supabase.from('profiles').delete().eq('id', targetUserId);
             if (delProfileErr) {
               console.error('Error deleting profile directly:', delProfileErr);
-              get().addToast(`Lỗi khi xóa hồ sơ người dùng: ${delProfileErr.message}`, 'error');
+              get().addToast(`Lỗi khi xóa hồ sơ người dùng: ${localizeError(delProfileErr)}`, 'error');
               return false;
             }
           }
@@ -1716,7 +1709,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().fetchCommunityProfiles();
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi xóa tài khoản', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi xóa tài khoản'), 'error');
           return false;
         }
       },
@@ -1730,14 +1723,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           if (error) {
             if (error.code === 'PGRST202' || error.message?.includes('schema cache')) {
-              get().addToast('⚠️ Bạn chưa chạy SQL tạo hàm rpc_admin_set_user_role trên Supabase SQL Editor', 'error');
+              get().addToast('⚠️ Chức năng phân quyền đang bảo trì, vui lòng thử lại sau!', 'error');
               return false;
             }
             throw error;
           }
           return true;
         } catch (e: any) {
-          get().addToast(e.message || 'Lỗi khi cập nhật phân quyền', 'error');
+          get().addToast(localizeError(e, 'Lỗi khi cập nhật phân quyền'), 'error');
           return false;
         }
       },
@@ -1801,13 +1794,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (updErr) {
               console.error('Lỗi cập nhật cover_url lên profiles:', updErr);
-              get().addToast(`Lỗi lưu ảnh bìa lên Supabase: ${updErr.message}`, 'error');
+              get().addToast(localizeError(updErr, 'Không thể lưu ảnh bìa lên máy chủ, vui lòng thử lại!'), 'error');
             } else {
               get().fetchCommunityProfiles();
             }
           } catch (e: any) {
             console.error('Lỗi cập nhật cover_url lên profiles:', e);
-            get().addToast(`Lỗi kết nối khi cập nhật ảnh bìa: ${e?.message || e}`, 'error');
+            get().addToast(localizeError(e, 'Kết nối máy chủ bị gián đoạn khi cập nhật ảnh bìa!'), 'error');
           }
         }
         await get().syncToCloud(true);
@@ -2032,7 +2025,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (rpcErr) {
               playSoundEffect('warning', state.soundEnabled);
-              get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+              get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể hoàn thành nhiệm vụ!')}`, 'error');
               return;
             }
 
@@ -2218,7 +2211,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (rpcErr) {
               playSoundEffect('warning', state.soundEnabled);
-              get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+              get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể hoàn thành nhiệm vụ!')}`, 'error');
               return;
             }
 
@@ -2386,7 +2379,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (rpcErr) {
               playSound('error_block', state.soundEnabled);
-              get().addToast(`⚠️ Giao dịch thất bại: ${rpcErr.message}`, 'error');
+              get().addToast(`⚠️ Giao dịch thất bại: ${localizeError(rpcErr.message, 'Số dư không đủ hoặc có sự cố kết nối!')}`, 'error');
               return;
             }
 
@@ -2904,7 +2897,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (stateError) {
               console.error('Supabase reset user_states error:', stateError);
-              state.addToast(`Lỗi đặt lại dữ liệu game trên máy chủ: ${stateError.message}`, 'error');
+              state.addToast(`Lỗi đặt lại dữ liệu trên máy chủ: ${localizeError(stateError)}`, 'error');
               return false;
             }
 
@@ -2929,7 +2922,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             }
           } catch (err: any) {
             console.error('Ngoại lệ khi thực thi reset Database:', err);
-            state.addToast(`Lỗi kết nối máy chủ: ${err?.message || 'Không thể đặt lại dữ liệu'}`, 'error');
+            state.addToast(`Lỗi kết nối máy chủ: ${localizeError(err, 'Không thể đặt lại dữ liệu')}`, 'error');
             return false;
           }
         }
@@ -3066,7 +3059,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 }
               } else {
                 playSoundEffect('warning', state.soundEnabled);
-                get().addToast(`⚠️ ${rpcErr.message}`, 'error');
+                get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể điểm danh chuỗi hôm nay!')}`, 'error');
                 return;
               }
             }
@@ -3340,13 +3333,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
           set({ cloudSyncStatus: 'synced', lastSyncedAt: nowStr });
           if (!silent) {
-            get().addToast('☁️ Đã đồng bộ dữ liệu lên Supabase thành công!', 'success');
+            get().addToast('☁️ Đã đồng bộ dữ liệu lên máy chủ thành công!', 'success');
           }
           return true;
         } else {
           set({ cloudSyncStatus: 'error' });
           if (!silent) {
-            get().addToast(`⚠️ Lỗi đồng bộ đám mây: ${res.error}`, 'error');
+            get().addToast(`⚠️ Lỗi đồng bộ đám mây: ${localizeError(res.error, 'Kết nối gián đoạn')}`, 'error');
           }
           return false;
         }
@@ -3391,13 +3384,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(
-            `🎉 Đã khôi phục thành công dữ liệu của "${s.playerName || cleanId}" từ Supabase!`,
+            `🎉 Đã khôi phục thành công dữ liệu của "${s.playerName || cleanId}"!`,
             'success'
           );
           return true;
         } else {
           set({ cloudSyncStatus: 'error' });
-          get().addToast(`❌ Khôi phục thất bại: ${res.error}`, 'error');
+          get().addToast(`❌ Khôi phục thất bại: ${localizeError(res.error, 'Không tìm thấy dữ liệu hoặc mã không hợp lệ')}`, 'error');
           return false;
         }
       },
@@ -3660,7 +3653,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           if (error) {
-            return { success: false, error: error.message };
+            return { success: false, error: localizeError(error, 'Đăng ký không thành công, vui lòng thử lại') };
           }
 
           if (!data.user) {
@@ -3818,7 +3811,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             };
           }
         } catch (err: any) {
-          return { success: false, error: err.message || 'Lỗi khi đăng ký' };
+          return { success: false, error: localizeError(err, 'Lỗi kết nối khi đăng ký tài khoản') };
         }
       },
 
@@ -3835,11 +3828,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           if (error) {
-            let msg = error.message;
-            if (msg.toLowerCase().includes('invalid login credentials')) {
-              msg = 'Email hoặc mật khẩu không chính xác';
-            }
-            return { success: false, error: msg };
+            return {
+              success: false,
+              error: localizeError(error, 'Email hoặc mật khẩu không chính xác'),
+            };
           }
 
           if (!data.user) {
@@ -4046,7 +4038,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');
           return { success: true };
         } catch (err: any) {
-          return { success: false, error: err.message || 'Lỗi khi đăng nhập' };
+          return { success: false, error: localizeError(err, 'Lỗi kết nối máy chủ khi đăng nhập') };
         }
       },
 

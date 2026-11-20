@@ -162,7 +162,7 @@ export const AdminLiveOpsTab: React.FC = () => {
         {/* Metric 4 */}
         <div className="bg-[#11212D] border border-[#253745] p-4.5 rounded-3xl space-y-1 shadow-md">
           <div className="flex items-center justify-between text-[#9BA8AB] text-xs font-semibold">
-            <span>Tổng EXP Toàn Server</span>
+            <span>Tổng EXP Toàn Hệ Thống</span>
             <Sparkles className="w-4 h-4 text-amber-300" />
           </div>
           <div className="text-2xl font-extrabold text-white font-rpg">

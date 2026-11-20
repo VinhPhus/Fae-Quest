@@ -101,7 +101,7 @@ export const LeaderboardHeader: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[11px] sm:text-xs font-bold text-[#CCD0CF]">
               <Swords className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Đấu Trường Danh Vọng • Supabase Realtime</span>
+              <span>Đấu Trường Danh Vọng • Cập Nhật Thời Gian Thực</span>
             </div>
             {userRole === 'admin' && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-[10px] sm:text-[11px] font-extrabold text-amber-300">
@@ -172,7 +172,7 @@ export const LeaderboardHeader: React.FC = () => {
               onClick={handleRefresh}
               disabled={isLoading}
               className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] text-xs font-extrabold flex items-center gap-1.5 shadow active:scale-95 transition cursor-pointer disabled:opacity-50 shrink-0"
-              title="Tải lại BXH người chơi thật từ Supabase"
+              title="Tải lại bảng xếp hạng người chơi"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               <span>{isLoading ? 'Đang tải...' : 'Làm Mới'}</span>

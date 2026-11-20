@@ -184,7 +184,7 @@ export const WriteJournalModal: React.FC = () => {
                     </span>
                   )}
                 </h3>
-                <p className="text-xs text-[#9BA8AB]">Nhật ký cá nhân lưu trữ an toàn & riêng tư trên Supabase</p>
+                <p className="text-xs text-[#9BA8AB]">Nhật ký cá nhân lưu trữ an toàn & riêng tư trên máy chủ</p>
               </div>
             </div>
 

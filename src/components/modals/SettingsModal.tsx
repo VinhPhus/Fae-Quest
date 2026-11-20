@@ -112,7 +112,7 @@ export const SettingsModal: React.FC = () => {
         Object.entries(preserved).forEach(([k, v]) => localStorage.setItem(k, v));
       }
 
-      addToast('✨ Đã dọn sạch bộ nhớ đệm và giải phóng dung lượng cache thành công!', 'success');
+      addToast('✨ Đã dọn sạch bộ nhớ đệm và tối ưu dung lượng thành công!', 'success');
     } catch (err) {
       console.error('Lỗi dọn dẹp cache:', err);
       addToast('Không thể dọn dẹp bộ nhớ đệm, vui lòng thử lại!', 'error');
@@ -410,7 +410,7 @@ export const SettingsModal: React.FC = () => {
                         }}
                         disabled={isSyncing}
                         className="px-3 py-1.5 rounded-xl bg-opal/40 hover:bg-opal/60 border border-opal/50 text-parchment text-xs font-bold transition flex items-center gap-1.5 shadow disabled:opacity-50"
-                        title="Đẩy dữ liệu mới nhất lên Supabase"
+                        title="Lưu dữ liệu mới nhất lên máy chủ"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 text-fae ${isSyncing ? 'animate-spin' : ''}`} />
                         <span>{isSyncing ? 'Đang lưu...' : 'Lưu Ngay'}</span>
@@ -665,11 +665,11 @@ export const SettingsModal: React.FC = () => {
           {/* TAB 2: DATA & BACKUP & RESET */}
           {activeTab === 'data' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Cloud Sync Supabase */}
+              {/* Cloud Sync */}
               <div className="space-y-3">
                 <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
                   <Cloud className="w-4 h-4 text-fae" />
-                  <span>Đồng Bộ Đám Mây Supabase (Cloud Sync)</span>
+                  <span>Đồng Bộ Đám Mây (Lưu Trữ An Toàn)</span>
                 </label>
 
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-[#06141B] via-[#11212D] to-[#06141B] border border-[#253745] shadow-lg space-y-3">
@@ -700,7 +700,7 @@ export const SettingsModal: React.FC = () => {
                   </div>
 
                   <p className="text-xs text-parchment/70 leading-relaxed">
-                    Mã này đại diện cho nhân vật của bạn trên cơ sở dữ liệu Supabase. Sử dụng mã này để đồng bộ và tiếp tục hành trình trên máy tính hoặc điện thoại khác.
+                    Mã này đại diện cho nhân vật của bạn trên hệ thống máy chủ. Sử dụng mã này để đồng bộ và tiếp tục hành trình trên máy tính hoặc điện thoại khác.
                   </p>
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -815,10 +815,10 @@ export const SettingsModal: React.FC = () => {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs font-bold text-[#CCD0CF]">
                         <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>Dọn dẹp bộ nhớ đệm (Cache)</span>
+                        <span>Dọn dẹp bộ nhớ đệm</span>
                       </div>
                       <p className="text-[11px] text-[#9BA8AB] leading-relaxed">
-                        Làm sạch Service Worker cache và dữ liệu tạm thời để app luôn nhẹ mượt (không làm mất phiên đăng nhập).
+                        Làm sạch dữ liệu đệm tạm thời để ứng dụng luôn nhẹ mượt (không làm mất phiên đăng nhập).
                       </p>
                     </div>
 
@@ -836,7 +836,7 @@ export const SettingsModal: React.FC = () => {
                       ) : (
                         <>
                           <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                          <span>Dọn Dẹp Cache Ngay</span>
+                          <span>Dọn Dẹp Ngay</span>
                         </>
                       )}
                     </button>
@@ -850,7 +850,7 @@ export const SettingsModal: React.FC = () => {
                         <span>Xóa toàn bộ Nhật Ký & Ảnh</span>
                       </div>
                       <p className="text-[11px] text-[#9BA8AB] leading-relaxed">
-                        Xóa sạch toàn bộ bài viết Nhật Ký và giải phóng 100% dung lượng ảnh đã tải lên Cloudinary.
+                        Xóa sạch toàn bộ bài viết Nhật Ký và giải phóng 100% dung lượng ảnh đã tải lên kho lưu trữ.
                       </p>
                     </div>
 
@@ -875,7 +875,7 @@ export const SettingsModal: React.FC = () => {
 
                 <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-3">
                   <p className="text-xs text-[#9BA8AB] leading-relaxed">
-                    Xóa toàn bộ ảnh cá nhân trên Cloudinary, đặt lại điểm EXP, Rank Đồng, xóa toàn bộ nhiệm vụ, lịch sử mua đồ và đưa dữ liệu về ban đầu (yêu cầu nhập chữ <strong className="text-rose-400">XAC NHAN</strong>).
+                    Xóa toàn bộ ảnh cá nhân trên kho lưu trữ, đặt lại điểm EXP, Rank Đồng, xóa toàn bộ nhiệm vụ, lịch sử mua đồ và đưa dữ liệu về ban đầu (yêu cầu nhập chữ <strong className="text-rose-400">XAC NHAN</strong>).
                   </p>
 
                   <button
@@ -1087,7 +1087,7 @@ export const SettingsModal: React.FC = () => {
                     Xác Nhận Xóa Toàn Bộ Nhật Ký?
                   </h3>
                   <p className="text-xs text-[#9BA8AB] leading-relaxed">
-                    Toàn bộ bài viết cùng tất cả hình ảnh đính kèm sẽ được xóa sạch trên Supabase và Cloudinary để giải phóng dung lượng.
+                    Toàn bộ bài viết cùng tất cả hình ảnh đính kèm sẽ được xóa sạch trên máy chủ và kho lưu trữ để giải phóng dung lượng.
                   </p>
                 </div>
 

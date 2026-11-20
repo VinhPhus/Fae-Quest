@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { SystemAchievement } from '../../types';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
+import { localizeError } from '../../utils/errorLocalization';
 import { playSound } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import {
@@ -134,9 +135,9 @@ export const AdminAchievementsTab: React.FC = () => {
       const url = await uploadImageToCloudinary(file);
       setIconUrl(url);
       playSound('ui_click', soundEnabled);
-      addToast('Tải ảnh biểu tượng lên Cloudinary thành công!', 'success');
+      addToast('Tải ảnh biểu tượng thành công!', 'success');
     } catch (err: any) {
-      addToast(err.message || 'Lỗi khi tải ảnh lên Cloudinary', 'error');
+      addToast(localizeError(err, 'Lỗi khi tải ảnh biểu tượng'), 'error');
     } finally {
       setIsUploading(false);
     }
@@ -197,7 +198,7 @@ export const AdminAchievementsTab: React.FC = () => {
                 playSound('ui_click', soundEnabled);
                 addToast('📋 Đã dán và tải ảnh từ Clipboard thành công!', 'success');
               })
-              .catch((err) => addToast(err.message || 'Lỗi tải ảnh Clipboard', 'error'))
+              .catch((err) => addToast(localizeError(err, 'Lỗi tải ảnh từ bộ nhớ tạm'), 'error'))
               .finally(() => setIsUploading(false));
             return;
           }

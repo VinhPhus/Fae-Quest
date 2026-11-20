@@ -75,7 +75,7 @@ export const syncProfileAndStateToCloud = async (
   initialRole?: UserRole
 ): Promise<{ success: boolean; error?: string }> => {
   if (!isSupabaseConfigured) {
-    return { success: false, error: 'Chưa cấu hình Supabase URL hoặc Anon Key' };
+    return { success: false, error: 'Chưa cấu hình kết nối máy chủ' };
   }
 
   try {
@@ -182,7 +182,7 @@ export const fetchCommunityLeaderboard = async (
   limit = 50
 ): Promise<{ profiles: HunterProfileCloud[]; error?: string }> => {
   if (!isSupabaseConfigured) {
-    return { profiles: [], error: 'Chưa cấu hình Supabase' };
+    return { profiles: [], error: 'Chưa cấu hình kết nối máy chủ' };
   }
 
   try {
@@ -200,7 +200,7 @@ export const fetchCommunityLeaderboard = async (
     return { profiles: nonAdminProfiles };
   } catch (err: any) {
     console.error('Lỗi khi tải BXH Supabase:', err);
-    return { profiles: [], error: err.message || 'Không thể tải BXH từ đám mây' };
+    return { profiles: [], error: 'Không thể tải bảng xếp hạng từ máy chủ' };
   }
 };
 
@@ -211,7 +211,7 @@ export const restoreUserStateFromCloud = async (
   hunterId: string
 ): Promise<{ success: boolean; state?: UserStateCloud; error?: string }> => {
   if (!isSupabaseConfigured) {
-    return { success: false, error: 'Chưa cấu hình Supabase' };
+    return { success: false, error: 'Chưa cấu hình kết nối máy chủ' };
   }
 
   try {
@@ -225,7 +225,7 @@ export const restoreUserStateFromCloud = async (
 
     if (error) throw error;
     if (!data || !data.state_json) {
-      return { success: false, error: 'Không tìm thấy dữ liệu cho mã thợ săn này' };
+      return { success: false, error: 'Không tìm thấy dữ liệu cho mã Thợ Săn này' };
     }
 
     // 2. Lấy profile chính chủ từ public.profiles để luôn ưu tiên cover_url & avatar_url chuẩn
@@ -251,6 +251,6 @@ export const restoreUserStateFromCloud = async (
 
     return { success: true, state: finalState };
   } catch (err: any) {
-    return { success: false, error: err.message || 'Lỗi khi khôi phục dữ liệu' };
+    return { success: false, error: 'Lỗi kết nối khi khôi phục dữ liệu' };
   }
 };
