@@ -46,6 +46,9 @@ export const SeasonResetModal: React.FC = () => {
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
   const [isResetting, setIsResetting] = useState<boolean>(false);
 
+  // Khóa cuộn trang khi mở modal (luôn gọi hook ở cấp cao nhất trước bất kỳ điều kiện nào)
+  useBodyScrollLock(isSeasonResetModalOpen);
+
   useEffect(() => {
     if (!isSeasonResetModalOpen) return;
 
@@ -65,16 +68,19 @@ export const SeasonResetModal: React.FC = () => {
             const curIdx = getRankIndexByExp(curExp);
             const newIdx = Math.max(0, curIdx - 2);
 
+            const curTier = RANK_TIERS[curIdx] || RANK_TIERS[0];
+            const newTier = RANK_TIERS[newIdx] || RANK_TIERS[0];
+
             return {
               id: p.id,
               username: p.username || 'Thợ Săn',
               avatar_url: p.avatar_url,
               currentExp: curExp,
-              currentTierName: RANK_TIERS[curIdx].name,
-              currentTierIcon: RANK_TIERS[curIdx].iconUrl,
-              newExp: RANK_TIERS[newIdx].minExp,
-              newTierName: RANK_TIERS[newIdx].name,
-              newTierIcon: RANK_TIERS[newIdx].iconUrl,
+              currentTierName: curTier.name,
+              currentTierIcon: curTier.iconUrl,
+              newExp: newTier.minExp,
+              newTierName: newTier.name,
+              newTierIcon: newTier.iconUrl,
             };
           });
           setHunters(mapped);
@@ -88,8 +94,6 @@ export const SeasonResetModal: React.FC = () => {
 
     fetchPreview();
   }, [isSeasonResetModalOpen]);
-
-  if (!isSeasonResetModalOpen) return null;
 
   const handleClose = () => {
     playSound('ui_click', soundEnabled);
@@ -108,19 +112,18 @@ export const SeasonResetModal: React.FC = () => {
     }
   };
 
-  useBodyScrollLock(isSeasonResetModalOpen);
-
-  if (!isSeasonResetModalOpen || typeof document === 'undefined') return null;
+  if (typeof document === 'undefined') return null;
 
   return createPortal(
     <AnimatePresence>
-      <div
-        onClick={handleClose}
-        onTouchMove={(e) => {
-          if (e.target === e.currentTarget) e.preventDefault();
-        }}
-        className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
-      >
+      {isSeasonResetModalOpen && (
+        <div
+          onClick={handleClose}
+          onTouchMove={(e) => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4"
+        >
         <motion.div
           onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
@@ -290,7 +293,8 @@ export const SeasonResetModal: React.FC = () => {
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>,
+    )}
+  </AnimatePresence>,
     document.body
   );
 };
