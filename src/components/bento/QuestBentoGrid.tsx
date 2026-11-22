@@ -16,6 +16,7 @@ import {
   Swords,
   Timer,
   Sunrise,
+  Loader2,
 } from 'lucide-react';
 import { Task } from '../../types';
 import { getTodayString } from '../../utils/dateUtils';
@@ -35,6 +36,8 @@ export const QuestBentoGrid: React.FC = () => {
     setActivePomodoroTaskId,
     setCreateQuestOpen,
     setEditingTask,
+    processingTaskIds,
+    taskLocks,
   } = useFaeQuestStore();
 
   const handleCompleteTask = (task: Task, e: React.MouseEvent) => {
@@ -278,6 +281,8 @@ export const QuestBentoGrid: React.FC = () => {
               const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
               const cat = CATEGORIES[task.category] || CATEGORIES['ca-nhan'];
               const isTomorrow = isTomorrowTask(task);
+              const isProcessing = Boolean(processingTaskIds?.includes(task.id));
+              const isLocked = Boolean(taskLocks?.[task.id] && taskLocks[task.id] > Date.now());
 
               return (
                 <motion.div
@@ -390,14 +395,29 @@ export const QuestBentoGrid: React.FC = () => {
                       </div>
                     ) : (
                       <motion.button
-                        whileTap={{ scale: 0.94 }}
+                        whileTap={!isProcessing && !isLocked ? { scale: 0.94 } : undefined}
                         type="button"
+                        disabled={isProcessing || isLocked}
                         onClick={(e) => handleCompleteTask(task, e)}
-                        className="h-8 px-3 rounded-full bg-[#06141B] border border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm hover:scale-105"
-                        title="Nhấn để hoàn thành & nhận EXP"
+                        className={`h-8 px-3 rounded-full bg-[#06141B] border font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm ${
+                          isProcessing || isLocked
+                            ? 'opacity-50 border-[#253745] text-[#4A5C6A] cursor-not-allowed'
+                            : 'border-[#4A5C6A] hover:border-[#CCD0CF] text-[#9BA8AB] hover:text-[#CCD0CF] cursor-pointer hover:scale-105'
+                        }`}
+                        title={
+                          isLocked
+                            ? 'Đang tạm khóa để chống spam thao tác'
+                            : isProcessing
+                            ? 'Đang nghiệm thu...'
+                            : 'Nhấn để hoàn thành & nhận EXP'
+                        }
                       >
-                        <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
-                        <span>Hoàn thành</span>
+                        {isProcessing ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#CCD0CF]" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-400" />
+                        )}
+                        <span>{isProcessing ? 'Đang xử lý...' : 'Hoàn thành'}</span>
                       </motion.button>
                     )}
 
@@ -447,6 +467,8 @@ export const QuestBentoGrid: React.FC = () => {
               const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
               const cat = CATEGORIES[task.category] || CATEGORIES['ca-nhan'];
               const isTomorrow = isTomorrowTask(task);
+              const isProcessing = Boolean(processingTaskIds?.includes(task.id));
+              const isLocked = Boolean(taskLocks?.[task.id] && taskLocks[task.id] > Date.now());
 
               return (
                 <motion.div
@@ -475,13 +497,28 @@ export const QuestBentoGrid: React.FC = () => {
                       </div>
                     ) : (
                       <motion.button
-                        whileTap={{ scale: 0.9 }}
+                        whileTap={!isProcessing && !isLocked ? { scale: 0.9 } : undefined}
                         type="button"
+                        disabled={isProcessing || isLocked}
                         onClick={(e) => handleCompleteTask(task, e)}
-                        className="w-6 h-6 rounded-lg border-2 bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] flex items-center justify-center shrink-0 transition-colors cursor-pointer text-transparent"
-                        title="Nhấn để hoàn thành & nhận EXP"
+                        className={`w-6 h-6 rounded-lg border-2 bg-[#06141B] flex items-center justify-center shrink-0 transition-colors ${
+                          isProcessing || isLocked
+                            ? 'opacity-50 border-[#253745] cursor-not-allowed text-[#4A5C6A]'
+                            : 'border-[#4A5C6A] hover:border-[#CCD0CF] cursor-pointer text-transparent'
+                        }`}
+                        title={
+                          isLocked
+                            ? 'Đang tạm khóa để chống spam thao tác'
+                            : isProcessing
+                            ? 'Đang nghiệm thu...'
+                            : 'Nhấn để hoàn thành & nhận EXP'
+                        }
                       >
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        {isProcessing ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-[#CCD0CF]" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        )}
                       </motion.button>
                     )}
 

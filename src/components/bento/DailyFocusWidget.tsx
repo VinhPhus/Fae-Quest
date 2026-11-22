@@ -2,10 +2,10 @@ import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
 import { CoinIcon } from '../ui/CoinIcon';
-import { Flame, Check } from 'lucide-react';
+import { Flame, Check, Loader2 } from 'lucide-react';
 
 export const DailyFocusWidget: React.FC = () => {
-  const { tasks, toggleTask } = useFaeQuestStore();
+  const { tasks, toggleTask, processingTaskIds, taskLocks } = useFaeQuestStore();
 
   // Pick daily recurring tasks first; if fewer than 3, fill with top pending tasks
   const dailyTasks = tasks.filter((t) => t.isDailyRecurring);
@@ -53,6 +53,9 @@ export const DailyFocusWidget: React.FC = () => {
             const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
             const cat = CATEGORIES[task.category] || CATEGORIES['ca-nhan'];
 
+            const isProcessing = Boolean(processingTaskIds?.includes(task.id));
+            const isLocked = Boolean(taskLocks?.[task.id] && taskLocks[task.id] > Date.now());
+
             return (
               <div
                 key={task.id}
@@ -94,14 +97,30 @@ export const DailyFocusWidget: React.FC = () => {
                 ) : (
                   <button
                     type="button"
+                    disabled={isProcessing || isLocked}
                     onClick={(e) => {
+                      e.stopPropagation();
                       const rect = e.currentTarget.getBoundingClientRect();
                       toggleTask(task.id, { x: rect.right, y: rect.top });
                     }}
-                    className="w-6 h-6 rounded-lg border bg-[#06141B] border-[#4A5C6A] hover:border-[#CCD0CF] text-transparent hover:scale-105 flex items-center justify-center shrink-0 transition cursor-pointer"
-                    title="Hoàn thành ngay"
+                    className={`w-6 h-6 rounded-lg border bg-[#06141B] flex items-center justify-center shrink-0 transition ${
+                      isProcessing || isLocked
+                        ? 'opacity-50 border-[#253745] cursor-not-allowed'
+                        : 'border-[#4A5C6A] hover:border-[#CCD0CF] text-transparent hover:scale-105 cursor-pointer'
+                    }`}
+                    title={
+                      isLocked
+                        ? 'Đang tạm khóa để chống spam thao tác'
+                        : isProcessing
+                        ? 'Đang nghiệm thu...'
+                        : 'Hoàn thành ngay'
+                    }
                   >
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    {isProcessing ? (
+                      <Loader2 className="w-3 h-3 animate-spin text-[#CCD0CF]" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    )}
                   </button>
                 )}
               </div>

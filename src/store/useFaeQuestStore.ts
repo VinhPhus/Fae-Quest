@@ -208,6 +208,11 @@ interface FaeQuestState {
   equippedTitleId: string;
   focusSessionsCompleted: number;
 
+  // Anti-Cheat & Concurrency Lock
+  processingTaskIds: string[];
+  taskLocks: Record<string, number>;
+  taskToggleHistory: Record<string, number[]>;
+
   // Supabase Auth & Cloud Sync
   currentUser: HunterUser | null;
   authLoading: boolean;
@@ -421,6 +426,31 @@ const debouncedAutoSync = (store: any) => {
   }, 500);
 };
 
+const QUICK_COMPLETION_SESSION_KEY = 'faequest_quick_completions';
+
+export const getQuickCompletions = (): number[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = sessionStorage.getItem(QUICK_COMPLETION_SESSION_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    const tenMinsAgo = Date.now() - 10 * 60 * 1000;
+    return arr.filter((t) => typeof t === 'number' && t > tenMinsAgo);
+  } catch {
+    return [];
+  }
+};
+
+export const recordQuickCompletion = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getQuickCompletions();
+    current.push(Date.now());
+    sessionStorage.setItem(QUICK_COMPLETION_SESSION_KEY, JSON.stringify(current));
+  } catch {}
+};
+
 export const useFaeQuestStore = create<FaeQuestState>()(
   persist(
     (set, get) => ({
@@ -450,6 +480,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       unlockedTitleIds: ['title_tan_binh_gai_do'],
       equippedTitleId: 'title_tan_binh_gai_do',
       focusSessionsCompleted: 2,
+
+      // Anti-Cheat & Concurrency Lock
+      processingTaskIds: [],
+      taskLocks: {},
+      taskToggleHistory: {},
 
       hunterId: getOrInitHunterId(),
       cloudSyncStatus: 'idle',
@@ -1993,198 +2028,290 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      toggleTask: async (id: string, coords) => {
+      toggleTask: async (id: string, coords, forceSkipAgeCheck?: boolean) => {
         const state = get();
         const task = state.tasks.find((t) => t.id === id);
         if (!task) return;
 
-        const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
-        const oldRankIdx = getRankIndexByExp(state.exp);
         const now = Date.now();
 
-        if (task.completed) {
-          // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành vĩnh viễn
+        // 1. Chống Double-Click: Nếu task đang được xử lý thì chặn ngay
+        if (state.processingTaskIds?.includes(id)) {
           return;
         }
 
-        // Chống gian lận: Khóa hoàn thành đối với nhiệm vụ thuộc Ngày Mai / Tương lai
-        const today = getTodayString();
-        if (task.target_date && task.target_date > today) {
+        // 2. Chống Spam Toggle: Nếu task đang bị tạm khóa thì báo warning và chặn
+        const lockUntil = state.taskLocks?.[id] || 0;
+        if (lockUntil > now) {
+          const remSec = Math.max(1, Math.ceil((lockUntil - now) / 1000));
           playSoundEffect('warning', state.soundEnabled);
-          get().addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
+          get().addToast(`Thao tác quá nhanh! Nút trạng thái của nhiệm vụ này đang bị tạm khóa trong ${remSec} giây.`, 'info');
           return;
         }
 
-        // Anti-Cheat 1: 3-second Cooldown between completions
-        if (now - state.lastCompletedTimestamp < 3000) {
-          playSoundEffect('warning', state.soundEnabled);
-          get().addToast('⏳ Chậm lại nào Thợ Săn! Hãy nghỉ 3 giây trước khi nghiệm thu nhiệm vụ tiếp theo.', 'info');
-          return;
-        }
-
-        // Anti-Cheat 2: Minimum Task Age (60 seconds)
-        const taskAge = now - (task.createdAt || 0);
-        if (taskAge < 60000) {
-          playSoundEffect('warning', state.soundEnabled);
-          get().addToast('⏳ Nhiệm vụ vừa được khắc lệnh chưa đầy 1 phút! Hãy thực hiện ít nhất 1 phút trước khi nghiệm thu.', 'info');
-          return;
-        }
-
-        let streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
-        let awardedExp = Math.round(diff.exp * streakBonusMultiplier);
-        let awardedCoins = diff.coins;
-        let newExp = state.exp + awardedExp;
-        let finalCoins = state.coins + awardedCoins;
-        let rankUpBonus = 0;
-        let newRankTier: RankTier | null = null;
-
-        // BẢO MẬT MÁY CHỦ: Xác thực qua Server-Side RPC
-        if (state.currentUser) {
-          try {
-            let { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
-              p_difficulty: task.difficulty,
-              p_focus_minutes: 0,
-              p_is_focus_completed: false,
-              p_category: task.category,
-            });
-
-            if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
-              try { await supabase.rpc('rpc_ensure_profile'); } catch { }
-              await get().syncToCloud(true);
-              const retry = await supabase.rpc('rpc_complete_task', {
-                p_difficulty: task.difficulty,
-                p_focus_minutes: 0,
-                p_is_focus_completed: false,
-                p_category: task.category,
-              });
-              rpcRes = retry.data;
-              rpcErr = retry.error;
-            }
-
-            if (rpcErr) {
-              playSoundEffect('warning', state.soundEnabled);
-              get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể hoàn thành nhiệm vụ!')}`, 'error');
-              return;
-            }
-
-            if (rpcRes) {
-              awardedExp = rpcRes.awarded_exp ?? awardedExp;
-              awardedCoins = rpcRes.awarded_coins ?? awardedCoins;
-              newExp = rpcRes.new_exp ?? newExp;
-              finalCoins = rpcRes.new_coins ?? finalCoins;
-              rankUpBonus = rpcRes.rank_bonus_coins ?? 0;
-              if (rpcRes.rank_up_occurred) {
-                const newRankIdx = getRankIndexByExp(newExp);
-                newRankTier = RANK_TIERS[newRankIdx];
-              }
-            }
-          } catch (e: any) {
-            console.warn('RPC complete_task error:', e);
-          }
-        } else {
-          // Fallback offline / guest
-          const newRankIdx = getRankIndexByExp(newExp);
-          if (newRankIdx > oldRankIdx) {
-            for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
-              rankUpBonus += RANK_TIERS[i].coinBonus;
-            }
-            newRankTier = RANK_TIERS[newRankIdx];
-          }
-          finalCoins = state.coins + awardedCoins + rankUpBonus;
-        }
-
-        // Spawn floating reward & coin particles
-        if (coords) {
-          triggerCoinBurst(coords.x, coords.y, 8);
-          const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
-          const text = streakBonusMultiplier > 1
-            ? `+${awardedExp} EXP (+20% Streak!)  •  +${awardedCoins} Xu`
-            : `+${awardedExp} EXP  •  +${awardedCoins} Xu`;
+        // Cập nhật lịch sử toggle của task này trong 1 phút qua
+        const oneMinuteAgo = now - 60 * 1000;
+        const recentToggles = (state.taskToggleHistory?.[id] || []).filter((t) => t > oneMinuteAgo);
+        if (recentToggles.length >= 2) {
+          // Đã bấm quá 2 lần trong 1 phút -> Khóa thẻ 30 giây
+          const newLock = now + 30 * 1000;
           set((prev) => ({
-            floatingRewards: [...prev.floatingRewards, { id: rewardId, x: coords.x, y: coords.y, text }],
+            taskLocks: { ...(prev.taskLocks || {}), [id]: newLock },
+            taskToggleHistory: {
+              ...(prev.taskToggleHistory || {}),
+              [id]: [...recentToggles, now],
+            },
           }));
-          setTimeout(() => {
-            set((prev) => ({
-              floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
-            }));
-          }, 1400);
+          playSoundEffect('warning', state.soundEnabled);
+          get().addToast('Phát hiện thao tác liên tục! Nút hoàn thành của nhiệm vụ này đã bị tạm khóa trong 30 giây.', 'info');
+          return;
         }
 
-        let newStreak = state.streakDays;
-        if (state.lastActiveDate !== today) {
-          newStreak = state.streakDays + 1;
-        }
-
+        // Ghi nhận lần bấm này và đưa vào processingTaskIds
         set((prev) => ({
-          exp: newExp,
-          coins: finalCoins,
-          completedTotal: prev.completedTotal + 1,
-          dailyCompletedCount: prev.dailyCompletedCount + 1,
-          dailyBossCompletedCount: task.difficulty === 'boss' ? prev.dailyBossCompletedCount + 1 : prev.dailyBossCompletedCount,
-          streakDays: newStreak,
-          lastActiveDate: today,
-          lastCompletedTimestamp: now,
-          tasks: prev.tasks.map((t) =>
-            t.id === id
-              ? {
-                ...t,
-                completed: true,
-                rewardClaimed: true,
-                completedAt: now,
-                lastAwardedExp: awardedExp,
-                lastAwardedCoins: awardedCoins,
-                lastRankUpBonus: rankUpBonus,
-              }
-              : t
-          ),
+          taskToggleHistory: {
+            ...(prev.taskToggleHistory || {}),
+            [id]: [...recentToggles, now],
+          },
+          processingTaskIds: [...(prev.processingTaskIds || []), id],
         }));
 
-        get().checkSystemMilestones();
+        try {
+          if (task.completed) {
+            // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành vĩnh viễn
+            return;
+          }
 
-        const diffSoundMap: Record<string, 'quest_easy' | 'quest_medium' | 'quest_hard' | 'quest_boss'> = {
-          easy: 'quest_easy',
-          medium: 'quest_medium',
-          hard: 'quest_hard',
-          boss: 'quest_boss',
-        };
-        const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
+          // Chống gian lận: Khóa hoàn thành đối với nhiệm vụ thuộc Ngày Mai / Tương lai
+          const today = getTodayString();
+          if (task.target_date && task.target_date > today) {
+            playSoundEffect('warning', state.soundEnabled);
+            get().addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
+            return;
+          }
 
-        const newRankIdx = getRankIndexByExp(newExp);
-        const isLevelUp = newRankIdx > oldRankIdx;
-        const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
+          // Tính tuổi thọ nhiệm vụ (taskAgeMs)
+          const createdAtMs =
+            typeof task.createdAt === 'number' && task.createdAt > 0
+              ? task.createdAt
+              : (task as any).created_at
+              ? new Date((task as any).created_at).getTime()
+              : now;
+          const taskAgeMs = Math.max(0, now - createdAtMs);
 
-        // Kích hoạt Floating Reward & Level Up Overlay
-        get().triggerRewardPopup({
-          avatarUrl: state.avatarUrl,
-          oldExp: state.exp,
-          newExp,
-          maxExp: effectiveTier.maxExp,
-          addedExp: awardedExp,
-          addedCoins: awardedCoins,
-          isLevelUp,
-          newRankName: effectiveTier.name,
-        });
+          // KIỂM TRA 1: Nhiệm vụ có gắn thời gian Focus (focusDuration >= 15 phút)
+          // Nếu không hoàn thành qua bộ đếm Focus Timer (forceSkipAgeCheck), yêu cầu taskAgeMs >= 30% focusDuration
+          if (!forceSkipAgeCheck && task.focusDuration && task.focusDuration >= 15) {
+            const minRequiredFocusAgeMs = 0.3 * (task.focusDuration * 60 * 1000);
+            if (taskAgeMs < minRequiredFocusAgeMs) {
+              playSoundEffect('warning', state.soundEnabled);
+              get().addToast('Thử thách cần thêm thời gian rèn luyện hoặc hãy bật chế độ Focus để nghiệm thu!', 'info');
+              return;
+            }
+          }
 
-        if (newRankTier) {
-          triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
-          try {
-            confetti({
-              particleCount: 80,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
+          // KIỂM TRA 2: Tuổi thọ nhiệm vụ & Anti-Spam Farming
+          // Nếu taskAgeMs >= 3 phút (3 * 60 * 1000): Quy tắc Batch Check-off hợp lệ -> Tick liên tiếp tốc độ bất kỳ!
+          if (taskAgeMs < 3 * 60 * 1000) {
+            // Nếu task có tuổi thọ ngắn (< 2 phút):
+            if (taskAgeMs < 2 * 60 * 1000) {
+              const tenMinsAgo = now - 10 * 60 * 1000;
+              const recentQuick = getQuickCompletions().filter((t) => t > tenMinsAgo);
+
+              // 1 đến 2 lần đầu trong vòng 10 phút: Cho phép bình thường
+              // Từ lần thứ 3 trở đi trong vòng 10 phút: Chặn thao tác
+              if (recentQuick.length >= 2) {
+                playSoundEffect('warning', state.soundEnabled);
+                get().addToast('Lệnh vừa khắc chưa đủ thời gian tôi luyện. Hãy hoàn thành thử thách thực tế trước khi nghiệm thu!', 'info');
+                return;
+              }
+
+              // Ghi nhận lần hoàn thành ngắn hợp lệ
+              recordQuickCompletion();
+            }
+          }
+
+          // KIỂM TRA 3: Ngưỡng Thể Lực Ngày (Daily Reward Cap: tối đa 20 nhiệm vụ nhận thưởng/ngày)
+          const isNewDay = state.lastActiveDate !== today;
+          const effectiveDailyCount = isNewDay ? 0 : (state.dailyCompletedCount || 0);
+          const isDailyCapReached = effectiveDailyCount >= 20;
+
+          const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
+          const oldRankIdx = getRankIndexByExp(state.exp);
+
+          let streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
+          let awardedExp = isDailyCapReached ? 0 : Math.round(diff.exp * streakBonusMultiplier);
+          let awardedCoins = isDailyCapReached ? 0 : diff.coins;
+          let newExp = state.exp + awardedExp;
+          let finalCoins = state.coins + awardedCoins;
+          let rankUpBonus = 0;
+          let newRankTier: RankTier | null = null;
+
+          if (isDailyCapReached) {
+            // Đã chạm ngưỡng 20 nhiệm vụ trong ngày: Vẫn ghi nhận hoàn thành nhưng không cộng thêm EXP / Xu
+            get().addToast('Thợ săn đã chạm ngưỡng thể lực hôm nay — nhiệm vụ được ghi nhận nhưng không cộng thêm EXP', 'info');
+          } else {
+            // Chưa chạm ngưỡng: Gửi xác thực qua Server-Side RPC nếu đã đăng nhập
+            if (state.currentUser) {
+              try {
+                let { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
+                  p_difficulty: task.difficulty,
+                  p_focus_minutes: 0,
+                  p_is_focus_completed: false,
+                  p_category: task.category,
+                });
+
+                if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
+                  try { await supabase.rpc('rpc_ensure_profile'); } catch { }
+                  await get().syncToCloud(true);
+                  const retry = await supabase.rpc('rpc_complete_task', {
+                    p_difficulty: task.difficulty,
+                    p_focus_minutes: 0,
+                    p_is_focus_completed: false,
+                    p_category: task.category,
+                  });
+                  rpcRes = retry.data;
+                  rpcErr = retry.error;
+                }
+
+                if (rpcErr) {
+                  playSoundEffect('warning', state.soundEnabled);
+                  get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể hoàn thành nhiệm vụ!')}`, 'error');
+                  return;
+                }
+
+                if (rpcRes) {
+                  awardedExp = rpcRes.awarded_exp ?? awardedExp;
+                  awardedCoins = rpcRes.awarded_coins ?? awardedCoins;
+                  newExp = rpcRes.new_exp ?? newExp;
+                  finalCoins = rpcRes.new_coins ?? finalCoins;
+                  rankUpBonus = rpcRes.rank_bonus_coins ?? 0;
+                  if (rpcRes.rank_up_occurred) {
+                    const newRankIdx = getRankIndexByExp(newExp);
+                    newRankTier = RANK_TIERS[newRankIdx];
+                  }
+                }
+              } catch (e: any) {
+                console.warn('RPC complete_task error:', e);
+              }
+            } else {
+              // Fallback offline / guest
+              const newRankIdx = getRankIndexByExp(newExp);
+              if (newRankIdx > oldRankIdx) {
+                for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
+                  rankUpBonus += RANK_TIERS[i].coinBonus;
+                }
+                newRankTier = RANK_TIERS[newRankIdx];
+              }
+              finalCoins = state.coins + awardedCoins + rankUpBonus;
+            }
+
+            // Spawn floating reward & coin burst chỉ khi có thưởng
+            if (coords && (awardedExp > 0 || awardedCoins > 0)) {
+              triggerCoinBurst(coords.x, coords.y, 8);
+              const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
+              const text =
+                streakBonusMultiplier > 1
+                  ? `+${awardedExp} EXP (+20% Streak!)  •  +${awardedCoins} Xu`
+                  : `+${awardedExp} EXP  •  +${awardedCoins} Xu`;
+              set((prev) => ({
+                floatingRewards: [...prev.floatingRewards, { id: rewardId, x: coords.x, y: coords.y, text }],
+              }));
+              setTimeout(() => {
+                set((prev) => ({
+                  floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
+                }));
+              }, 1400);
+            }
+          }
+
+          let newStreak = state.streakDays;
+          if (state.lastActiveDate !== today) {
+            newStreak = state.streakDays + 1;
+          }
+
+          set((prev) => ({
+            exp: newExp,
+            coins: finalCoins,
+            completedTotal: prev.completedTotal + 1,
+            dailyCompletedCount: effectiveDailyCount + 1,
+            dailyBossCompletedCount:
+              task.difficulty === 'boss' ? prev.dailyBossCompletedCount + 1 : prev.dailyBossCompletedCount,
+            streakDays: newStreak,
+            lastActiveDate: today,
+            lastCompletedTimestamp: now,
+            tasks: prev.tasks.map((t) =>
+              t.id === id
+                ? {
+                    ...t,
+                    completed: true,
+                    rewardClaimed: !isDailyCapReached,
+                    completedAt: now,
+                    lastAwardedExp: awardedExp,
+                    lastAwardedCoins: awardedCoins,
+                    lastRankUpBonus: rankUpBonus,
+                  }
+                : t
+            ),
+          }));
+
+          get().checkSystemMilestones();
+
+          const diffSoundMap: Record<string, 'quest_easy' | 'quest_medium' | 'quest_hard' | 'quest_boss'> = {
+            easy: 'quest_easy',
+            medium: 'quest_medium',
+            hard: 'quest_hard',
+            boss: 'quest_boss',
+          };
+          const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
+
+          const newRankIdx = getRankIndexByExp(newExp);
+          const isLevelUp = newRankIdx > oldRankIdx;
+          const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
+
+          if (!isDailyCapReached) {
+            // Kích hoạt Floating Reward & Level Up Overlay khi có thưởng
+            get().triggerRewardPopup({
+              avatarUrl: state.avatarUrl,
+              oldExp: state.exp,
+              newExp,
+              maxExp: effectiveTier.maxExp,
+              addedExp: awardedExp,
+              addedCoins: awardedCoins,
+              isLevelUp,
+              newRankName: effectiveTier.name,
             });
-          } catch (e) { }
-          playSound('rank_up', state.soundEnabled);
-          // Đợi RewardPopupOverlay phát xong 3s mới hiển thị RankUpModal chi tiết
-          setTimeout(() => {
-            set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
-          }, 3200);
-        } else {
-          playSound(questSound, state.soundEnabled);
-          get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
+
+            if (newRankTier) {
+              triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
+              try {
+                confetti({
+                  particleCount: 80,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                  colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
+                });
+              } catch (e) { }
+              playSound('rank_up', state.soundEnabled);
+              // Đợi RewardPopupOverlay phát xong 3s mới hiển thị RankUpModal chi tiết
+              setTimeout(() => {
+                set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
+              }, 3200);
+            } else {
+              playSound(questSound, state.soundEnabled);
+              get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
+            }
+          } else {
+            playSound(questSound, state.soundEnabled);
+          }
+
+          debouncedAutoSync(get());
+        } finally {
+          // Giải phóng cờ đang xử lý của task
+          set((prev) => ({
+            processingTaskIds: (prev.processingTaskIds || []).filter((tId) => tId !== id),
+          }));
         }
-        debouncedAutoSync(get());
       },
 
       deleteTask: (id: string) => {
