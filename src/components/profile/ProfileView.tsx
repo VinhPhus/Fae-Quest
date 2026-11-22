@@ -266,6 +266,9 @@ export const ProfileView: React.FC = () => {
       setBase64RankIcon(rankB64);
       setBase64TitleIcon(titleB64);
 
+      // Chờ React cập nhật DOM với các state ảnh base64 mới
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
       // 2. Chờ font hệ thống / webfont sẵn sàng
       if (document.fonts?.ready) {
         try {
@@ -281,17 +284,34 @@ export const ProfileView: React.FC = () => {
       }
       await waitForImagesToLoad(exportCardRef.current);
 
-      // 4. Chờ 1 nhịp requestAnimationFrame để trình duyệt hoàn tất vẽ đồ họa
+      // 4. Chờ 2 nhịp requestAnimationFrame để trình duyệt hoàn tất vẽ đồ họa
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
       // 5. Xuất thẻ chuẩn 1080x1920 (540x960, pixelRatio: 2) với nền trong suốt để giữ nguyên 4 góc bo tròn
-      const dataUrl = await toPng(exportCardRef.current, {
+      const transparent1x1 =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAAElFTkSuQmCC';
+      const toPngOptions = {
         width: 540,
         height: 960,
         pixelRatio: 2,
         backgroundColor: 'transparent',
-        cacheBust: true,
-      });
+        skipFonts: true,
+        fontEmbedCSS: '',
+        cacheBust: false,
+        imagePlaceholder: transparent1x1,
+        onImageErrorHandler: () => transparent1x1,
+      };
+
+      let dataUrl: string;
+      try {
+        dataUrl = await toPng(exportCardRef.current, toPngOptions);
+      } catch (firstErr) {
+        console.warn('Transparent export failed, retrying with solid background:', firstErr);
+        dataUrl = await toPng(exportCardRef.current, {
+          ...toPngOptions,
+          backgroundColor: '#06141B',
+        });
+      }
 
       // Lưu đệm để lần sau mở tức thì
       battleCardCache = { signature: profileSignature, imageDataUrl: dataUrl };
@@ -745,7 +765,7 @@ export const ProfileView: React.FC = () => {
         ref={exportCardRef}
         playerName={playerName}
         avatarBase64={base64Avatar}
-        coverBase64={base64Cover || coverUrl || DEFAULT_COVER_URL}
+        coverBase64={base64Cover}
         currentTier={currentTier}
         nextTier={nextTier}
         exp={exp}
@@ -753,7 +773,7 @@ export const ProfileView: React.FC = () => {
         streakDays={streakDays}
         completedTotal={completedTotal}
         titleName={titleObj.name}
-        titleIconUrl={base64TitleIcon || titleObj.iconUrl}
+        titleIconUrl={base64TitleIcon}
         titleRarity={titleObj.rarity}
         hunterId={hunterId}
         playerRankPos={playerRankPos}

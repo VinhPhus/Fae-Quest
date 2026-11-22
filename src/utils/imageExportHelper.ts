@@ -7,38 +7,63 @@ export async function imageUrlToBase64(url: string): Promise<string> {
   if (!url) return '';
   if (url.startsWith('data:image')) return url;
 
-  // Try standard fetch first
+  // Make relative URLs absolute so fetch works reliably
+  let targetUrl = url;
+  if (typeof window !== 'undefined' && url.startsWith('/')) {
+    targetUrl = window.location.origin + url;
+  }
+
+  // Add cache-busting param for remote http(s) URLs so the browser doesn't serve a non-CORS cached entry
+  let fetchUrl = targetUrl;
+  if (fetchUrl.startsWith('http://') || fetchUrl.startsWith('https://')) {
+    const separator = fetchUrl.includes('?') ? '&' : '?';
+    fetchUrl = `${fetchUrl}${separator}_c=${Date.now()}`;
+  }
+
+  // 1. Try standard fetch with timeout
   try {
-    const res = await fetch(url, { mode: 'cors' });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(fetchUrl, { mode: 'cors', signal: controller.signal });
+    clearTimeout(timer);
+
     if (res.ok) {
       const blob = await res.blob();
-      return await new Promise<string>((resolve, reject) => {
+      return await new Promise<string>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           if (typeof reader.result === 'string') {
             resolve(reader.result);
           } else {
-            reject(new Error('Failed to read as data URL'));
+            resolve('');
           }
         };
-        reader.onerror = reject;
+        reader.onerror = () => resolve('');
         reader.readAsDataURL(blob);
       });
     }
   } catch (err) {
-    console.warn('[imageUrlToBase64] Fetch failed, trying Canvas fallback:', err);
+    console.warn('[imageUrlToBase64] Fetch failed, trying Canvas fallback:', fetchUrl, err);
   }
 
-  // Fallback to Image loading via Canvas with anonymous crossOrigin
+  // 2. Fallback to Image loading via Canvas with anonymous crossOrigin
   try {
     return await new Promise<string>((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
+
+      const timeout = setTimeout(() => {
+        img.onload = null;
+        img.onerror = null;
+        resolve('');
+      }, 3000);
+
       img.onload = () => {
+        clearTimeout(timeout);
         try {
           const canvas = document.createElement('canvas');
-          canvas.width = img.naturalWidth || img.width;
-          canvas.height = img.naturalHeight || img.height;
+          canvas.width = img.naturalWidth || img.width || 300;
+          canvas.height = img.naturalHeight || img.height || 300;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             resolve('');
@@ -50,10 +75,13 @@ export async function imageUrlToBase64(url: string): Promise<string> {
           resolve('');
         }
       };
+
       img.onerror = () => {
+        clearTimeout(timeout);
         resolve('');
       };
-      img.src = url;
+
+      img.src = fetchUrl;
     });
   } catch {
     return '';
@@ -77,7 +105,7 @@ export async function waitForImagesToLoad(container: HTMLElement): Promise<void>
         img.addEventListener('load', onDone);
         img.addEventListener('error', onDone);
         // Safety timeout so export never hangs
-        setTimeout(onDone, 600);
+        setTimeout(onDone, 500);
       });
     })
   );

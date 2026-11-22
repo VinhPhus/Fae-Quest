@@ -1,7 +1,6 @@
 import React, { forwardRef } from 'react';
 import { RankTier } from '../../types';
 import { Flame, CheckCircle2, Trophy, Shield, Sparkles } from 'lucide-react';
-import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 
 export interface HunterBattleCardExportProps {
   playerName: string;
@@ -70,7 +69,7 @@ export const RANK_GLOW_STYLES: Record<string, { border: string; shadow: string; 
 
 /**
  * Fixed 9:16 (540x960) Off-screen Card for High-Res PNG Export (1080x1920)
- * Thiết kế tràn viền bo tròn 32px, không viền đệm thừa
+ * Thiết kế tràn viền bo tròn 32px, bảo vệ 100% data: URL cho tất cả ảnh để không bao giờ bị lỗi CORS
  */
 export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCardExportProps>(
   (
@@ -131,12 +130,11 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
           <div className="pt-4 px-6 pb-2.5 flex items-center justify-between border-b border-[#253745]/80 relative z-20 bg-[#06141B]/80 backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#06141B] border border-[#4A5C6A] p-1 flex items-center justify-center shadow-md">
-                {logoBase64 ? (
+                {logoBase64 && logoBase64.startsWith('data:') ? (
                   <img
                     src={logoBase64}
                     alt="FaeQuest Logo"
                     className="w-full h-full object-contain [image-rendering:pixelated]"
-                    crossOrigin="anonymous"
                   />
                 ) : (
                   <Shield className="w-6 h-6 text-amber-400" />
@@ -162,12 +160,18 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
           <div className="relative flex flex-col items-center z-10 w-full">
             {/* Cover Banner (Nửa trên thẻ, cao 300px, sắc nét, opacity 85%) */}
             <div className="w-full h-[300px] overflow-hidden relative bg-[#06141B] shrink-0">
-              <img
-                src={coverBase64 || DEFAULT_COVER_URL}
-                alt="Hunter Cover"
-                className="w-full h-[300px] object-cover object-center opacity-85 brightness-95"
-                crossOrigin="anonymous"
-              />
+              {coverBase64 && coverBase64.startsWith('data:') ? (
+                <img
+                  src={coverBase64}
+                  alt="Hunter Cover"
+                  className="w-full h-[300px] object-cover object-center opacity-85 brightness-95"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[#11212D] via-[#253745] to-[#06141B] relative flex items-center justify-center">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(251,191,36,0.18)_0%,transparent_75%)]" />
+                  <Shield className="w-20 h-20 text-white/10" />
+                </div>
+              )}
               {/* Lớp gradient chuyển sắc nhẹ ở phần đáy */}
               <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/20 via-[#06141B]/45 to-[#06141B]" />
             </div>
@@ -181,12 +185,11 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                   boxShadow: glowConfig.shadow,
                 }}
               >
-                {avatarBase64 ? (
+                {avatarBase64 && avatarBase64.startsWith('data:') ? (
                   <img
                     src={avatarBase64}
                     alt={playerName}
                     className="w-full h-full object-cover rounded-full"
-                    crossOrigin="anonymous"
                   />
                 ) : (
                   <div className="w-full h-full rounded-full bg-[#11212D] flex items-center justify-center text-white font-black text-2xl">
@@ -202,12 +205,13 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                     boxShadow: `0 4px 14px rgba(0,0,0,0.8), 0 0 12px ${glowConfig.border}66`,
                   }}
                 >
-                  <img
-                    src={rankIconBase64 || currentTier.iconUrl}
-                    alt={currentTier.name}
-                    className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
-                    crossOrigin="anonymous"
-                  />
+                  {rankIconBase64 && rankIconBase64.startsWith('data:') && (
+                    <img
+                      src={rankIconBase64}
+                      alt={currentTier.name}
+                      className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
+                    />
+                  )}
                   <span
                     className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap"
                     style={{ color: glowConfig.border }}
@@ -233,12 +237,11 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                       : 'border-sky-400/60 text-sky-300'
                   }`}
                 >
-                  {titleIconUrl && (
+                  {titleIconUrl && titleIconUrl.startsWith('data:') && (
                     <img
                       src={titleIconUrl}
                       alt={titleName}
                       className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
-                      crossOrigin="anonymous"
                     />
                   )}
                   <span>{titleName}</span>
@@ -267,12 +270,17 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                   boxShadow: `0 0 20px ${glowConfig.border}33`,
                 }}
               >
-                <img
-                  src={rankIconBase64 || currentTier.iconUrl}
-                  alt={currentTier.name}
-                  className="w-full h-full object-contain [image-rendering:pixelated]"
-                  crossOrigin="anonymous"
-                />
+                {rankIconBase64 && rankIconBase64.startsWith('data:') ? (
+                  <img
+                    src={rankIconBase64}
+                    alt={currentTier.name}
+                    className="w-full h-full object-contain [image-rendering:pixelated]"
+                  />
+                ) : (
+                  <span className="font-rpg font-black text-2xl" style={{ color: glowConfig.border }}>
+                    {currentTier.name.slice(0, 1)}
+                  </span>
+                )}
               </div>
 
               <div className="flex-1 min-w-0">
