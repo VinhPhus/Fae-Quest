@@ -13,14 +13,12 @@ import { EASING_SPRING } from '../../constants/motion';
 import {
   Scroll,
   Flame,
-  RotateCcw,
   CheckCircle2,
   Lock,
   Sparkles,
   Trophy,
   Award,
   Calendar,
-  AlertTriangle,
   Gift,
   ChevronLeft,
   ChevronRight,
@@ -93,13 +91,11 @@ export const SystemQuestsView: React.FC = () => {
     focusSessionsCompleted,
     exp,
     checkInStreakQuest,
-    resetStreakQuest,
     claimSystemQuestReward,
     equipTitle,
   } = useFaeQuestStore();
 
   const titleCarouselRef = useRef<HTMLDivElement | null>(null);
-  const [confirmResetQuestId, setConfirmResetQuestId] = useState<string | null>(null);
   const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'streak' | 'milestone'>('all');
 
   const getClientTodayStr = () => {
@@ -109,24 +105,12 @@ export const SystemQuestsView: React.FC = () => {
 
   const [todayStr, setTodayStr] = useState<string>(getClientTodayStr);
 
-  // Countdown to 00:00 midnight (lock reset period)
-  const [countdownString, setCountdownString] = useState<string>('');
-
   useEffect(() => {
-    const updateCountdown = () => {
-      const now = new Date();
-      const currentToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      setTodayStr(currentToday);
-
-      const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-      const diffMs = Math.max(0, midnight.getTime() - now.getTime());
-      const hours = Math.floor(diffMs / (1000 * 60 * 60));
-      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      setCountdownString(`${String(hours).padStart(2, '0')}g ${String(minutes).padStart(2, '0')}p`);
+    const updateToday = () => {
+      setTodayStr(getClientTodayStr());
     };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 5000);
+    updateToday();
+    const interval = setInterval(updateToday, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -357,8 +341,6 @@ export const SystemQuestsView: React.FC = () => {
             const currentStreak = quest.currentStreak || 0;
             const pct = Math.min(100, Math.round((currentStreak / targetDays) * 100));
             const isCheckedInToday = quest.lastCheckInDate === todayStr;
-            const isResetToday = quest.lastResetDate === todayStr;
-            const isAtDayZero = (quest.currentStreak || 0) === 0;
             const canClaim = quest.isCompleted && !quest.isRewardClaimed;
 
             return (
@@ -455,27 +437,20 @@ export const SystemQuestsView: React.FC = () => {
                 </div>
 
                 {/* Actions Bar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1 w-full">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1 w-full">
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                     {/* Check-In Button */}
                     {!quest.isCompleted && (
                       <motion.button
-                        whileTap={!isCheckedInToday && !isResetToday ? { scale: 0.94 } : undefined}
+                        whileTap={!isCheckedInToday ? { scale: 0.94 } : undefined}
                         onClick={() => checkInStreakQuest(quest.id)}
-                        disabled={isCheckedInToday || isResetToday}
-                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${isResetToday
-                          ? 'bg-[#06141B] border border-[#253745] text-[#9BA8AB] cursor-not-allowed shadow-inner'
-                          : isCheckedInToday
+                        disabled={isCheckedInToday}
+                        className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer ${isCheckedInToday
                             ? 'bg-thorn-dark text-parchment/40 border border-parchment/15 cursor-not-allowed'
                             : 'rpg-btn-primary text-parchment shadow-lg hover:scale-105'
                           }`}
                       >
-                        {isResetToday ? (
-                          <>
-                            <span className="text-sm">⏳</span>
-                            <span>Đã Reset • Mở điểm danh lại sau 00:00 (còn {countdownString})</span>
-                          </>
-                        ) : isCheckedInToday ? (
+                        {isCheckedInToday ? (
                           <>
                             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                             <span>✓ Đã Điểm Danh Hôm Nay (Quay lại ngày mai)</span>
@@ -483,7 +458,11 @@ export const SystemQuestsView: React.FC = () => {
                         ) : (
                           <>
                             <Flame className="w-4 h-4 text-amber-300 fill-amber-300" />
-                            <span>🔥 Điểm Danh Hôm Nay (+1 Ngày)</span>
+                            <span>
+                              {currentStreak === 0
+                                ? '🔥 Bắt Đầu Điểm Danh (Ngày 1)'
+                                : '🔥 Điểm Danh Hôm Nay (+1 Ngày)'}
+                            </span>
                           </>
                         )}
                       </motion.button>
@@ -509,53 +488,10 @@ export const SystemQuestsView: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Reset Button with Dialog */}
-                  <div className="w-full sm:w-auto">
-                    {confirmResetQuestId === quest.id ? (
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-[#11212D] p-3 rounded-2xl border border-rose-500/50 shadow-xl animate-in fade-in w-full max-w-lg">
-                        <div className="flex items-start gap-2 text-xs text-rose-200">
-                          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                          <span className="leading-snug">
-                            ⚠️ Nếu Reset bây giờ, toàn bộ tiến độ hiện tại sẽ về Ngày 0 và bạn phải đợi qua 12h đêm nay (00:00 ngày mai) mới có thể điểm danh lại Ngày 1. Bạn chắc chắn muốn Reset chứ?
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0 pt-1 sm:pt-0">
-                          <button
-                            onClick={() => {
-                              resetStreakQuest(quest.id);
-                              setConfirmResetQuestId(null);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow transition whitespace-nowrap"
-                          >
-                            Đồng Ý
-                          </button>
-                          <button
-                            onClick={() => setConfirmResetQuestId(null)}
-                            className="px-3 py-1.5 rounded-xl bg-thorn-dark text-xs text-parchment/70 hover:text-parchment transition border border-parchment/15 whitespace-nowrap"
-                          >
-                            Hủy
-                          </button>
-                        </div>
-                      </div>
-                    ) : isAtDayZero ? (
-                      <button
-                        disabled
-                        className="w-full sm:w-auto p-2 px-3 rounded-xl bg-thorn-dark/40 border border-parchment/10 text-parchment/30 text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-50"
-                        title="Bộ đếm đang ở Ngày 0, không cần Reset"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span className="text-[11px]">Reset Bộ Đếm</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmResetQuestId(quest.id)}
-                        className="w-full sm:w-auto p-2 px-3 rounded-xl bg-thorn-dark/70 hover:bg-rose-950/40 border border-parchment/15 hover:border-rose-400/40 text-parchment/50 hover:text-rose-300 text-xs flex items-center justify-center gap-1.5 transition"
-                        title="Reset chuỗi về ngày 0 để bắt đầu lại thử thách"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span className="text-[11px]">Reset Bộ Đếm</span>
-                      </button>
-                    )}
+                  {/* Auto-reset Rule Note */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-[#9BA8AB] italic bg-[#06141B]/60 px-3 py-1.5 rounded-xl border border-white/5">
+                    <span className="text-amber-400 font-bold">⚡</span>
+                    <span>Hôm nào không bấm điểm danh, ngày mai sẽ tự động tính lại từ đầu.</span>
                   </div>
                 </div>
               </div>

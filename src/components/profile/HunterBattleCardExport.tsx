@@ -1,7 +1,6 @@
 import React, { forwardRef } from 'react';
 import { RankTier } from '../../types';
 import { Trophy, Shield, Sparkles } from 'lucide-react';
-import { DEFAULT_DARK_FANTASY_COVER_SVG } from '../../utils/imageExportHelper';
 
 export interface HunterBattleCardExportProps {
   playerName: string;
@@ -108,35 +107,88 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
       progressPercent = Math.min(100, Math.max(0, Math.round((gainedInTier / span) * 100)));
     }
 
-    const safeCoverSrc =
-      coverBase64 && coverBase64.startsWith('data:image')
-        ? coverBase64
-        : DEFAULT_DARK_FANTASY_COVER_SVG;
-
     return (
       <div
-        className="fixed top-0 left-[-2500px] pointer-events-none select-none"
-        style={{ position: 'fixed', top: 0, left: '-2500px', width: '540px', height: '960px', zIndex: -999 }}
+        className="fixed top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none select-none z-[-999]"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: 0,
+          height: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: -999,
+        }}
         aria-hidden="true"
       >
         {/* ================= KHUNG CHÍNH 540x960 (BO TRÒN 32PX) ================= */}
         <div
           ref={ref}
+          style={{ width: '540px', height: '960px', minWidth: '540px', minHeight: '960px' }}
           className="relative w-[540px] h-[960px] rounded-[32px] overflow-hidden border border-white/20 bg-[#06141B] opacity-100 text-[#CCD0CF] select-none box-border font-sans shadow-2xl"
         >
           {/* 1. NỀN ẢNH BÌA TRÀN SÁT MÉP TRÊN (H=440PX) + CHUYỂN SẮC ĐA TẦNG */}
           <div className="absolute top-0 inset-x-0 h-[440px] w-full overflow-hidden pointer-events-none z-0">
-            <img
-              src={safeCoverSrc}
-              alt="Hunter Cover"
-              className="w-full h-[440px] object-cover object-center"
-            />
+            {coverBase64 && coverBase64.startsWith('data:image') ? (
+              <img
+                src={coverBase64}
+                alt="Hunter Cover"
+                className="w-full h-[440px] object-cover object-center"
+              />
+            ) : (
+              <svg
+                viewBox="0 0 540 440"
+                width="540"
+                height="440"
+                className="w-full h-[440px] object-cover"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#040D12" />
+                    <stop offset="35%" stopColor="#0B1E29" />
+                    <stop offset="70%" stopColor="#132B3A" />
+                    <stop offset="100%" stopColor="#06141B" />
+                  </linearGradient>
+                  <radialGradient id="moonGlow" cx="50%" cy="28%" r="48%">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
+                    <stop offset="45%" stopColor="#F59E0B" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="#06141B" stopOpacity="0" />
+                  </radialGradient>
+                  <linearGradient id="mtnGrad1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#182E3C" stopOpacity="0.85" />
+                    <stop offset="100%" stopColor="#06141B" stopOpacity="0.95" />
+                  </linearGradient>
+                  <linearGradient id="mtnGrad2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0D1E28" />
+                    <stop offset="100%" stopColor="#06141B" />
+                  </linearGradient>
+                </defs>
+                <rect width="540" height="440" fill="url(#skyGrad)" />
+                <circle cx="270" cy="150" r="220" fill="url(#moonGlow)" />
+                <polygon points="0,320 85,210 170,290 270,165 370,285 455,215 540,310 540,440 0,440" fill="url(#mtnGrad1)" />
+                <polygon points="0,380 110,270 210,340 315,240 430,350 540,280 540,440 0,440" fill="url(#mtnGrad2)" />
+                <rect x="256" y="150" width="28" height="90" fill="#07131A" />
+                <polygon points="252,150 270,120 288,150" fill="#07131A" />
+                <rect x="242" y="180" width="16" height="60" fill="#08151D" />
+                <polygon points="239,180 250,160 261,180" fill="#08151D" />
+                <rect x="282" y="180" width="16" height="60" fill="#08151D" />
+                <polygon points="279,180 290,160 301,180" fill="#08151D" />
+                <circle cx="75" cy="80" r="1.5" fill="#FDE68A" opacity="0.6" />
+                <circle cx="140" cy="50" r="1.2" fill="#FDE68A" opacity="0.5" />
+                <circle cx="210" cy="95" r="1.5" fill="#FDE68A" opacity="0.7" />
+                <circle cx="340" cy="65" r="1.8" fill="#FDE68A" opacity="0.8" />
+                <circle cx="420" cy="90" r="1.2" fill="#FDE68A" opacity="0.5" />
+                <circle cx="485" cy="55" r="1.5" fill="#FDE68A" opacity="0.6" />
+              </svg>
+            )}
             {/* Lớp chuyển sắc đa tầng: nửa trên hiện rõ nét ảnh bìa, nửa dưới tan êm vào #06141B */}
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  'linear-gradient(180deg, rgba(6,20,27,0.32) 0%, rgba(6,20,27,0.05) 30%, rgba(6,20,27,0.65) 72%, #06141B 100%)',
+                  'linear-gradient(180deg, rgba(6,20,27,0.22) 0%, rgba(6,20,27,0.02) 28%, rgba(6,20,27,0.65) 72%, #06141B 100%)',
               }}
             />
           </div>

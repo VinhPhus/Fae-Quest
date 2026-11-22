@@ -224,9 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ v4 để làm mới bộ nhớ đệm
+    // Chuỗi định danh hồ sơ v5 để làm mới bộ nhớ đệm
     const profileSignature = [
-      'v4',
+      'v5',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
@@ -299,12 +299,15 @@ export const ProfileView: React.FC = () => {
       const toPngOptions = {
         width: 540,
         height: 960,
+        canvasWidth: 540,
+        canvasHeight: 960,
         pixelRatio: 2,
         backgroundColor: 'transparent',
         skipFonts: true,
         fontEmbedCSS: '',
         cacheBust: false,
         imagePlaceholder: transparent1x1,
+        onImageErrorHandler: () => transparent1x1,
       };
 
       let dataUrl: string;

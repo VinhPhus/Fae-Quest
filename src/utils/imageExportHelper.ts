@@ -119,11 +119,14 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
 
   const isRemote = targetUrl.startsWith('http://') || targetUrl.startsWith('https://');
 
-  // 2. Try fast fetch without cache bust first (reuses browser CORS cache)
+  // 2. Try fast fetch with CORS mode and cache buster
+  // Thêm cache-buster để trình duyệt KHÔNG dùng lại cache bị tainted không có CORS từ thẻ <img>
   try {
+    const sep = targetUrl.includes('?') ? '&' : '?';
+    const fetchUrl = isRemote ? `${targetUrl}${sep}_cors_cb=${Date.now()}` : targetUrl;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 1800);
-    const res = await fetch(targetUrl, { mode: 'cors', signal: controller.signal });
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(fetchUrl, { mode: 'cors', signal: controller.signal });
     clearTimeout(timer);
 
     if (res.ok) {
@@ -145,7 +148,7 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
         img.onload = null;
         img.onerror = null;
         resolve('');
-      }, 1800);
+      }, 3000);
 
       img.onload = () => {
         clearTimeout(timeout);
@@ -170,9 +173,8 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
         resolve('');
       };
 
-      // Add cache buster only if previous standard fetch failed
       const sep = targetUrl.includes('?') ? '&' : '?';
-      img.src = `${targetUrl}${sep}_cb=${Date.now()}`;
+      img.src = `${targetUrl}${sep}_img_cb=${Date.now()}`;
     });
 
     if (canvasRes) return canvasRes;
