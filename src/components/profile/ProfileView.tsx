@@ -224,9 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ v5 để làm mới bộ nhớ đệm
+    // Chuỗi định danh hồ sơ v7 để làm mới bộ nhớ đệm
     const profileSignature = [
-      'v5',
+      'v7',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
@@ -251,65 +251,37 @@ export const ProfileView: React.FC = () => {
 
     try {
       // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 tối ưu kích thước
-      // ƯU TIÊN: Trích ảnh bìa trực tiếp từ DOM element đã tải sẵn trên trang Hồ Sơ
-      //          → Tránh hoàn toàn lỗi CORS khi fetch lại URL Cloudinary/Unsplash trên di động
       let coverB64 = '';
+      const userCover = coverUrl && coverUrl.trim() ? coverUrl.trim() : '';
 
-      // Bước 1a: Thử trích từ DOM element đang hiển thị (0ms, zero-network)
-      if (typeof document !== 'undefined') {
-        try {
-          const coverImgEl = document.querySelector<HTMLImageElement>('#profile-cover-img');
-          if (coverImgEl && coverImgEl.complete && coverImgEl.naturalWidth > 0) {
-            const canvas = document.createElement('canvas');
-            const maxW = 1080;
-            let w = coverImgEl.naturalWidth;
-            let h = coverImgEl.naturalHeight;
-            if (w > maxW) {
-              h = Math.round((h * maxW) / w);
-              w = maxW;
-            }
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(coverImgEl, 0, 0, w, h);
-              const extracted = canvas.toDataURL('image/jpeg', 0.88);
-              if (extracted && extracted.startsWith('data:image') && extracted.length > 100) {
-                coverB64 = extracted;
-              }
-            }
-          }
-        } catch (domErr) {
-          console.warn('DOM cover extraction failed (likely tainted canvas):', domErr);
+      if (userCover) {
+        // Người dùng đã cài ảnh bìa tùy chỉnh: ưu tiên chuyển sang Base64
+        coverB64 = await imageUrlToBase64(userCover, undefined, 1080);
+        // Nếu không convert được Base64 do CORS, dùng trực tiếp userCover thay vì ghi đè bằng ảnh mặc định!
+        if (!coverB64) {
+          coverB64 = userCover;
         }
-      }
-
-      // Bước 1b: Fallback sang fetch nếu DOM extraction thất bại
-      if (!coverB64 && coverUrl) {
-        coverB64 = await imageUrlToBase64(coverUrl, undefined, 1080);
-      }
-      if (!coverB64 && DEFAULT_COVER_URL) {
-        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL, undefined, 1080);
+      } else if (DEFAULT_COVER_URL) {
+        // Chỉ khi người dùng CHƯA TỪNG cài ảnh bìa mới dùng DEFAULT_COVER_URL
+        coverB64 = (await imageUrlToBase64(DEFAULT_COVER_URL, undefined, 1080)) || DEFAULT_COVER_URL;
       }
 
       const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
-        avatarUrl
-          ? imageUrlToBase64(avatarUrl, '#profile-avatar-img', 400)
-          : Promise.resolve(''),
+        avatarUrl ? imageUrlToBase64(avatarUrl, undefined, 400) : Promise.resolve(''),
         imageUrlToBase64('/assets/logo.png', undefined, 200),
         imageUrlToBase64(currentTier.iconUrl, undefined, 200),
         titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl, undefined, 100) : Promise.resolve(''),
       ]);
 
-      setBase64Avatar(avatarB64);
+      setBase64Avatar(avatarB64 || avatarUrl || '');
       setBase64Cover(coverB64);
       setBase64Logo(logoB64);
       setBase64RankIcon(rankB64);
       setBase64TitleIcon(titleB64);
 
       // Debug: Log trạng thái ảnh đã nạp
-      console.log('[BattleCard] Cover source:', coverB64 ? `base64 (${(coverB64.length / 1024).toFixed(0)}KB)` : 'EMPTY → will use SVG fallback');
-      console.log('[BattleCard] Avatar source:', avatarB64 ? `base64 (${(avatarB64.length / 1024).toFixed(0)}KB)` : 'EMPTY → will use initials');
+      console.log('[BattleCard] Cover source:', coverB64 ? (coverB64.startsWith('data:') ? `base64 (${(coverB64.length / 1024).toFixed(0)}KB)` : 'direct URL') : 'EMPTY');
+      console.log('[BattleCard] Avatar source:', avatarB64 ? `base64 (${(avatarB64.length / 1024).toFixed(0)}KB)` : (avatarUrl ? 'direct URL' : 'EMPTY'));
       console.log('[BattleCard] coverUrl in store:', coverUrl ? coverUrl.substring(0, 80) + '...' : '(empty)');
 
       // Chờ React cập nhật DOM với các state ảnh base64 mới (tối thiểu 150ms trên điện thoại di động)
@@ -419,10 +391,8 @@ export const ProfileView: React.FC = () => {
           {/* 1. Background Ảnh Bìa (Cover Banner Dark Fantasy) */}
           <div className="absolute top-0 inset-x-0 h-36 sm:h-40 overflow-hidden pointer-events-none z-0">
             <img
-              id="profile-cover-img"
               src={coverUrl || DEFAULT_COVER_URL}
               alt="Hunter Dark Fantasy Cover"
-              crossOrigin="anonymous"
               className="w-full h-full object-cover object-center opacity-55 brightness-90 scale-105"
               onError={(e) => {
                 const target = e.currentTarget as HTMLImageElement;
@@ -472,10 +442,8 @@ export const ProfileView: React.FC = () => {
                   >
                     {avatarUrl ? (
                       <img
-                        id="profile-avatar-img"
                         src={avatarUrl}
                         alt={playerName}
-                        crossOrigin="anonymous"
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (

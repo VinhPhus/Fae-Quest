@@ -130,7 +130,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
         >
           {/* 1. NỀN ẢNH BÌA TRÀN SÁT MÉP TRÊN (H=440PX) + CHUYỂN SẮC ĐA TẦNG */}
           <div className="absolute top-0 inset-x-0 h-[440px] w-full overflow-hidden pointer-events-none z-0">
-            {coverBase64 && coverBase64.startsWith('data:image') ? (
+            {coverBase64 ? (
               <img
                 src={coverBase64}
                 alt="Hunter Cover"

@@ -159,17 +159,6 @@ export async function imageUrlToBase64(
   if (!url) return '';
   if (url.startsWith('data:image')) return url;
 
-  // 1. Try extracting from an existing DOM element if selector provided
-  if (typeof document !== 'undefined' && domSelector) {
-    try {
-      const el = document.querySelector<HTMLImageElement>(domSelector);
-      const b64 = getElementImageBase64(el);
-      if (b64) return b64;
-    } catch {
-      // Continue to next method
-    }
-  }
-
   // Make relative URLs absolute
   let targetUrl = url;
   if (typeof window !== 'undefined' && url.startsWith('/')) {
@@ -178,14 +167,11 @@ export async function imageUrlToBase64(
 
   const isRemote = targetUrl.startsWith('http://') || targetUrl.startsWith('https://');
 
-  // 2. Try fast fetch with CORS mode and cache buster
-  // Thêm cache-buster để trình duyệt KHÔNG dùng lại cache bị tainted không có CORS từ thẻ <img>
+  // 1. Direct fetch without cache-buster (fastest & standard for Cloudinary / modern CDNs)
   try {
-    const sep = targetUrl.includes('?') ? '&' : '?';
-    const fetchUrl = isRemote ? `${targetUrl}${sep}_cors_cb=${Date.now()}` : targetUrl;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch(fetchUrl, { mode: 'cors', signal: controller.signal });
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(targetUrl, { mode: 'cors', signal: controller.signal });
     clearTimeout(timer);
 
     if (res.ok) {
@@ -194,7 +180,27 @@ export async function imageUrlToBase64(
       if (base64) return base64;
     }
   } catch {
-    // Continue to canvas fallback
+    // Continue to next method
+  }
+
+  // 2. Fetch with cache-buster to bypass stale tainted browser cache
+  if (isRemote) {
+    try {
+      const sep = targetUrl.includes('?') ? '&' : '?';
+      const fetchUrl = `${targetUrl}${sep}_cors_cb=${Date.now()}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(fetchUrl, { mode: 'cors', signal: controller.signal });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const base64 = await compressBlobToDataUrl(blob, maxDim);
+        if (base64) return base64;
+      }
+    } catch {
+      // Continue to canvas fallback
+    }
   }
 
   // 3. Fallback to Image loading via Canvas with anonymous crossOrigin
@@ -252,12 +258,13 @@ export async function imageUrlToBase64(
     // Continue to proxy
   }
 
-  // 4. Fallback for remote URLs: High-speed CORS proxy
+  // 4. Fallback for remote URLs: Multi-layer CORS proxy
   if (isRemote) {
+    // Layer 1: images.weserv.nl
     try {
       const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(targetUrl)}&output=jpg&q=82&w=${Math.min(maxDim, 1080)}`;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2500);
+      const timer = setTimeout(() => controller.abort(), 3000);
       const res = await fetch(proxyUrl, { mode: 'cors', signal: controller.signal });
       clearTimeout(timer);
 
@@ -267,7 +274,35 @@ export async function imageUrlToBase64(
         if (base64) return base64;
       }
     } catch {
-      // Return empty so fallback artwork kicks in safely
+      // Continue to layer 2
+    }
+
+    // Layer 2: corsproxy.io
+    try {
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(proxyUrl, { mode: 'cors', signal: controller.signal });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const base64 = await compressBlobToDataUrl(blob, maxDim);
+        if (base64) return base64;
+      }
+    } catch {
+      // Continue to DOM extraction
+    }
+  }
+
+  // 5. Try extracting from an existing DOM element if selector provided
+  if (typeof document !== 'undefined' && domSelector) {
+    try {
+      const el = document.querySelector<HTMLImageElement>(domSelector);
+      const b64 = getElementImageBase64(el);
+      if (b64) return b64;
+    } catch {
+      // End of attempts
     }
   }
 
