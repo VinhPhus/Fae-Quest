@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { resolveTitleObject } from '../../constants/systemQuests';
-import { Search, X, Plus, ShieldAlert } from 'lucide-react';
+import { Search, X, Plus, ShieldAlert, Mail, Scroll } from 'lucide-react';
 
 export const TopBentoHeader: React.FC = () => {
   const {
@@ -12,6 +12,9 @@ export const TopBentoHeader: React.FC = () => {
     searchQuery,
     setSearchQuery,
     userRole,
+    unreadMessagesCount,
+    setUserInboxOpen,
+    setOathOpen,
   } = useFaeQuestStore();
 
   const titleObj = resolveTitleObject(equippedTitleId);
@@ -91,6 +94,29 @@ export const TopBentoHeader: React.FC = () => {
             </button>
           )}
         </div>
+
+        {/* Desktop Utility: Cuộn Giấy (Khế Ước Thợ Săn) */}
+        <button
+          type="button"
+          onClick={() => setOathOpen(true)}
+          className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-[#CCD0CF] hover:text-white transition-colors relative cursor-pointer shrink-0"
+          title="Khế Ước Thợ Săn"
+        >
+          <Scroll className="w-4 h-4" />
+        </button>
+
+        {/* Desktop Utility: Hộp Thư Thợ Săn */}
+        <button
+          type="button"
+          onClick={() => setUserInboxOpen(true)}
+          className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-[#CCD0CF] hover:text-white transition-colors relative cursor-pointer shrink-0"
+          title={unreadMessagesCount > 0 ? `Hộp Thư (${unreadMessagesCount} chưa đọc)` : 'Hộp Thư Thợ Săn'}
+        >
+          <Mail className="w-4 h-4" />
+          {unreadMessagesCount > 0 && (
+            <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-rose-500 border border-[#06141B] animate-pulse" />
+          )}
+        </button>
 
         {/* Primary CTA: + Khắc Lệnh Mới Button */}
         <button
