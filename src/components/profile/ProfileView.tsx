@@ -224,9 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ v3 để làm mới bộ nhớ đệm
+    // Chuỗi định danh hồ sơ v3_ để làm mới bộ nhớ đệm
     const profileSignature = [
-      'v3',
+      'v3_',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
