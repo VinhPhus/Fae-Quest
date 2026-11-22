@@ -17,6 +17,61 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /**
+ * Resize and compress Blob to Data URL.
+ * Prevents massive 5MB-10MB mobile camera/Unsplash photos from choking WebKit/Safari
+ * memory buffers during html-to-image <foreignObject> rasterization.
+ */
+function compressBlobToDataUrl(blob: Blob, maxDim = 1080): Promise<string> {
+  return new Promise<string>((resolve) => {
+    if (blob.type === 'image/svg+xml') {
+      blobToDataUrl(blob).then(resolve);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rawData = reader.result;
+      if (typeof rawData !== 'string') {
+        resolve('');
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.naturalWidth || img.width || 400;
+          let height = img.naturalHeight || img.height || 400;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(rawData);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.88);
+          resolve(compressed || rawData);
+        } catch {
+          resolve(rawData);
+        }
+      };
+      img.onerror = () => resolve(rawData);
+      img.src = rawData;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
  * High-definition Dark Fantasy SVG Background (Data URL).
  * 100% offline, guaranteed zero-delay, zero-CORS fallback.
  */
@@ -96,7 +151,11 @@ export function getElementImageBase64(imgEl: HTMLImageElement | null): string {
  * into Base64 data strings before capturing with html-to-image.
  * Guaranteed zero CORS / tainted canvas issues.
  */
-export async function imageUrlToBase64(url: string, domSelector?: string): Promise<string> {
+export async function imageUrlToBase64(
+  url: string,
+  domSelector?: string,
+  maxDim = 1080
+): Promise<string> {
   if (!url) return '';
   if (url.startsWith('data:image')) return url;
 
@@ -125,13 +184,13 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
     const sep = targetUrl.includes('?') ? '&' : '?';
     const fetchUrl = isRemote ? `${targetUrl}${sep}_cors_cb=${Date.now()}` : targetUrl;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
+    const timer = setTimeout(() => controller.abort(), 4000);
     const res = await fetch(fetchUrl, { mode: 'cors', signal: controller.signal });
     clearTimeout(timer);
 
     if (res.ok) {
       const blob = await res.blob();
-      const base64 = await blobToDataUrl(blob);
+      const base64 = await compressBlobToDataUrl(blob, maxDim);
       if (base64) return base64;
     }
   } catch {
@@ -148,20 +207,31 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
         img.onload = null;
         img.onerror = null;
         resolve('');
-      }, 3000);
+      }, 3500);
 
       img.onload = () => {
         clearTimeout(timeout);
         try {
           const canvas = document.createElement('canvas');
-          canvas.width = Math.min(img.naturalWidth || img.width || 400, 1200);
-          canvas.height = Math.min(img.naturalHeight || img.height || 400, 800);
+          let w = img.naturalWidth || img.width || 400;
+          let h = img.naturalHeight || img.height || 400;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = Math.max(1, w);
+          canvas.height = Math.max(1, h);
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             resolve('');
             return;
           }
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, w, h);
           resolve(canvas.toDataURL('image/jpeg', 0.88));
         } catch {
           resolve('');
@@ -185,15 +255,15 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
   // 4. Fallback for remote URLs: High-speed CORS proxy
   if (isRemote) {
     try {
-      const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(targetUrl)}&output=jpg&q=82&w=1080`;
+      const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(targetUrl)}&output=jpg&q=82&w=${Math.min(maxDim, 1080)}`;
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2200);
+      const timer = setTimeout(() => controller.abort(), 2500);
       const res = await fetch(proxyUrl, { mode: 'cors', signal: controller.signal });
       clearTimeout(timer);
 
       if (res.ok) {
         const blob = await res.blob();
-        const base64 = await blobToDataUrl(blob);
+        const base64 = await compressBlobToDataUrl(blob, maxDim);
         if (base64) return base64;
       }
     } catch {
@@ -206,24 +276,37 @@ export async function imageUrlToBase64(url: string, domSelector?: string): Promi
 
 /**
  * Ensure all <img> elements inside a container are fully loaded and decoded.
+ * Uses HTMLImageElement.prototype.decode() to force WebKit/Safari to compile
+ * raster textures into GPU cache before html-to-image foreignObject capture.
  */
 export async function waitForImagesToLoad(container: HTMLElement): Promise<void> {
   const images = Array.from(container.querySelectorAll('img'));
   await Promise.all(
-    images.map((img) => {
-      if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
-      return new Promise<void>((resolve) => {
-        const onDone = () => {
-          img.removeEventListener('load', onDone);
-          img.removeEventListener('error', onDone);
-          resolve();
-        };
-        img.addEventListener('load', onDone);
-        img.addEventListener('error', onDone);
-        setTimeout(onDone, 350);
-      });
+    images.map(async (img) => {
+      if (!img.complete) {
+        await new Promise<void>((resolve) => {
+          const onDone = () => {
+            img.removeEventListener('load', onDone);
+            img.removeEventListener('error', onDone);
+            resolve();
+          };
+          img.addEventListener('load', onDone);
+          img.addEventListener('error', onDone);
+          setTimeout(onDone, 500);
+        });
+      }
+      // Explicitly decode image texture into GPU memory
+      if (typeof img.decode === 'function') {
+        try {
+          await img.decode();
+        } catch {
+          // ignore decode errors
+        }
+      }
     })
   );
+  // Micro-delay for WebKit GPU texture commitment
+  await new Promise((r) => setTimeout(r, 60));
 }
 
 /**

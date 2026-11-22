@@ -109,16 +109,16 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
     return (
       <div
-        className="fixed top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none select-none z-[-999]"
+        className="fixed pointer-events-none select-none z-[-9999]"
         style={{
           position: 'fixed',
           top: 0,
-          left: 0,
-          width: 0,
-          height: 0,
-          overflow: 'hidden',
+          left: '-9999px',
+          width: '540px',
+          height: '960px',
+          overflow: 'visible',
           pointerEvents: 'none',
-          zIndex: -999,
+          zIndex: -9999,
         }}
         aria-hidden="true"
       >
@@ -134,6 +134,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
               <img
                 src={coverBase64}
                 alt="Hunter Cover"
+                crossOrigin="anonymous"
                 className="w-full h-[440px] object-cover object-center"
               />
             ) : (
@@ -231,6 +232,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                     <img
                       src={logoBase64}
                       alt="FaeQuest Logo"
+                      crossOrigin="anonymous"
                       className="w-full h-full object-contain [image-rendering:pixelated]"
                     />
                   ) : (
@@ -265,11 +267,12 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                 }}
               >
                 {/* Lớp viền đệm trong tạo hiệu ứng huy chương */}
-                <div className="w-full h-full rounded-full bg-[#06141B] p-[3px] border border-white/20 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-[#11212D] to-[#06141B] p-[3px] border border-white/20 flex items-center justify-center overflow-hidden">
                   {avatarBase64 && avatarBase64.startsWith('data:') ? (
                     <img
                       src={avatarBase64}
                       alt={playerName}
+                      crossOrigin="anonymous"
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
@@ -313,6 +316,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                     <img
                       src={titleIconUrl}
                       alt={titleName}
+                      crossOrigin="anonymous"
                       className="w-4 h-4 object-contain shrink-0 [image-rendering:pixelated]"
                     />
                   )}
@@ -352,6 +356,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                       <img
                         src={rankIconBase64}
                         alt={currentTier.name}
+                        crossOrigin="anonymous"
                         className="w-full h-full object-contain [image-rendering:pixelated]"
                       />
                     ) : (

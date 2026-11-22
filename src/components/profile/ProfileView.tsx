@@ -250,20 +250,20 @@ export const ProfileView: React.FC = () => {
     addToast('Đang chuẩn bị nguyên liệu rèn Thẻ Chiến Tích...', 'info');
 
     try {
-      // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 để tránh lỗi CORS / trắng ảnh
+      // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 tối ưu kích thước
       let coverB64 = '';
       if (coverUrl) {
-        coverB64 = await imageUrlToBase64(coverUrl);
+        coverB64 = await imageUrlToBase64(coverUrl, undefined, 1080);
       }
       if (!coverB64 && DEFAULT_COVER_URL) {
-        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL);
+        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL, undefined, 1080);
       }
 
       const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
-        avatarUrl ? imageUrlToBase64(avatarUrl) : Promise.resolve(''),
-        imageUrlToBase64('/assets/logo.png'),
-        imageUrlToBase64(currentTier.iconUrl),
-        titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl) : Promise.resolve(''),
+        avatarUrl ? imageUrlToBase64(avatarUrl, undefined, 400) : Promise.resolve(''),
+        imageUrlToBase64('/assets/logo.png', undefined, 200),
+        imageUrlToBase64(currentTier.iconUrl, undefined, 200),
+        titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl, undefined, 100) : Promise.resolve(''),
       ]);
 
       setBase64Avatar(avatarB64);
@@ -272,8 +272,8 @@ export const ProfileView: React.FC = () => {
       setBase64RankIcon(rankB64);
       setBase64TitleIcon(titleB64);
 
-      // Chờ React cập nhật DOM với các state ảnh base64 mới
-      await new Promise((resolve) => setTimeout(resolve, 80));
+      // Chờ React cập nhật DOM với các state ảnh base64 mới (tối thiểu 150ms trên điện thoại di động)
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // 2. Chờ font hệ thống / webfont sẵn sàng
       if (document.fonts?.ready) {
@@ -284,14 +284,16 @@ export const ProfileView: React.FC = () => {
         }
       }
 
-      // 3. Đảm bảo tất cả ảnh <img> bên trong node xuất ảnh đã tải xong (img.complete)
+      // 3. Đảm bảo tất cả ảnh <img> bên trong node xuất ảnh đã tải xong và decode texture vào GPU
       if (!exportCardRef.current) {
         throw new Error('Khung xuất ảnh chưa sẵn sàng');
       }
       await waitForImagesToLoad(exportCardRef.current);
 
       // 4. Chờ 2 nhịp requestAnimationFrame để trình duyệt hoàn tất vẽ đồ họa
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 40)))
+      );
 
       // 5. Xuất thẻ chuẩn 1080x1920 (540x960, pixelRatio: 2) với nền trong suốt để giữ nguyên 4 góc bo tròn
       const transparent1x1 =
@@ -310,6 +312,19 @@ export const ProfileView: React.FC = () => {
         onImageErrorHandler: () => transparent1x1,
       };
 
+      // iOS Safari / WebKit Fix:
+      // WebKit yêu cầu 1 lượt render khởi động (warm-up pass) để giải mã và nạp textures cho các ảnh con trong <foreignObject>
+      // Lượt 1: Warm-up pass
+      try {
+        await toPng(exportCardRef.current, toPngOptions);
+      } catch (warmupErr) {
+        console.warn('Warmup pass error:', warmupErr);
+      }
+
+      // Nghỉ 100ms để GPU / WebKit compositor nạp đầy đủ texture vào bộ nhớ đệm
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Lượt 2: Capture thực tế (lúc này các ảnh raster đã sẵn sàng trong cache đồ họa)
       let dataUrl: string;
       try {
         dataUrl = await toPng(exportCardRef.current, toPngOptions);
