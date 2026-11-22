@@ -128,8 +128,8 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
           {/* ================= 1. HEADER ================= */}
           <div className="pt-4 px-6 pb-2.5 flex items-center justify-between border-b border-[#253745]/80 relative z-20 bg-[#06141B]/80 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#06141B] border border-[#4A5C6A] p-1 flex items-center justify-center shadow-md">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-[#06141B] border border-[#4A5C6A] p-1 flex items-center justify-center shadow-md shrink-0">
                 {logoBase64 && logoBase64.startsWith('data:') ? (
                   <img
                     src={logoBase64}
@@ -137,20 +137,20 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                     className="w-full h-full object-contain [image-rendering:pixelated]"
                   />
                 ) : (
-                  <Shield className="w-6 h-6 text-amber-400" />
+                  <Shield className="w-5 h-5 text-amber-400" />
                 )}
               </div>
-              <div>
-                <h1 className="font-rpg font-black text-lg tracking-wider text-white leading-tight">
+              <div className="min-w-0">
+                <h1 className="font-rpg font-black text-base tracking-wider text-white leading-tight whitespace-nowrap">
                   FAE<span className="text-amber-400">QUEST</span>
                 </h1>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#9BA8AB]">
+                <p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#9BA8AB] whitespace-nowrap">
                   THẺ CHIẾN TÍCH THỢ SĂN
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#11212D] border border-[#253745] text-[10px] font-bold text-[#CCD0CF]">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#11212D] border border-[#253745] text-[10px] font-bold text-[#CCD0CF] shrink-0 whitespace-nowrap">
               <Sparkles className="w-3 h-3 text-amber-300" />
               <span>MÙA 2 • HẮC ÁM</span>
             </div>
@@ -158,30 +158,31 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
           {/* ================= 2. CHARACTER & COVER SECTION ================= */}
           <div className="relative flex flex-col items-center z-10 w-full">
-            {/* Cover Banner (Nửa trên thẻ, cao 300px, sắc nét, opacity 85%) */}
-            <div className="w-full h-[300px] overflow-hidden relative bg-[#06141B] shrink-0">
+            {/* Cover Banner (Nửa trên thẻ, cao 330px, sắc nét, opacity 90%) */}
+            <div className="w-full h-[330px] overflow-hidden relative bg-[#06141B] shrink-0">
               {coverBase64 && coverBase64.startsWith('data:') ? (
                 <img
                   src={coverBase64}
                   alt="Hunter Cover"
-                  className="w-full h-[300px] object-cover object-center opacity-85 brightness-95"
+                  className="w-full h-[330px] object-cover object-center opacity-90 brightness-100"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[#11212D] via-[#253745] to-[#06141B] relative flex items-center justify-center">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(251,191,36,0.18)_0%,transparent_75%)]" />
-                  <Shield className="w-20 h-20 text-white/10" />
-                </div>
+                <img
+                  src="/assets/auth-knight-bg.jpg"
+                  alt="Hunter Cover Fallback"
+                  className="w-full h-[330px] object-cover object-center opacity-90 brightness-95"
+                />
               )}
               {/* Lớp gradient chuyển sắc nhẹ ở phần đáy */}
-              <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/20 via-[#06141B]/45 to-[#06141B]" />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#06141B]/15 via-[#06141B]/40 to-[#06141B]" />
             </div>
 
-            {/* Avatar overlapping banner */}
-            <div className="-mt-16 relative flex flex-col items-center z-20">
+            {/* Avatar overlapping banner: Phóng to kích thước lớn hơn (w-36 h-36 = 144px) */}
+            <div className="-mt-20 relative flex flex-col items-center z-20">
               <div
-                className="w-28 h-28 rounded-full p-1 bg-[#06141B] relative flex items-center justify-center shadow-2xl transition-all"
+                className="w-36 h-36 rounded-full p-1.5 bg-[#06141B] relative flex items-center justify-center shadow-2xl transition-all"
                 style={{
-                  border: `3px solid ${glowConfig.border}`,
+                  border: `4px solid ${glowConfig.border}`,
                   boxShadow: glowConfig.shadow,
                 }}
               >
@@ -192,28 +193,28 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-[#11212D] flex items-center justify-center text-white font-black text-2xl">
+                  <div className="w-full h-full rounded-full bg-[#11212D] flex items-center justify-center text-white font-black text-3xl">
                     {playerName.slice(0, 2).toUpperCase()}
                   </div>
                 )}
 
-                {/* Rank Badge dưới chân Avatar (Thay thế huy hiệu Cấp số) */}
+                {/* Rank Badge dưới chân Avatar (Bậc Rank hiện tại) */}
                 <div
-                  className="absolute -bottom-3 px-3 py-1 rounded-full bg-[#06141B] border shadow-xl flex items-center gap-1.5 whitespace-nowrap z-30"
+                  className="absolute -bottom-3.5 px-4 py-1 rounded-full bg-[#06141B] border shadow-2xl flex items-center gap-1.5 whitespace-nowrap z-30"
                   style={{
                     borderColor: glowConfig.border,
-                    boxShadow: `0 4px 14px rgba(0,0,0,0.8), 0 0 12px ${glowConfig.border}66`,
+                    boxShadow: `0 4px 14px rgba(0,0,0,0.8), 0 0 14px ${glowConfig.border}77`,
                   }}
                 >
                   {rankIconBase64 && rankIconBase64.startsWith('data:') && (
                     <img
                       src={rankIconBase64}
                       alt={currentTier.name}
-                      className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
+                      className="w-4 h-4 object-contain [image-rendering:pixelated]"
                     />
                   )}
                   <span
-                    className="text-[11px] font-black uppercase tracking-wider whitespace-nowrap"
+                    className="text-xs font-black uppercase tracking-wider whitespace-nowrap"
                     style={{ color: glowConfig.border }}
                   >
                     BẬC {currentTier.name.toUpperCase()}
@@ -221,40 +222,40 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                 </div>
               </div>
 
-              {/* Player Name: Tăng khoảng cách mt-5 tách biệt hẳn khỏi badge */}
-              <h2 className="font-rpg font-black text-2xl text-white tracking-wide text-center mt-5 drop-shadow-md max-w-[440px] truncate">
+              {/* Player Name: Tách biệt hẳn khỏi avatar và badge */}
+              <h2 className="font-rpg font-black text-2xl text-white tracking-wide text-center mt-6 drop-shadow-md max-w-[460px] truncate whitespace-nowrap px-4">
                 {playerName}
               </h2>
 
-              {/* Equipped Title & Subtitle */}
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+              {/* Equipped Title & Subtitle: Không bao giờ bị rớt dòng chữ trong pill */}
+              <div className="flex items-center justify-center flex-wrap gap-2 mt-2.5 max-w-[480px] px-2">
                 <div
-                  className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#06141B]/90 border text-xs font-black shadow-sm ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#06141B]/95 border text-xs font-black shadow-md shrink-0 whitespace-nowrap ${
                     titleRarity === 'legendary'
-                      ? 'border-amber-400/60 text-amber-300'
+                      ? 'border-amber-400/70 text-amber-300'
                       : titleRarity === 'epic'
-                      ? 'border-purple-400/60 text-purple-300'
-                      : 'border-sky-400/60 text-sky-300'
+                      ? 'border-purple-400/70 text-purple-300'
+                      : 'border-sky-400/70 text-sky-300'
                   }`}
                 >
                   {titleIconUrl && titleIconUrl.startsWith('data:') && (
                     <img
                       src={titleIconUrl}
                       alt={titleName}
-                      className="w-3.5 h-3.5 object-contain [image-rendering:pixelated]"
+                      className="w-3.5 h-3.5 object-contain shrink-0 [image-rendering:pixelated]"
                     />
                   )}
-                  <span>{titleName}</span>
+                  <span className="whitespace-nowrap max-w-[220px] truncate">{titleName}</span>
                 </div>
 
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#11212D] border border-[#253745] text-[11px] font-bold text-[#9BA8AB]">
-                  <Trophy className="w-3 h-3 text-amber-300" />
-                  <span>#{playerRankPos} BXH</span>
+                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#11212D] border border-[#253745] text-[11px] font-bold text-[#9BA8AB] shrink-0 whitespace-nowrap shadow-sm">
+                  <Trophy className="w-3 h-3 text-amber-300 shrink-0" />
+                  <span className="whitespace-nowrap">#{playerRankPos} BXH</span>
                 </div>
 
                 {stars > 0 && (
-                  <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-yellow-500/15 border border-yellow-400/30 text-[11px] font-bold text-yellow-300">
-                    <span>⭐ {stars} Sao</span>
+                  <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-500/15 border border-yellow-400/30 text-[11px] font-bold text-yellow-300 shrink-0 whitespace-nowrap shadow-sm">
+                    <span className="whitespace-nowrap">⭐ {stars} Sao</span>
                   </div>
                 )}
               </div>
@@ -265,7 +266,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
           <div className="mx-6 p-4 rounded-2xl bg-[#11212D]/85 border border-[#253745] shadow-xl relative overflow-hidden backdrop-blur-sm z-10">
             <div className="flex items-center gap-4">
               <div
-                className="w-20 h-20 rounded-2xl bg-[#06141B] border border-[#4A5C6A] p-2 flex items-center justify-center shrink-0 shadow-lg"
+                className="w-16 h-16 rounded-2xl bg-[#06141B] border border-[#4A5C6A] p-2 flex items-center justify-center shrink-0 shadow-lg"
                 style={{
                   boxShadow: `0 0 20px ${glowConfig.border}33`,
                 }}
@@ -288,7 +289,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                   BẬC HẠNG HIỆN TẠI
                 </span>
                 <h3
-                  className={`font-rpg font-black text-2xl tracking-widest uppercase bg-clip-text text-transparent bg-gradient-to-r ${glowConfig.textGradient}`}
+                  className={`font-rpg font-black text-xl tracking-widest uppercase bg-clip-text text-transparent bg-gradient-to-r whitespace-nowrap ${glowConfig.textGradient}`}
                 >
                   BẬC {currentTier.name}
                 </h3>
@@ -299,7 +300,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
             </div>
 
             {/* EXP Progress Bar */}
-            <div className="mt-3.5 space-y-1.5">
+            <div className="mt-3 space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-mono">
                 <span className="text-[#9BA8AB] font-bold">Tiến Trình Rank</span>
                 <span className="text-white font-black">
@@ -318,40 +319,40 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
           {/* ================= 4. 3-COLUMN COMBAT STATS ================= */}
           <div className="mx-6 grid grid-cols-3 gap-3 z-10">
             {/* Col 1: Chuỗi Kỷ Luật */}
-            <div className="p-3.5 rounded-2xl bg-[#11212D]/85 border border-[#253745] flex flex-col items-center justify-center text-center shadow-lg">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center mb-1.5">
+            <div className="p-3 rounded-2xl bg-[#11212D]/85 border border-[#253745] flex flex-col items-center justify-center text-center shadow-lg">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center mb-1">
                 <Flame className="w-4 h-4 text-amber-400 fill-amber-400" />
               </div>
               <span className="font-mono font-black text-xl text-amber-300">
                 {streakDays}N
               </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#9BA8AB] mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-tight text-[#9BA8AB] mt-0.5 whitespace-nowrap text-center">
                 Chuỗi Kỷ Luật
               </span>
             </div>
 
             {/* Col 2: Lệnh Đã Xong */}
-            <div className="p-3.5 rounded-2xl bg-[#11212D]/85 border border-[#253745] flex flex-col items-center justify-center text-center shadow-lg">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center mb-1.5">
+            <div className="p-3 rounded-2xl bg-[#11212D]/85 border border-[#253745] flex flex-col items-center justify-center text-center shadow-lg">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center mb-1">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
               <span className="font-mono font-black text-xl text-emerald-300">
                 {completedTotal.toLocaleString()}
               </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#9BA8AB] mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-tight text-[#9BA8AB] mt-0.5 whitespace-nowrap text-center">
                 Lệnh Đã Xong
               </span>
             </div>
 
             {/* Col 3: Tổng EXP */}
-            <div className="p-3.5 rounded-2xl bg-[#11212D]/85 border border-[#253745] flex flex-col items-center justify-center text-center shadow-lg">
-              <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center mb-1.5">
+            <div className="p-3 rounded-2xl bg-[#11212D]/85 border border-[#253745] flex flex-col items-center justify-center text-center shadow-lg">
+              <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center mb-1">
                 <Trophy className="w-4 h-4 text-cyan-300" />
               </div>
               <span className="font-mono font-black text-xl text-cyan-300">
                 {exp > 99999 ? `${(exp / 1000).toFixed(0)}k` : exp.toLocaleString()}
               </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#9BA8AB] mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-tight text-[#9BA8AB] mt-0.5 whitespace-nowrap text-center">
                 Tổng EXP
               </span>
             </div>

@@ -224,9 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ v2 để làm mới bộ nhớ đệm
+    // Chuỗi định danh hồ sơ v3 để làm mới bộ nhớ đệm
     const profileSignature = [
-      'v2',
+      'v3',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
@@ -252,9 +252,20 @@ export const ProfileView: React.FC = () => {
 
     try {
       // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 để tránh lỗi CORS / trắng ảnh
-      const [avatarB64, coverB64, logoB64, rankB64, titleB64] = await Promise.all([
+      let coverB64 = '';
+      if (coverUrl) {
+        coverB64 = await imageUrlToBase64(coverUrl);
+      }
+      if (!coverB64 && DEFAULT_COVER_URL) {
+        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL);
+      }
+      // Fallback ảnh bìa nội bộ cực kỳ đáng tin cậy nếu tải mạng thất bại
+      if (!coverB64) {
+        coverB64 = await imageUrlToBase64('/assets/auth-knight-bg.jpg');
+      }
+
+      const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
         avatarUrl ? imageUrlToBase64(avatarUrl) : Promise.resolve(''),
-        coverUrl ? imageUrlToBase64(coverUrl) : imageUrlToBase64(DEFAULT_COVER_URL),
         imageUrlToBase64('/assets/logo.png'),
         imageUrlToBase64(currentTier.iconUrl),
         titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl) : Promise.resolve(''),

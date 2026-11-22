@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { dataUrlToFile } from '../../utils/imageExportHelper';
-import { X, Share2, Download, Sparkles, Check, Smartphone } from 'lucide-react';
+import { X, Share2, Download, Sparkles, Check, Smartphone, Maximize2, Minimize2 } from 'lucide-react';
 
 interface BattleCardPreviewModalProps {
   isOpen: boolean;
@@ -23,6 +23,27 @@ export const BattleCardPreviewModal: React.FC<BattleCardPreviewModalProps> = ({
   useBodyScrollLock(isOpen);
   const [isSharing, setIsSharing] = React.useState(false);
   const [downloadSuccess, setDownloadSuccess] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+
+  // Close fullscreen on modal close or ESC key
+  React.useEffect(() => {
+    if (!isOpen) {
+      setIsFullscreen(false);
+    }
+  }, [isOpen]);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+        e.stopPropagation();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isFullscreen]);
 
   // Check if Web Share API with files is supported
   const canShareFiles = React.useMemo(() => {
@@ -127,23 +148,48 @@ export const BattleCardPreviewModal: React.FC<BattleCardPreviewModalProps> = ({
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white flex items-center justify-center transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setIsFullscreen(true)}
+                    className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-amber-400 flex items-center justify-center transition cursor-pointer"
+                    title="Xem toàn màn hình"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] hover:text-white flex items-center justify-center transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Image Preview Container (Hiển thị trực tiếp thẻ ảnh, không khung bao rỗng) */}
+            {/* Image Preview Container (Hiển thị trực tiếp thẻ ảnh, bấm vào để mở toàn màn hình) */}
             <div className="flex items-center justify-center w-full my-auto">
               {imageUrl ? (
-                <img
-                  src={imageUrl}
-                  alt="Thẻ Chiến Tích FaeQuest"
-                  className="max-h-[54vh] sm:max-h-[60vh] w-auto aspect-[9/16] object-contain rounded-2xl overflow-hidden shadow-2xl border border-white/15 select-none"
-                />
+                <div
+                  className="relative group cursor-zoom-in flex items-center justify-center max-w-full"
+                  onClick={() => setIsFullscreen(true)}
+                  title="Nhấn để phóng to toàn màn hình"
+                >
+                  <img
+                    src={imageUrl}
+                    alt="Thẻ Chiến Tích FaeQuest"
+                    className="max-h-[50vh] sm:max-h-[56vh] w-auto aspect-[9/16] object-contain rounded-2xl overflow-hidden shadow-2xl border border-white/15 select-none transition-transform duration-200 group-hover:scale-[1.01]"
+                  />
+                  {/* Overlay nút gợi ý khi hover */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl flex items-center justify-center pointer-events-none">
+                    <div className="px-3.5 py-1.5 rounded-full bg-[#06141B]/95 border border-white/25 text-white text-xs font-bold flex items-center gap-2 shadow-2xl backdrop-blur-md">
+                      <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Xem Toàn Màn Hình</span>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="h-72 flex items-center justify-center text-sm text-[#9BA8AB]">
                   Đang rèn thẻ chiến tích...
@@ -151,11 +197,11 @@ export const BattleCardPreviewModal: React.FC<BattleCardPreviewModalProps> = ({
               )}
             </div>
 
-            {/* Instruction tooltip for iOS */}
+            {/* Instruction tooltip for iOS & Fullscreen hint */}
             <div className="w-full px-3 py-2 rounded-xl bg-[#06141B]/80 border border-[#253745] flex items-center gap-2 text-center justify-center">
               <Smartphone className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
               <p className="text-[11px] text-[#9BA8AB] leading-snug">
-                Trên iPhone hoặc trình duyệt di động, bạn cũng có thể <strong className="text-[#CCD0CF]">nhấn giữ trực tiếp vào ảnh</strong> để Lưu vào Thư viện Ảnh.
+                Chạm vào ảnh để <strong className="text-amber-300">xem toàn màn hình</strong> hoặc nhấn giữ để Lưu ảnh.
               </p>
             </div>
 
@@ -193,6 +239,100 @@ export const BattleCardPreviewModal: React.FC<BattleCardPreviewModalProps> = ({
               </button>
             </div>
           </motion.div>
+
+          {/* ================= CHẾ ĐỘ XEM TOÀN MÀN HÌNH (FULL-SCREEN LIGHTBOX) ================= */}
+          <AnimatePresence>
+            {isFullscreen && imageUrl && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[150] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-between p-3 sm:p-5 select-none"
+              >
+                {/* Top Bar trong chế độ Full-screen */}
+                <div className="w-full max-w-4xl flex items-center justify-between pb-2 border-b border-white/10 z-10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/15 flex items-center justify-center text-amber-400">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-rpg font-black text-sm sm:text-base text-white">
+                        Thẻ Chiến Tích Thợ Săn • Toàn Màn Hình
+                      </h3>
+                      <span className="text-[10px] text-[#9BA8AB]">Chuẩn 9:16 (1080x1920) Siêu Nét</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsFullscreen(false)}
+                      className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[#CCD0CF] hover:text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Minimize2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="hidden sm:inline">Thu Nhỏ</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsFullscreen(false)}
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-[#CCD0CF] hover:text-white flex items-center justify-center transition cursor-pointer"
+                      title="Đóng toàn màn hình"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Vùng hiển thị ảnh lớn cực đại */}
+                <div
+                  className="flex-1 w-full flex items-center justify-center p-2 overflow-hidden cursor-zoom-out"
+                  onClick={() => setIsFullscreen(false)}
+                >
+                  <motion.img
+                    initial={{ scale: 0.93, y: 10 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.93, y: 10 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 320 }}
+                    src={imageUrl}
+                    alt="Thẻ Chiến Tích Full Screen"
+                    className="max-h-[78vh] sm:max-h-[82vh] w-auto aspect-[9/16] object-contain rounded-2xl shadow-[0_0_60px_rgba(0,0,0,0.95)] border border-white/25 select-none"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+
+                {/* Bottom Bar trong Full-screen */}
+                <div className="w-full max-w-md grid grid-cols-2 gap-3 pt-2 z-10">
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition cursor-pointer"
+                  >
+                    <Share2 className="w-4 h-4 stroke-[2.5]" />
+                    <span>{canShareFiles ? 'Chia Sẻ Ngay' : 'Chia Sẻ'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition cursor-pointer"
+                  >
+                    {downloadSuccess ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
+                        <span className="text-emerald-400">Đã Tải Xong</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 stroke-[2.5]" />
+                        <span>Tải Ảnh Về Máy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </AnimatePresence>,
