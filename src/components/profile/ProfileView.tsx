@@ -253,14 +253,14 @@ export const ProfileView: React.FC = () => {
       // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 để tránh lỗi CORS / trắng ảnh
       let coverB64 = '';
       if (coverUrl) {
-        coverB64 = await imageUrlToBase64(coverUrl, 'img[alt="Hunter Dark Fantasy Cover"]');
+        coverB64 = await imageUrlToBase64(coverUrl);
       }
       if (!coverB64 && DEFAULT_COVER_URL) {
-        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL, 'img[alt="Hunter Dark Fantasy Cover"]');
+        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL);
       }
 
       const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
-        avatarUrl ? imageUrlToBase64(avatarUrl, `img[alt="${playerName}"]`) : Promise.resolve(''),
+        avatarUrl ? imageUrlToBase64(avatarUrl) : Promise.resolve(''),
         imageUrlToBase64('/assets/logo.png'),
         imageUrlToBase64(currentTier.iconUrl),
         titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl) : Promise.resolve(''),
@@ -364,10 +364,15 @@ export const ProfileView: React.FC = () => {
           {/* 1. Background Ảnh Bìa (Cover Banner Dark Fantasy) */}
           <div className="absolute top-0 inset-x-0 h-36 sm:h-40 overflow-hidden pointer-events-none z-0">
             <img
-              crossOrigin="anonymous"
               src={coverUrl || DEFAULT_COVER_URL}
               alt="Hunter Dark Fantasy Cover"
               className="w-full h-full object-cover object-center opacity-55 brightness-90 scale-105"
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                if (DEFAULT_COVER_URL && target.src !== DEFAULT_COVER_URL) {
+                  target.src = DEFAULT_COVER_URL;
+                }
+              }}
               style={{
                 maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 100%)',
                 WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 100%)',
@@ -410,7 +415,6 @@ export const ProfileView: React.FC = () => {
                   >
                     {avatarUrl ? (
                       <img
-                        crossOrigin="anonymous"
                         src={avatarUrl}
                         alt={playerName}
                         className="w-full h-full object-cover rounded-full"
