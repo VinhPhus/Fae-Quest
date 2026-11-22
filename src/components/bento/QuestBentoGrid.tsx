@@ -15,7 +15,6 @@ import {
   Plus,
   Swords,
   Timer,
-  Pencil,
   Sunrise,
 } from 'lucide-react';
 import { Task } from '../../types';
@@ -289,7 +288,8 @@ export const QuestBentoGrid: React.FC = () => {
                   transition={{ duration: 0.25, ease: EASING_SPRING }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   key={task.id}
-                  className={`rounded-[24px] p-4 sm:p-5 bg-[#11212D] hover:bg-[#253745]/60 transition-colors duration-200 shadow-[0_8px_24px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_32px_rgba(204,208,207,0.15)] border border-[#253745] hover:border-[#4A5C6A] flex flex-col justify-between min-h-[168px] relative overflow-hidden group ${
+                  onClick={() => setEditingTask(task)}
+                  className={`rounded-[24px] p-4 sm:p-5 bg-[#11212D] hover:bg-[#253745]/60 transition-colors duration-200 shadow-[0_8px_24px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_32px_rgba(204,208,207,0.15)] border border-[#253745] hover:border-white/25 flex flex-col justify-between min-h-[168px] relative overflow-hidden group cursor-pointer active:scale-[0.99] ${
                     task.completed ? 'opacity-60 bg-[#06141B]/80' : ''
                   }`}
                 >
@@ -407,7 +407,10 @@ export const QuestBentoGrid: React.FC = () => {
                         <motion.button
                           whileTap={{ scale: 0.94 }}
                           type="button"
-                          onClick={() => setActivePomodoroTaskId(task.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActivePomodoroTaskId(task.id);
+                          }}
                           className="h-8 px-3 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_2px_10px_rgba(204,208,207,0.2)] transition cursor-pointer"
                           title={`Bật Đồng Hồ Focus (${task.focusDuration} phút)`}
                         >
@@ -416,22 +419,14 @@ export const QuestBentoGrid: React.FC = () => {
                         </motion.button>
                       )}
 
-                      {/* Edit Button */}
-                      <motion.button
-                        whileTap={{ scale: 0.9 }}
-                        type="button"
-                        onClick={() => setEditingTask(task)}
-                        className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-[#CCD0CF] flex items-center justify-center transition cursor-pointer"
-                        title="Chỉnh sửa nhiệm vụ"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </motion.button>
-
                       {/* Delete Button */}
                       <motion.button
                         whileTap={{ scale: 0.9 }}
                         type="button"
-                        onClick={() => deleteTask(task.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteTask(task.id);
+                        }}
                         className="w-8 h-8 rounded-full bg-[#06141B] hover:bg-rose-950/70 border border-[#253745] hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 flex items-center justify-center transition cursor-pointer"
                         title="Xóa nhiệm vụ"
                       >
@@ -461,7 +456,8 @@ export const QuestBentoGrid: React.FC = () => {
                   exit={{ opacity: 0, scale: 0.96 }}
                   transition={{ duration: 0.2, ease: EASING_SPRING }}
                   key={task.id}
-                  className={`rounded-[20px] p-3.5 sm:p-4 bg-[#11212D] hover:bg-[#253745]/60 border border-[#253745] hover:border-[#4A5C6A] flex items-center justify-between gap-3 transition-colors duration-200 shadow-md ${
+                  onClick={() => setEditingTask(task)}
+                  className={`rounded-[20px] p-3.5 sm:p-4 bg-[#11212D] hover:bg-[#253745]/60 border border-[#253745] hover:border-white/25 flex items-center justify-between gap-3 transition-colors duration-200 shadow-md cursor-pointer active:scale-[0.99] ${
                     task.completed ? 'opacity-60 bg-[#06141B]/80' : ''
                   }`}
                 >
@@ -536,7 +532,10 @@ export const QuestBentoGrid: React.FC = () => {
                       <motion.button
                         whileTap={{ scale: 0.94 }}
                         type="button"
-                        onClick={() => setActivePomodoroTaskId(task.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActivePomodoroTaskId(task.id);
+                        }}
                         className="h-7 px-2.5 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-[11px] flex items-center gap-1 cursor-pointer transition shadow"
                       >
                         <Play className="w-2.5 h-2.5 fill-[#06141B]" />
@@ -547,18 +546,11 @@ export const QuestBentoGrid: React.FC = () => {
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       type="button"
-                      onClick={() => setEditingTask(task)}
-                      className="p-1.5 rounded-lg text-[#9BA8AB] hover:text-[#CCD0CF] hover:bg-[#253745] transition cursor-pointer"
-                      title="Chỉnh sửa nhiệm vụ"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      type="button"
-                      onClick={() => deleteTask(task.id)}
-                      className="p-1.5 rounded-lg text-[#9BA8AB] hover:text-rose-300 transition"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteTask(task.id);
+                      }}
+                      className="p-1.5 rounded-lg text-[#9BA8AB] hover:text-rose-300 transition cursor-pointer"
                       title="Xóa nhiệm vụ"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
