@@ -136,13 +136,13 @@ export const BattleCardPreviewModal: React.FC<BattleCardPreviewModalProps> = ({
               </button>
             </div>
 
-            {/* Image Preview Container */}
-            <div className="relative group flex items-center justify-center w-full overflow-hidden rounded-2xl bg-[#06141B] p-2 border border-[#253745]">
+            {/* Image Preview Container (Hiển thị trực tiếp thẻ ảnh, không khung bao rỗng) */}
+            <div className="flex items-center justify-center w-full my-auto">
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt="Thẻ Chiến Tích FaeQuest"
-                  className="max-h-[52vh] sm:max-h-[58vh] w-auto aspect-[9/16] object-contain rounded-xl shadow-2xl border border-white/10 select-none"
+                  className="max-h-[54vh] sm:max-h-[60vh] w-auto aspect-[9/16] object-contain rounded-2xl overflow-hidden shadow-2xl border border-white/15 select-none"
                 />
               ) : (
                 <div className="h-72 flex items-center justify-center text-sm text-[#9BA8AB]">

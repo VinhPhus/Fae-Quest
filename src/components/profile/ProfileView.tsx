@@ -224,8 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ để lưu đệm (cache)
+    // Chuỗi định danh hồ sơ v2 để làm mới bộ nhớ đệm
     const profileSignature = [
+      'v2',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
@@ -283,12 +284,12 @@ export const ProfileView: React.FC = () => {
       // 4. Chờ 1 nhịp requestAnimationFrame để trình duyệt hoàn tất vẽ đồ họa
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
-      // 5. Xuất thẻ chuẩn 1080x1920 (540x960, pixelRatio: 2) với nền tối #06141B
+      // 5. Xuất thẻ chuẩn 1080x1920 (540x960, pixelRatio: 2) với nền trong suốt để giữ nguyên 4 góc bo tròn
       const dataUrl = await toPng(exportCardRef.current, {
         width: 540,
         height: 960,
         pixelRatio: 2,
-        backgroundColor: '#06141B',
+        backgroundColor: 'transparent',
         cacheBust: true,
       });
 
@@ -744,7 +745,7 @@ export const ProfileView: React.FC = () => {
         ref={exportCardRef}
         playerName={playerName}
         avatarBase64={base64Avatar}
-        coverBase64={base64Cover}
+        coverBase64={base64Cover || coverUrl || DEFAULT_COVER_URL}
         currentTier={currentTier}
         nextTier={nextTier}
         exp={exp}
