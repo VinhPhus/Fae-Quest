@@ -13,6 +13,7 @@ export interface HunterProfileCloud {
   rank_id: string;
   equipped_title: string;
   streak: number;
+  last_streak_date?: string | null;
   completed_tasks_count: number;
   role?: string;
   has_seen_tutorial?: boolean;
@@ -28,6 +29,7 @@ export interface UserStateCloud {
   stars?: number;
   completedTotal: number;
   streakDays: number;
+  lastStreakDate?: string;
   dailyCompletedCount: number;
   hasSeenTutorial?: boolean;
   dailyBossCompletedCount: number;
@@ -188,7 +190,7 @@ export const fetchCommunityLeaderboard = async (
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url, cover_url, equipped_title, exp, coins, stars, streak, completed_tasks_count, role, updated_at')
+      .select('id, username, avatar_url, cover_url, equipped_title, exp, coins, stars, streak, last_streak_date, completed_tasks_count, role, updated_at')
       .order('exp', { ascending: false })
       .limit(limit);
 
@@ -231,7 +233,7 @@ export const restoreUserStateFromCloud = async (
     // 2. Lấy profile chính chủ từ public.profiles để luôn ưu tiên cover_url & avatar_url chuẩn
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('cover_url, avatar_url, exp, coins, stars, equipped_title, streak, completed_tasks_count')
+      .select('cover_url, avatar_url, exp, coins, stars, equipped_title, streak, last_streak_date, completed_tasks_count')
       .eq('id', cleanId)
       .maybeSingle();
 
@@ -247,6 +249,11 @@ export const restoreUserStateFromCloud = async (
         profileData?.avatar_url !== undefined && profileData?.avatar_url !== null
           ? profileData.avatar_url
           : (rawState.avatarUrl || ''),
+      streakDays:
+        profileData?.streak !== undefined && profileData?.streak !== null
+          ? profileData.streak
+          : (rawState.streakDays || 0),
+      lastStreakDate: profileData?.last_streak_date || rawState.lastStreakDate || '',
     };
 
     return { success: true, state: finalState };

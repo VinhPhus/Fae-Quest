@@ -3,21 +3,27 @@
  * Prevents UTC timezone drift issues by strictly using local device time.
  */
 
-export const getLocalDateString = (d: Date = new Date()): string => {
+export const getLocalDateStr = (d: Date = new Date()): string => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
+export const getLocalDateString = getLocalDateStr;
+
 export const getTodayString = (): string => {
-  return getLocalDateString(new Date());
+  return getLocalDateStr(new Date());
+};
+
+export const getYesterdayString = (): string => {
+  return getLocalDateStr(new Date(Date.now() - 86400000));
 };
 
 export const getTomorrowString = (): string => {
   const d = new Date();
   d.setDate(d.getDate() + 1);
-  return getLocalDateString(d);
+  return getLocalDateStr(d);
 };
 
 /**

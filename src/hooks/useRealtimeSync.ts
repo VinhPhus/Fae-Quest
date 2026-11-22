@@ -141,6 +141,14 @@ export const useRealtimeSync = (): void => {
             patch.stars = p.stars;
           }
 
+          // Cập nhật Chuỗi Kỷ Luật & Ngày Điểm Danh Realtime
+          if (typeof p.streak === 'number' && p.streak !== useFaeQuestStore.getState().streakDays) {
+            patch.streakDays = p.streak;
+          }
+          if (p.last_streak_date !== undefined) {
+            patch.lastStreakDate = p.last_streak_date || '';
+          }
+
           // Cập nhật ảnh bìa & Avatar Realtime cho chính tài khoản hiện tại
           if (p.cover_url !== undefined && p.cover_url !== useFaeQuestStore.getState().coverUrl) {
             patch.coverUrl = p.cover_url || '';

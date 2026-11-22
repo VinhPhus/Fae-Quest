@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { RankTier } from '../../types';
 import { Trophy, Shield, Sparkles } from 'lucide-react';
+import { DEFAULT_DARK_FANTASY_COVER_SVG } from '../../utils/imageExportHelper';
 
 export interface HunterBattleCardExportProps {
   playerName: string;
@@ -72,7 +73,8 @@ export const RANK_GLOW_STYLES: Record<
 
 /**
  * Thẻ Sưu Tầm Dark Fantasy Cao Cấp (Luxury Collector Card)
- * Kích thước cố định 540x960 (Tỷ lệ 9:16) dùng để xuất PNG siêu nét 1080x1920
+ * Kích thước chuẩn 540x960 (Tỷ lệ 9:16) dùng để xuất PNG siêu nét 1080x1920 Story & TikTok.
+ * Đảm bảo 100% hình ảnh nhúng Base64, tuyệt đối không chứa thẻ <img> với URL nội bộ/mạng.
  */
 export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCardExportProps>(
   (
@@ -106,9 +108,15 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
       progressPercent = Math.min(100, Math.max(0, Math.round((gainedInTier / span) * 100)));
     }
 
+    const safeCoverSrc =
+      coverBase64 && coverBase64.startsWith('data:image')
+        ? coverBase64
+        : DEFAULT_DARK_FANTASY_COVER_SVG;
+
     return (
       <div
-        className="fixed top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none select-none"
+        className="fixed top-0 left-[-2500px] pointer-events-none select-none"
+        style={{ position: 'fixed', top: 0, left: '-2500px', width: '540px', height: '960px', zIndex: -999 }}
         aria-hidden="true"
       >
         {/* ================= KHUNG CHÍNH 540x960 (BO TRÒN 32PX) ================= */}
@@ -118,25 +126,17 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
         >
           {/* 1. NỀN ẢNH BÌA TRÀN SÁT MÉP TRÊN (H=440PX) + CHUYỂN SẮC ĐA TẦNG */}
           <div className="absolute top-0 inset-x-0 h-[440px] w-full overflow-hidden pointer-events-none z-0">
-            {coverBase64 && coverBase64.startsWith('data:') ? (
-              <img
-                src={coverBase64}
-                alt="Hunter Cover"
-                className="w-full h-[440px] object-cover object-center"
-              />
-            ) : (
-              <img
-                src="/assets/auth-knight-bg.jpg"
-                alt="Hunter Cover Fallback"
-                className="w-full h-[440px] object-cover object-center"
-              />
-            )}
-            {/* Lớp chuyển sắc đa tầng: nửa trên hiện rõ, nửa dưới tan êm vào #06141B */}
+            <img
+              src={safeCoverSrc}
+              alt="Hunter Cover"
+              className="w-full h-[440px] object-cover object-center"
+            />
+            {/* Lớp chuyển sắc đa tầng: nửa trên hiện rõ nét ảnh bìa, nửa dưới tan êm vào #06141B */}
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  'linear-gradient(180deg, rgba(6,20,27,0.55) 0%, rgba(6,20,27,0.1) 28%, rgba(6,20,27,0.65) 68%, #06141B 100%)',
+                  'linear-gradient(180deg, rgba(6,20,27,0.32) 0%, rgba(6,20,27,0.05) 30%, rgba(6,20,27,0.65) 72%, #06141B 100%)',
               }}
             />
           </div>
@@ -174,7 +174,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
             <div className="flex items-center justify-between w-full pt-1">
               {/* Bên trái: Logo + Thương hiệu FaeQuest */}
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#06141B]/80 border border-white/20 p-1 flex items-center justify-center shadow-lg shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-[#06141B]/85 border border-white/20 p-1 flex items-center justify-center shadow-lg shrink-0">
                   {logoBase64 && logoBase64.startsWith('data:') ? (
                     <img
                       src={logoBase64}
@@ -189,14 +189,14 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                   <h1 className="font-rpg font-black text-lg tracking-wider text-white leading-tight drop-shadow-md whitespace-nowrap">
                     FAE<span className="text-amber-400">QUEST</span>
                   </h1>
-                  <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/70 drop-shadow-sm whitespace-nowrap">
+                  <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/75 drop-shadow-sm whitespace-nowrap">
                     THẺ CHIẾN TÍCH
                   </p>
                 </div>
               </div>
 
               {/* Bên phải: Huy hiệu mùa giải gọn gàng */}
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#06141B]/70 border border-white/15 text-[10px] font-bold text-[#CCD0CF] shadow-md shrink-0 whitespace-nowrap">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#06141B]/75 border border-white/20 text-[10px] font-bold text-[#CCD0CF] shadow-md shrink-0 whitespace-nowrap">
                 <Sparkles className="w-3 h-3 text-amber-300" />
                 <span>MÙA 2 • HẮC ÁM</span>
               </div>
@@ -204,16 +204,16 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
             {/* ================= TẦNG 2: TÂM ĐIỂM NHÂN VẬT (VÙNG GIAO THOA ẢNH BÌA & NỀN TỐI) ================= */}
             <div className="flex flex-col items-center text-center my-auto pt-2">
-              {/* Avatar lớn 132x132 viền 2 lớp ánh kim sang trọng */}
+              {/* Avatar lớn 136x136 viền 2 lớp ánh kim sang trọng */}
               <div
-                className="w-[132px] h-[132px] rounded-full p-[3px] relative flex items-center justify-center shadow-2xl transition-all"
+                className="w-[136px] h-[136px] rounded-full p-[3px] relative flex items-center justify-center shadow-2xl transition-all"
                 style={{
-                  border: `2px solid ${glowConfig.border}`,
+                  border: `2.5px solid ${glowConfig.border}`,
                   boxShadow: `0 0 28px ${glowConfig.border}66, 0 12px 32px rgba(0,0,0,0.85)`,
                 }}
               >
-                {/* Lớp viền đệm trong cách 4px tạo hiệu ứng huy chương */}
-                <div className="w-full h-full rounded-full bg-[#06141B] p-[3px] border border-white/15 flex items-center justify-center overflow-hidden">
+                {/* Lớp viền đệm trong tạo hiệu ứng huy chương */}
+                <div className="w-full h-full rounded-full bg-[#06141B] p-[3px] border border-white/20 flex items-center justify-center overflow-hidden">
                   {avatarBase64 && avatarBase64.startsWith('data:') ? (
                     <img
                       src={avatarBase64}
@@ -221,15 +221,15 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-[#11212D] flex items-center justify-center text-white font-black text-3xl">
+                    <div className="w-full h-full rounded-full bg-gradient-to-br from-[#11212D] to-[#06141B] flex items-center justify-center text-amber-300 font-rpg font-black text-3xl">
                       {playerName.slice(0, 2).toUpperCase()}
                     </div>
                   )}
                 </div>
 
-                {/* Huy hiệu thứ hạng nhỏ gọn TOP #X dưới chân Avatar (Không lặp lại chữ Bậc) */}
+                {/* Huy hiệu thứ hạng nhỏ gọn TOP #X dưới chân Avatar */}
                 <div
-                  className="absolute -bottom-2.5 px-3 py-0.5 rounded-full bg-[#06141B] border border-amber-400/70 shadow-xl flex items-center gap-1 whitespace-nowrap z-30"
+                  className="absolute -bottom-2.5 px-3.5 py-0.5 rounded-full bg-[#06141B] border border-amber-400/80 shadow-xl flex items-center gap-1.5 whitespace-nowrap z-30"
                   style={{
                     boxShadow: '0 4px 12px rgba(0,0,0,0.9), 0 0 10px rgba(245,158,11,0.4)',
                   }}
@@ -242,14 +242,14 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
               </div>
 
               {/* Tên nhân vật hiển thị font Serif / RPG cỡ lớn sang trọng */}
-              <h2 className="font-rpg font-black text-[32px] text-white tracking-wide text-center mt-5 drop-shadow-lg max-w-[460px] truncate whitespace-nowrap leading-tight px-2">
+              <h2 className="font-rpg font-black text-[30px] text-white tracking-wide text-center mt-5 drop-shadow-lg max-w-[480px] truncate whitespace-nowrap leading-tight px-2">
                 {playerName}
               </h2>
 
-              {/* Danh hiệu hiện tại dạng dải ruy-băng ánh kim: Hiển thị 100% chữ đầy đủ, không cắt xén */}
-              <div className="mt-2.5 flex items-center justify-center">
+              {/* Danh hiệu hiện tại dạng dải ruy-băng ánh kim: 100% hiển thị đầy đủ, không rớt dòng */}
+              <div className="mt-2.5 flex items-center justify-center max-w-[480px]">
                 <div
-                  className={`inline-flex items-center gap-2 px-4 py-1 rounded-full bg-gradient-to-r from-[#0F202B] via-[#142A38] to-[#0F202B] border text-xs font-black shadow-lg ${
+                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#0F202B] via-[#142A38] to-[#0F202B] border text-xs font-black shadow-lg whitespace-nowrap ${
                     titleRarity === 'legendary'
                       ? 'border-amber-400/80 text-amber-300 shadow-amber-500/10'
                       : titleRarity === 'epic'
@@ -261,17 +261,17 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                     <img
                       src={titleIconUrl}
                       alt={titleName}
-                      className="w-3.5 h-3.5 object-contain shrink-0 [image-rendering:pixelated]"
+                      className="w-4 h-4 object-contain shrink-0 [image-rendering:pixelated]"
                     />
                   )}
-                  <span className="tracking-widest uppercase text-xs font-extrabold whitespace-nowrap">
+                  <span className="tracking-wider uppercase text-xs font-extrabold whitespace-nowrap">
                     {titleName}
                   </span>
                 </div>
               </div>
 
-              {/* Hàng phụ thông số vinh dự: Nằm gọn trên 1 dòng duy nhất, cách khung dưới mb-3 */}
-              <div className="flex items-center justify-center gap-2 mt-2 text-[11px] font-semibold text-[#9BA8AB] mb-1">
+              {/* Hàng phụ thông số vinh dự: Nằm gọn trên 1 dòng duy nhất */}
+              <div className="flex items-center justify-center gap-2 mt-2 text-[11px] font-semibold text-[#9BA8AB] whitespace-nowrap">
                 <span>#{playerRankPos} BXH</span>
                 <span className="text-white/30">•</span>
                 <span className="text-amber-300 font-bold">★ {stars} Sao Vinh Dự</span>

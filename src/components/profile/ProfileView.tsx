@@ -224,9 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ v3_ để làm mới bộ nhớ đệm
+    // Chuỗi định danh hồ sơ v4 để làm mới bộ nhớ đệm
     const profileSignature = [
-      'v3_',
+      'v4',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
@@ -237,7 +237,6 @@ export const ProfileView: React.FC = () => {
       equippedTitleId || '',
       streakDays,
       completedTotal,
-      exp,
     ].join('|');
 
     // Kiểm tra cache: nếu các thông số không đổi, mở modal ngay tức thì (0ms)
@@ -254,18 +253,14 @@ export const ProfileView: React.FC = () => {
       // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 để tránh lỗi CORS / trắng ảnh
       let coverB64 = '';
       if (coverUrl) {
-        coverB64 = await imageUrlToBase64(coverUrl);
+        coverB64 = await imageUrlToBase64(coverUrl, 'img[alt="Hunter Dark Fantasy Cover"]');
       }
       if (!coverB64 && DEFAULT_COVER_URL) {
-        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL);
-      }
-      // Fallback ảnh bìa nội bộ cực kỳ đáng tin cậy nếu tải mạng thất bại
-      if (!coverB64) {
-        coverB64 = await imageUrlToBase64('/assets/auth-knight-bg.jpg');
+        coverB64 = await imageUrlToBase64(DEFAULT_COVER_URL, 'img[alt="Hunter Dark Fantasy Cover"]');
       }
 
       const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
-        avatarUrl ? imageUrlToBase64(avatarUrl) : Promise.resolve(''),
+        avatarUrl ? imageUrlToBase64(avatarUrl, `img[alt="${playerName}"]`) : Promise.resolve(''),
         imageUrlToBase64('/assets/logo.png'),
         imageUrlToBase64(currentTier.iconUrl),
         titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl) : Promise.resolve(''),
@@ -310,7 +305,6 @@ export const ProfileView: React.FC = () => {
         fontEmbedCSS: '',
         cacheBust: false,
         imagePlaceholder: transparent1x1,
-        onImageErrorHandler: () => transparent1x1,
       };
 
       let dataUrl: string;
@@ -367,6 +361,7 @@ export const ProfileView: React.FC = () => {
           {/* 1. Background Ảnh Bìa (Cover Banner Dark Fantasy) */}
           <div className="absolute top-0 inset-x-0 h-36 sm:h-40 overflow-hidden pointer-events-none z-0">
             <img
+              crossOrigin="anonymous"
               src={coverUrl || DEFAULT_COVER_URL}
               alt="Hunter Dark Fantasy Cover"
               className="w-full h-full object-cover object-center opacity-55 brightness-90 scale-105"
@@ -411,7 +406,12 @@ export const ProfileView: React.FC = () => {
                     title="Nhấn để cập nhật ảnh đại diện Thợ Săn"
                   >
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt={playerName} className="w-full h-full object-cover rounded-full" />
+                      <img
+                        crossOrigin="anonymous"
+                        src={avatarUrl}
+                        alt={playerName}
+                        className="w-full h-full object-cover rounded-full"
+                      />
                     ) : (
                       <img src={currentTier.iconUrl} alt={currentTier.name} className="w-full h-full object-contain [image-rendering:pixelated] p-2" />
                     )}

@@ -126,21 +126,62 @@ export const App: React.FC = () => {
       checkDailyReset();
       checkSystemMilestones();
       cleanupExpiredInventory();
+      // Tự động kiểm tra điểm danh & chuỗi ngày mới khi đăng nhập
+      useFaeQuestStore.getState().syncDailyLoginStreak();
       // Tự động đồng bộ nhẹ lên Supabase khi khởi chạy ứng dụng
       useFaeQuestStore.getState().syncToCloud(true);
     }
   }, [currentUser, checkDailyReset, checkSystemMilestones, cleanupExpiredInventory]);
 
-  // Periodic 30s background check for inventory item lifecycle (auto-cleanup) and midnight daily reset
+  // Periodic 30s background check for inventory item lifecycle (auto-cleanup), daily reset & streak
   useEffect(() => {
     cleanupExpiredInventory();
     checkDailyReset();
+    useFaeQuestStore.getState().syncDailyLoginStreak();
     const interval = setInterval(() => {
       cleanupExpiredInventory();
       checkDailyReset();
+      useFaeQuestStore.getState().syncDailyLoginStreak();
     }, 30000);
     return () => clearInterval(interval);
   }, [cleanupExpiredInventory, checkDailyReset]);
+
+  // Tự động kích hoạt khi người dùng quay lại ứng dụng (visibilitychange & focus)
+  useEffect(() => {
+    const handleAppResume = () => {
+      if (document.visibilityState === 'visible') {
+        checkDailyReset();
+        useFaeQuestStore.getState().syncDailyLoginStreak();
+      }
+    };
+    document.addEventListener('visibilitychange', handleAppResume);
+    window.addEventListener('focus', handleAppResume);
+    return () => {
+      document.removeEventListener('visibilitychange', handleAppResume);
+      window.removeEventListener('focus', handleAppResume);
+    };
+  }, [checkDailyReset]);
+
+  // Bộ hẹn giờ đúng mốc 00:00:02 đêm để tự động nhảy chuỗi & reset nhiệm vụ mà không cần F5
+  useEffect(() => {
+    let timerId: ReturnType<typeof setTimeout>;
+    const scheduleMidnightStreak = () => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 2);
+      const msUntilMidnight = Math.max(1000, tomorrow.getTime() - now.getTime());
+
+      timerId = setTimeout(() => {
+        checkDailyReset();
+        useFaeQuestStore.getState().syncDailyLoginStreak();
+        scheduleMidnightStreak();
+      }, msUntilMidnight);
+    };
+
+    scheduleMidnightStreak();
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [checkDailyReset]);
 
   // Clean up inventory whenever switching tabs
   useEffect(() => {
