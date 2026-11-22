@@ -3455,109 +3455,93 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
-      syncDailyLoginStreak: async (profileInput?: any): Promise<number | null> => {
+      syncDailyLoginStreak: async (targetUserId?: string): Promise<number | null> => {
         if (isSyncingStreakLock) return null;
         isSyncingStreakLock = true;
 
         try {
           const state = get();
+          const userId = targetUserId || state.currentUser?.id;
+
+          // Chặn chạy logic chuỗi khi hồ sơ chưa tải xong hoặc đang đăng xuất
+          if (!userId) {
+            return null;
+          }
+
+          // 1. Mọi lần kiểm tra BẮT BUỘC phải truy vấn trực tiếp dữ liệu mới nhất từ Supabase trước
+          const { data: freshProfile, error } = await supabase
+            .from('profiles')
+            .select('id, streak, last_streak_date')
+            .eq('id', String(userId))
+            .maybeSingle();
+
+          // Nếu error hoặc không có freshProfile, dừng ngay — tuyệt đối không ghi đè streak = 1 lên database!
+          if (error || !freshProfile) {
+            if (error) {
+              console.error('Streak profile fetch failed:', error);
+            }
+            return null;
+          }
+
+          // 2. Logic so sánh ngày theo giờ địa phương (YYYY-MM-DD, tuyệt đối không dùng toISOString)
           const today = getLocalDateStr();
           const yesterday = getYesterdayString();
+          const savedDate = String(freshProfile.last_streak_date || '').slice(0, 10);
 
-          // 1. Xác định profile và ID mục tiêu
-          let profile = profileInput;
-          const currentUser = state.currentUser;
-          const targetId = currentUser?.id || profile?.id;
-
-          if (!profile && targetId) {
-            try {
-              const { data, error } = await supabase
-                .from('profiles')
-                .select('id, streak, last_streak_date')
-                .eq('id', targetId)
-                .maybeSingle();
-
-              if (error) {
-                console.error('Streak profile fetch failed:', error);
-              } else if (data) {
-                profile = data;
-              }
-            } catch (err) {
-              console.error('Error fetching profile for streak sync:', err);
+          // Nếu savedDate === today: Đã điểm danh hôm nay -> dừng ngay, không cập nhật database, không tăng chuỗi, không hiện toast
+          if (savedDate === today) {
+            if (state.streakDays !== freshProfile.streak || state.lastStreakDate !== today) {
+              set({ streakDays: freshProfile.streak, lastStreakDate: today });
             }
+            return freshProfile.streak;
           }
 
-          const currentStreak = typeof profile?.streak === 'number'
-            ? profile.streak
-            : (typeof state.streakDays === 'number' ? state.streakDays : 0);
-
-          const lastStreakDate = profile?.last_streak_date || state.lastStreakDate || null;
-
-          let newStreak: number;
-          let shouldUpdate = false;
-
-          if (lastStreakDate === today) {
-            // Trường hợp 1: Đã cộng hôm nay rồi -> giữ nguyên, không cập nhật lại
-            if (state.streakDays !== currentStreak || state.lastStreakDate !== today) {
-              set({ streakDays: currentStreak, lastStreakDate: today });
-            }
-            return currentStreak;
-          } else if (lastStreakDate === yesterday) {
-            // Trường hợp 2: Duy trì liên tiếp -> cập nhật streak = (profile.streak || 0) + 1 và last_streak_date = today
-            newStreak = (currentStreak || 0) + 1;
-            shouldUpdate = true;
-          } else if (!lastStreakDate && currentStreak > 0) {
-            // Trường hợp 3: Tài khoản cũ mới chuyển sang cơ chế mới -> bảo toàn chuỗi cũ bằng cách tăng streak = profile.streak + 1 và ghi last_streak_date = today
-            newStreak = currentStreak + 1;
-            shouldUpdate = true;
+          let nextStreak = 1;
+          if (savedDate === yesterday) {
+            // Nếu savedDate === yesterday: Duy trì liên tiếp -> nextStreak = (freshProfile.streak || 0) + 1
+            nextStreak = (freshProfile.streak || 0) + 1;
+          } else if (!savedDate) {
+            // Nếu !savedDate (tài khoản cũ chưa có ngày điểm danh):
+            // Nếu freshProfile.streak > 0 thì giữ nguyên và ghi nhận ngày hôm nay; nếu streak === 0 thì nextStreak = 1
+            nextStreak = (freshProfile.streak || 0) > 0 ? freshProfile.streak : 1;
           } else {
-            // Trường hợp 4: last_streak_date cũ hơn hôm qua hoặc tài khoản mới streak = 0 -> Đặt streak = 1 và last_streak_date = today
-            newStreak = 1;
-            shouldUpdate = true;
+            // Nếu savedDate cũ hơn yesterday: Đứt chuỗi -> nextStreak = 1
+            nextStreak = 1;
           }
 
-          if (!shouldUpdate) return currentStreak;
+          // 3. Chốt chặn nguyên tử ngay tại câu lệnh UPDATE lên Supabase (Chống cộng đúp 100%)
+          const { data: updated, error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              streak: nextStreak,
+              last_streak_date: today,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', String(userId))
+            .or(`last_streak_date.is.null,last_streak_date.neq.${today}`)
+            .select('streak, last_streak_date')
+            .maybeSingle();
 
-          // Cập nhật Supabase nếu có ID
-          if (targetId) {
-            const { error } = await supabase
-              .from('profiles')
-              .update({
-                streak: newStreak,
-                last_streak_date: today,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', targetId);
+          if (updateError) {
+            console.error('Streak update failed:', updateError);
+            return null;
+          }
 
-            if (error) {
-              console.error('Streak update failed:', error);
-              // Fallback nếu cột last_streak_date chưa có trên Supabase
-              if (error.message?.includes('last_streak_date') || (error as any).details?.includes('last_streak_date')) {
-                const { error: fallbackErr } = await supabase
-                  .from('profiles')
-                  .update({
-                    streak: newStreak,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', targetId);
-                if (fallbackErr) {
-                  console.error('Streak fallback update failed:', fallbackErr);
-                }
-              }
+          // 4. Chỉ cập nhật state giao diện và hiện thông báo điểm danh khi updated có dữ liệu và nextStreak > (freshProfile.streak || 0)
+          if (updated) {
+            set({
+              streakDays: updated.streak,
+              lastStreakDate: updated.last_streak_date,
+            });
+
+            if (nextStreak > (freshProfile.streak || 0)) {
+              get().addToast(`🔥 Điểm danh ngày mới! Chuỗi kỷ luật đạt ${updated.streak}N`, 'success');
+              playSoundEffect('rankup', get().soundEnabled);
             }
+            return updated.streak;
           }
 
-          // Cập nhật Store toàn cục
-          set({
-            streakDays: newStreak,
-            lastStreakDate: today,
-          });
-
-          // Thông báo toast Điểm danh ngày mới
-          get().addToast(`🔥 Điểm danh ngày mới! Chuỗi kỷ luật đạt ${newStreak}N`, 'success');
-          playSoundEffect('rankup', get().soundEnabled);
-
-          return newStreak;
+          return freshProfile.streak;
         } catch (err) {
           console.error('Streak sync error:', err);
           return null;
@@ -3674,10 +3658,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       fetchCommunityProfiles: async () => {
         try {
           const res = await fetchCommunityLeaderboard(50);
+          if (res.error) {
+            console.error('Leaderboard fetch error:', res.error);
+          }
           const list = res.profiles || [];
           set({ communityProfiles: list });
           return list;
-        } catch {
+        } catch (error) {
+          console.error('Leaderboard fetch error:', error);
           return [];
         }
       },
@@ -3801,8 +3789,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 completedTotal: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
                   ? 0
                   : (profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0)),
-                streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
-                lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
+                streakDays: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                  ? 0
+                  : (profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0)),
                 dailyCompletedCount: s.dailyCompletedCount || 0,
                 dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
@@ -3821,9 +3810,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 }),
                 authLoading: false,
               });
-
-              // Tự động cộng chuỗi kỷ luật đăng nhập ngày mới
-              await get().syncDailyLoginStreak(profile);
             } else {
               // Brand new user profile in auth but no user_states: initialize clean
               const starterTasks: Task[] = [
@@ -3864,7 +3850,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 stars: profile?.stars || 0,
                 completedTotal: 0,
                 streakDays: 0,
-                lastStreakDate: '',
                 dailyCompletedCount: 0,
                 dailyBossCompletedCount: 0,
                 tasks: starterTasks,
@@ -3888,6 +3873,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               await get().syncToCloud(true);
             }
 
+            // Tự động kiểm tra & đồng bộ chuỗi kỷ luật ngày mới
+            await get().syncDailyLoginStreak(hunterId);
+
             // Đồng bộ dữ liệu Live-Ops: Hộp thư, Cửa hàng hệ thống, Thành tựu động, BXH thật, Nhật ký
             get().fetchUserMessages();
             get().fetchSystemShopItems();
@@ -3906,11 +3894,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
 
         // Keep auth session listener
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        supabase.auth.onAuthStateChange(async (event) => {
           if (event === 'SIGNED_OUT') {
             set({ currentUser: null, cloudSyncStatus: 'idle' });
-          } else if (event === 'SIGNED_IN' && session?.user) {
-            get().syncDailyLoginStreak();
           }
         });
       },
@@ -4063,7 +4049,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 stars: 0,
                 completedTotal: 0,
                 streakDays: 0,
-                lastStreakDate: '',
                 dailyCompletedCount: 0,
                 dailyBossCompletedCount: 0,
                 tasks: starterTasks,
@@ -4225,8 +4210,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               completedTotal: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
                 ? 0
                 : (profile?.completed_tasks_count !== undefined ? profile.completed_tasks_count : (typeof s.completedTotal === 'number' ? s.completedTotal : 0)),
-              streakDays: profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0),
-              lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
+              streakDays: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
+                ? 0
+                : (profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0)),
               dailyCompletedCount: s.dailyCompletedCount || 0,
               dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
@@ -4316,7 +4302,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().fetchAdminAssets();
 
           // Điểm danh ngày mới & đồng bộ chuỗi kỷ luật
-          await get().syncDailyLoginStreak(profile);
+          await get().syncDailyLoginStreak(userId);
 
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');

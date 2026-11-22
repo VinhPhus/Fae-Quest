@@ -78,10 +78,15 @@ export const LeaderboardHeader: React.FC = () => {
   const handleRefresh = async () => {
     playSound('ui_click', soundEnabled);
     setIsLoading(true);
-    await syncToCloud(true);
-    await fetchCommunityProfiles();
-    window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
-    setTimeout(() => setIsLoading(false), 800);
+    try {
+      await fetchCommunityProfiles();
+      syncToCloud(true).catch((e) => console.warn('Background sync error in leaderboard:', e));
+      window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
+    } catch (err) {
+      console.error('Leaderboard refresh error:', err);
+    } finally {
+      setTimeout(() => setIsLoading(false), 600);
+    }
   };
 
   // Tính số lượng người chơi thật đang thi đấu
@@ -210,10 +215,15 @@ export const LeaderboardTable: React.FC = () => {
 
   const loadLeaderboard = async () => {
     setIsLoading(true);
-    await syncToCloud(true);
-    await fetchCommunityProfiles();
-    setIsLoading(false);
-    setLastRefreshed(new Date().toLocaleTimeString('vi-VN'));
+    try {
+      await fetchCommunityProfiles();
+      syncToCloud(true).catch((e) => console.warn('Background sync error in leaderboard:', e));
+    } catch (err) {
+      console.error('Leaderboard load error:', err);
+    } finally {
+      setIsLoading(false);
+      setLastRefreshed(new Date().toLocaleTimeString('vi-VN'));
+    }
   };
 
   useEffect(() => {

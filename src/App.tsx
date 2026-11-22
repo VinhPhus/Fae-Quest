@@ -127,7 +127,7 @@ export const App: React.FC = () => {
       checkSystemMilestones();
       cleanupExpiredInventory();
       // Tự động kiểm tra điểm danh & chuỗi ngày mới khi đăng nhập
-      useFaeQuestStore.getState().syncDailyLoginStreak();
+      useFaeQuestStore.getState().syncDailyLoginStreak(currentUser.id);
       // Tự động đồng bộ nhẹ lên Supabase khi khởi chạy ứng dụng
       useFaeQuestStore.getState().syncToCloud(true);
     }
@@ -137,11 +137,17 @@ export const App: React.FC = () => {
   useEffect(() => {
     cleanupExpiredInventory();
     checkDailyReset();
-    useFaeQuestStore.getState().syncDailyLoginStreak();
+    const currUser = useFaeQuestStore.getState().currentUser;
+    if (currUser) {
+      useFaeQuestStore.getState().syncDailyLoginStreak(currUser.id);
+    }
     const interval = setInterval(() => {
       cleanupExpiredInventory();
       checkDailyReset();
-      useFaeQuestStore.getState().syncDailyLoginStreak();
+      const user = useFaeQuestStore.getState().currentUser;
+      if (user) {
+        useFaeQuestStore.getState().syncDailyLoginStreak(user.id);
+      }
     }, 30000);
     return () => clearInterval(interval);
   }, [cleanupExpiredInventory, checkDailyReset]);
@@ -151,7 +157,10 @@ export const App: React.FC = () => {
     const handleAppResume = () => {
       if (document.visibilityState === 'visible') {
         checkDailyReset();
-        useFaeQuestStore.getState().syncDailyLoginStreak();
+        const user = useFaeQuestStore.getState().currentUser;
+        if (user) {
+          useFaeQuestStore.getState().syncDailyLoginStreak(user.id);
+        }
       }
     };
     document.addEventListener('visibilitychange', handleAppResume);
@@ -172,7 +181,10 @@ export const App: React.FC = () => {
 
       timerId = setTimeout(() => {
         checkDailyReset();
-        useFaeQuestStore.getState().syncDailyLoginStreak();
+        const user = useFaeQuestStore.getState().currentUser;
+        if (user) {
+          useFaeQuestStore.getState().syncDailyLoginStreak(user.id);
+        }
         scheduleMidnightStreak();
       }, msUntilMidnight);
     };

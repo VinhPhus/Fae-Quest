@@ -188,20 +188,27 @@ export const fetchCommunityLeaderboard = async (
   }
 
   try {
+    // Truy vấn trực tiếp từ bảng profiles (sắp xếp exp giảm dần, giới hạn 50 người)
+    // Dùng select('*') để bảo đảm không bị lỗi cột không tồn tại
+    // KHÔNG lọc .eq('id', user.id) và KHÔNG lọc bỏ những người chơi có last_streak_date là null
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url, cover_url, equipped_title, exp, coins, stars, streak, last_streak_date, completed_tasks_count, role, updated_at')
+      .select('*')
       .order('exp', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Leaderboard fetch error:', error);
+      return { profiles: [], error: error.message };
+    }
+
     // Đảm bảo loại bỏ tuyệt đối bất kỳ tài khoản nào mang role admin
     const nonAdminProfiles = ((data as HunterProfileCloud[]) || []).filter(
       (p) => p.role !== 'admin'
     );
     return { profiles: nonAdminProfiles };
   } catch (err: any) {
-    console.error('Lỗi khi tải BXH Supabase:', err);
+    console.error('Leaderboard fetch error:', err);
     return { profiles: [], error: 'Không thể tải bảng xếp hạng từ máy chủ' };
   }
 };
@@ -233,7 +240,7 @@ export const restoreUserStateFromCloud = async (
     // 2. Lấy profile chính chủ từ public.profiles để luôn ưu tiên cover_url & avatar_url chuẩn
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('cover_url, avatar_url, exp, coins, stars, equipped_title, streak, last_streak_date, completed_tasks_count')
+      .select('*')
       .eq('id', cleanId)
       .maybeSingle();
 
