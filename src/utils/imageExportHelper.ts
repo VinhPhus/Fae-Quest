@@ -61,6 +61,29 @@ export async function imageUrlToBase64(url: string): Promise<string> {
 }
 
 /**
+ * Ensure all <img> elements inside a container are fully loaded and decoded.
+ */
+export async function waitForImagesToLoad(container: HTMLElement): Promise<void> {
+  const images = Array.from(container.querySelectorAll('img'));
+  await Promise.all(
+    images.map((img) => {
+      if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const onDone = () => {
+          img.removeEventListener('load', onDone);
+          img.removeEventListener('error', onDone);
+          resolve();
+        };
+        img.addEventListener('load', onDone);
+        img.addEventListener('error', onDone);
+        // Safety timeout so export never hangs
+        setTimeout(onDone, 600);
+      });
+    })
+  );
+}
+
+/**
  * Convert a base64 data URL to a File object for navigator.share
  */
 export function dataUrlToFile(dataUrl: string, filename: string): File {

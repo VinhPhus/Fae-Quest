@@ -7,7 +7,7 @@ import { resolveTitleObject } from '../../constants/systemQuests';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
 import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
-import { imageUrlToBase64 } from '../../utils/imageExportHelper';
+import { imageUrlToBase64, waitForImagesToLoad } from '../../utils/imageExportHelper';
 import { CoinIcon } from '../ui/CoinIcon';
 import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 import { ProductivityAnalytics } from '../analytics/ProductivityAnalytics';
@@ -67,15 +67,6 @@ export const ProfileHeader: React.FC = () => {
       <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('faequest:export-battle-card'))}
-          className="px-3.5 py-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_16px_rgba(245,158,11,0.25)] active:scale-95 transition cursor-pointer"
-          title="Xuất Thẻ Chiến Tích Thợ Săn chuẩn 9:16 để chia sẻ Story & TikTok"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Xuất Thẻ Chiến Tích</span>
-        </button>
-        <button
-          type="button"
           onClick={() => setOathOpen(true)}
           className="px-3.5 py-2 rounded-full bg-[#06141B] hover:bg-[#253745] border border-[#253745] hover:border-[#4A5C6A] text-[#CCD0CF] font-bold text-xs flex items-center gap-1.5 transition cursor-pointer shadow-sm"
           title="Xem Bản Khế Ước Thợ Săn"
@@ -95,6 +86,11 @@ export const ProfileHeader: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Bộ nhớ đệm (Cache) Thẻ Chiến Tích theo Profile Signature để mở lại tức thì (0ms)
+ */
+let battleCardCache: { signature: string; imageDataUrl: string } | null = null;
 
 /**
  * Main Profile View Component
@@ -138,6 +134,7 @@ export const ProfileView: React.FC = () => {
   const [base64Cover, setBase64Cover] = useState('');
   const [base64Logo, setBase64Logo] = useState('');
   const [base64RankIcon, setBase64RankIcon] = useState('');
+  const [base64TitleIcon, setBase64TitleIcon] = useState('');
   const exportCardRef = useRef<HTMLDivElement>(null);
 
   const currentIdx = getRankIndexByExp(exp);
@@ -226,37 +223,77 @@ export const ProfileView: React.FC = () => {
    */
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
+
+    // Chuỗi định danh hồ sơ để lưu đệm (cache)
+    const profileSignature = [
+      playerName || '',
+      avatarUrl || '',
+      coverUrl || '',
+      currentTier.id,
+      currentIdx + 1,
+      exp,
+      nextTier ? nextTier.minExp : 'MAX',
+      equippedTitleId || '',
+      streakDays,
+      completedTotal,
+      exp,
+    ].join('|');
+
+    // Kiểm tra cache: nếu các thông số không đổi, mở modal ngay tức thì (0ms)
+    if (battleCardCache && battleCardCache.signature === profileSignature && battleCardCache.imageDataUrl) {
+      setExportedCardUrl(battleCardCache.imageDataUrl);
+      setIsPreviewModalOpen(true);
+      return;
+    }
+
     setIsExportingCard(true);
     addToast('Đang chuẩn bị nguyên liệu rèn Thẻ Chiến Tích...', 'info');
 
     try {
-      // 1. Chuyển đổi Avatar, Ảnh bìa, Logo & Rank Icon sang Base64 để tránh lỗi CORS / trắng ảnh
-      const [avatarB64, coverB64, logoB64, rankB64] = await Promise.all([
+      // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 để tránh lỗi CORS / trắng ảnh
+      const [avatarB64, coverB64, logoB64, rankB64, titleB64] = await Promise.all([
         avatarUrl ? imageUrlToBase64(avatarUrl) : Promise.resolve(''),
         coverUrl ? imageUrlToBase64(coverUrl) : imageUrlToBase64(DEFAULT_COVER_URL),
         imageUrlToBase64('/assets/logo.png'),
         imageUrlToBase64(currentTier.iconUrl),
+        titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl) : Promise.resolve(''),
       ]);
 
       setBase64Avatar(avatarB64);
       setBase64Cover(coverB64);
       setBase64Logo(logoB64);
       setBase64RankIcon(rankB64);
+      setBase64TitleIcon(titleB64);
 
-      // Chờ React đồng bộ dữ liệu vào node off-screen
-      await new Promise((r) => setTimeout(r, 180));
+      // 2. Chờ font hệ thống / webfont sẵn sàng
+      if (document.fonts?.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {
+          console.warn('fonts.ready error:', e);
+        }
+      }
 
+      // 3. Đảm bảo tất cả ảnh <img> bên trong node xuất ảnh đã tải xong (img.complete)
       if (!exportCardRef.current) {
         throw new Error('Khung xuất ảnh chưa sẵn sàng');
       }
+      await waitForImagesToLoad(exportCardRef.current);
 
-      // 2. Xuất node sang ảnh PNG chuẩn sắc nét với tỷ lệ 2x (540x960 -> 1080x1920)
+      // 4. Chờ 1 nhịp requestAnimationFrame để trình duyệt hoàn tất vẽ đồ họa
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
+      // 5. Xuất thẻ chuẩn 1080x1920 (540x960, pixelRatio: 2) với nền tối #06141B
       const dataUrl = await toPng(exportCardRef.current, {
-        pixelRatio: 2,
-        cacheBust: true,
         width: 540,
         height: 960,
+        pixelRatio: 2,
+        backgroundColor: '#06141B',
+        cacheBust: true,
       });
+
+      // Lưu đệm để lần sau mở tức thì
+      battleCardCache = { signature: profileSignature, imageDataUrl: dataUrl };
 
       setExportedCardUrl(dataUrl);
       setIsPreviewModalOpen(true);
@@ -268,17 +305,6 @@ export const ProfileView: React.FC = () => {
       setIsExportingCard(false);
     }
   };
-
-  // Đồng bộ trigger từ ProfileHeader
-  useEffect(() => {
-    const onExportTrigger = () => {
-      handleExportBattleCard();
-    };
-    window.addEventListener('faequest:export-battle-card', onExportTrigger);
-    return () => {
-      window.removeEventListener('faequest:export-battle-card', onExportTrigger);
-    };
-  }, [avatarUrl, coverUrl, currentTier, playerName, exp, stars, streakDays, completedTotal]);
 
   return (
     <div className="space-y-6">
@@ -726,7 +752,7 @@ export const ProfileView: React.FC = () => {
         streakDays={streakDays}
         completedTotal={completedTotal}
         titleName={titleObj.name}
-        titleIconUrl={titleObj.iconUrl}
+        titleIconUrl={base64TitleIcon || titleObj.iconUrl}
         titleRarity={titleObj.rarity}
         hunterId={hunterId}
         playerRankPos={playerRankPos}
