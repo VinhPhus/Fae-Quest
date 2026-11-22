@@ -1,14 +1,18 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { toPng } from 'html-to-image';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { resolveTitleObject } from '../../constants/systemQuests';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
 import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
+import { imageUrlToBase64 } from '../../utils/imageExportHelper';
 import { CoinIcon } from '../ui/CoinIcon';
 import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 import { ProductivityAnalytics } from '../analytics/ProductivityAnalytics';
+import { HunterBattleCardExport } from './HunterBattleCardExport';
+import { BattleCardPreviewModal } from '../modals/BattleCardPreviewModal';
 import {
   User,
   Camera,
@@ -61,6 +65,15 @@ export const ProfileHeader: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('faequest:export-battle-card'))}
+          className="px-3.5 py-2 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_16px_rgba(245,158,11,0.25)] active:scale-95 transition cursor-pointer"
+          title="Xuất Thẻ Chiến Tích Thợ Săn chuẩn 9:16 để chia sẻ Story & TikTok"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Xuất Thẻ Chiến Tích</span>
+        </button>
         <button
           type="button"
           onClick={() => setOathOpen(true)}
@@ -116,6 +129,16 @@ export const ProfileView: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [showAnalyticsSection, setShowAnalyticsSection] = useState(true);
+
+  // Thẻ Chiến Tích Export State
+  const [isExportingCard, setIsExportingCard] = useState(false);
+  const [exportedCardUrl, setExportedCardUrl] = useState('');
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [base64Avatar, setBase64Avatar] = useState('');
+  const [base64Cover, setBase64Cover] = useState('');
+  const [base64Logo, setBase64Logo] = useState('');
+  const [base64RankIcon, setBase64RankIcon] = useState('');
+  const exportCardRef = useRef<HTMLDivElement>(null);
 
   const currentIdx = getRankIndexByExp(exp);
   const currentTier = RANK_TIERS[currentIdx];
@@ -197,6 +220,65 @@ export const ProfileView: React.FC = () => {
       setIsUploading(false);
     }
   };
+
+  /**
+   * Tạo và xuất ảnh Thẻ Chiến Tích Thợ Săn chuẩn 9:16 (1080x1920)
+   */
+  const handleExportBattleCard = async () => {
+    if (isExportingCard) return;
+    setIsExportingCard(true);
+    addToast('Đang chuẩn bị nguyên liệu rèn Thẻ Chiến Tích...', 'info');
+
+    try {
+      // 1. Chuyển đổi Avatar, Ảnh bìa, Logo & Rank Icon sang Base64 để tránh lỗi CORS / trắng ảnh
+      const [avatarB64, coverB64, logoB64, rankB64] = await Promise.all([
+        avatarUrl ? imageUrlToBase64(avatarUrl) : Promise.resolve(''),
+        coverUrl ? imageUrlToBase64(coverUrl) : imageUrlToBase64(DEFAULT_COVER_URL),
+        imageUrlToBase64('/assets/logo.png'),
+        imageUrlToBase64(currentTier.iconUrl),
+      ]);
+
+      setBase64Avatar(avatarB64);
+      setBase64Cover(coverB64);
+      setBase64Logo(logoB64);
+      setBase64RankIcon(rankB64);
+
+      // Chờ React đồng bộ dữ liệu vào node off-screen
+      await new Promise((r) => setTimeout(r, 180));
+
+      if (!exportCardRef.current) {
+        throw new Error('Khung xuất ảnh chưa sẵn sàng');
+      }
+
+      // 2. Xuất node sang ảnh PNG chuẩn sắc nét với tỷ lệ 2x (540x960 -> 1080x1920)
+      const dataUrl = await toPng(exportCardRef.current, {
+        pixelRatio: 2,
+        cacheBust: true,
+        width: 540,
+        height: 960,
+      });
+
+      setExportedCardUrl(dataUrl);
+      setIsPreviewModalOpen(true);
+      addToast('Đã rèn Thẻ Chiến Tích 9:16 thành công!', 'success');
+    } catch (err) {
+      console.error('Lỗi khi xuất Thẻ Chiến Tích:', err);
+      addToast('Không thể xuất Thẻ Chiến Tích. Vui lòng thử lại!', 'error');
+    } finally {
+      setIsExportingCard(false);
+    }
+  };
+
+  // Đồng bộ trigger từ ProfileHeader
+  useEffect(() => {
+    const onExportTrigger = () => {
+      handleExportBattleCard();
+    };
+    window.addEventListener('faequest:export-battle-card', onExportTrigger);
+    return () => {
+      window.removeEventListener('faequest:export-battle-card', onExportTrigger);
+    };
+  }, [avatarUrl, coverUrl, currentTier, playerName, exp, stars, streakDays, completedTotal]);
 
   return (
     <div className="space-y-6">
@@ -373,7 +455,27 @@ export const ProfileView: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportBattleCard}
+                  disabled={isExportingCard}
+                  className="px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs flex items-center gap-1 shadow-md transition active:scale-95 cursor-pointer disabled:opacity-60"
+                  title="Xuất Thẻ Chiến Tích Thợ Săn chuẩn 9:16 chia sẻ Story & TikTok"
+                >
+                  {isExportingCard ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang rèn...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Xuất Thẻ Chiến Tích</span>
+                    </>
+                  )}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setRoadmapOpen(true)}
@@ -610,6 +712,37 @@ export const ProfileView: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      {/* ================= KHUNG XUẤT ẢNH THẺ CHIẾN TÍCH 9:16 (OFF-SCREEN) ================= */}
+      <HunterBattleCardExport
+        ref={exportCardRef}
+        playerName={playerName}
+        avatarBase64={base64Avatar}
+        coverBase64={base64Cover}
+        currentTier={currentTier}
+        nextTier={nextTier}
+        exp={exp}
+        stars={stars}
+        streakDays={streakDays}
+        completedTotal={completedTotal}
+        titleName={titleObj.name}
+        titleIconUrl={titleObj.iconUrl}
+        titleRarity={titleObj.rarity}
+        hunterId={hunterId}
+        playerRankPos={playerRankPos}
+        level={currentIdx + 1}
+        logoBase64={base64Logo}
+        rankIconBase64={base64RankIcon}
+      />
+
+      {/* ================= MODAL XEM TRƯỚC & CHIA SẺ THẺ CHIẾN TÍCH ================= */}
+      <BattleCardPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        imageUrl={exportedCardUrl}
+        playerName={playerName}
+        onShowToast={addToast}
+      />
     </div>
   );
 };
