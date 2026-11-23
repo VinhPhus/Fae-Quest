@@ -1,180 +1,298 @@
-# TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS) & HƯỚNG DẪN TRIỂN KHAI TRÊN ANTIGRAVITY
-**Tên dự án:** FaeQuest — Hệ Thống Quản Lý Nhiệm Vụ Nhập Vai (Gamified RPG Todo List)  
-**Phiên bản:** 2.0 (Bản nâng cấp Full-stack / Modern Web App cho Antigravity)  
-**Ngôn ngữ giao diện:** Tiếng Việt  
+# TÀI LIỆU ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS) & KIẾN TRÚC TRIỂN KHAI HỆ THỐNG
+**Tên dự án:** FaeQuest — Nền Tảng Quản Lý Nhiệm Vụ & Năng Suất Nhập Vai (Gamified RPG Productivity Platform)  
+**Phiên bản hiện tại:** 2.0.0 (Production Release / Full-stack Cloud-Sync & Mobile PWA)  
+**Tác giả & Đội ngũ:** FaeQuest Core Engineering Team  
+**Ngôn ngữ giao diện:** Tiếng Việt (Bản địa hóa 100%)  
+**Ngày cập nhật:** Tháng 11/2026  
 
 ---
 
-## 1. TỔNG QUAN DỰ ÁN (PROJECT OVERVIEW)
-### 1.1. Mục tiêu sản phẩm
-**FaeQuest** là ứng dụng quản lý công việc hằng ngày (Todo List) kết hợp cơ chế **Gamification (Trò chơi hóa)** theo phong cách Dark Fantasy RPG. Mục tiêu cốt lõi là biến những công việc nhàm chán hằng ngày thành hành trình tích lũy kinh nghiệm (EXP), leo 7 bậc Rank danh giá, nhận Xu thưởng khi thăng hạng để tự thưởng bản thân ngoài đời thực và cạnh tranh thứ hạng cùng các đối thủ giả lập (AI Rivals).
+## 1. TỔNG QUAN HỆ THỐNG (SYSTEM OVERVIEW)
 
-### 1.2. Đề xuất Công nghệ nâng cấp trên Antigravity (Tech Stack)
-Để nâng cấp từ bản Single-File HTML lên ứng dụng chuyên nghiệp trên Antigravity, khuyến nghị sử dụng:
-- **Framework:** Next.js 14+ (App Router) hoặc React + Vite + TypeScript.
-- **Styling:** Tailwind CSS + Framer Motion (hiệu ứng chuyển cảnh, lên cấp, thanh tiến trình mượt mà) + Canvas Confetti (pháo hoa khi lên Rank).
-- **Icons:** Lucide React hoặc Phosphor Icons (`@phosphor-icons/react`).
-- **Quản lý State & Lưu trữ:** Zustand (với middleware `persist` lưu vào `localStorage` hoặc đồng bộ Supabase/Firebase nếu muốn mở rộng đăng nhập).
-- **Âm thanh:** Web Audio API Synthesizer (không phụ thuộc file âm thanh ngoài, tự tạo âm thanh khi hoàn thành task, mua đồ, lên Rank).
+### 1.1. Tầm nhìn & Mục tiêu sản phẩm
+**FaeQuest** là nền tảng quản lý công việc và rèn luyện năng suất hằng ngày (Personal Productivity & Task Management) được xây dựng dựa trên triết lý **Gamification (Trò chơi hóa)** chuyên sâu theo phong cách Dark Fantasy RPG cổ điển. 
+
+Hệ thống chuyển đổi các nhiệm vụ, thói quen và mục tiêu kỷ luật thường nhật thành hành trình chinh phục thử thách của một **Thợ Săn Fae**:
+- Tích lũy điểm kinh nghiệm (**EXP**) để thăng cấp qua **7 Bậc Rank** danh giá (từ *Đồng* đến *Thách Đấu*).
+- Nhận thưởng **Xu Vàng Fae** khi hoàn thành nhiệm vụ và lên cấp để đổi lấy các phần thưởng tự thưởng ngoài đời thực trong **Cửa Hàng Tự Thưởng (Reward Shop)**.
+- Đo lường và cân bằng năng lực bản thân qua **Sơ Đồ Lục Giác Năng Lực 6 Trụ Cột** (thang 1.0 – 5.0) và biểu đồ phong độ 7 ngày.
+- Đắm chìm vào không gian làm việc sâu với **Fae Focus (Pomodoro Engine)** tích hợp âm thanh môi trường thư giãn (Ambient Sounds).
+- Đua tài trên **Bảng Xếp Hạng Cộng Đồng (Community Leaderboard)**, so sánh chỉ số và so kèo lục giác trực quan với các đối thủ khác.
+- Xuất **Thẻ Chiến Tích 9:16 (Hunter Battle Card)** chuẩn độ phân giải cao để chia sẻ thành quả lên mạng xã hội (TikTok, Instagram, Facebook Story).
+
+### 1.2. Ngăn xếp Công nghệ Hiện tại (Current Production Tech Stack)
+| Thành phần | Công nghệ / Thư viện | Vai trò kỹ thuật |
+| :--- | :--- | :--- |
+| **Frontend Framework** | **React 18 + Vite 6 + TypeScript** | Kiến trúc SPA hiện đại, compile siêu tốc, type-safe toàn bộ hệ thống. |
+| **Styling & Animation** | **Tailwind CSS v3 + Tailwind Animate + Framer Motion** | Giao diện Dark Fantasy huyền bí, animation chuyển cảnh lò xo (`EASING_SPRING`), tương thích responsive mọi kích thước màn hình. |
+| **State Management** | **Zustand v5 (`persist` middleware)** | Quản lý state tập trung, tự động lưu cục bộ vào `localStorage` và đồng bộ ngầm hai chiều với Supabase. |
+| **Backend & Cloud DB** | **Supabase (PostgreSQL 15 + PostgREST + Auth + Storage)** | Lưu trữ Profile người chơi, State đám mây (`user_states`), RPC functions bảo mật (`SECURITY DEFINER`), Leaderboard realtime. |
+| **Asset Cloud CDN** | **Cloudinary API (Upload & Delete)** | Tải lên, tối ưu nén ảnh đại diện và ảnh bìa tùy chỉnh, tự động dọn dẹp ảnh cũ để tiết kiệm tài nguyên. |
+| **Export Engine** | **HTML5 Canvas 2D + html-to-image** | Pre-compositing ảnh bìa và lớp chuyển sắc bằng Canvas 2D trước khi chụp để khử hoàn toàn lỗi đen kịt trên iOS Safari / WebKit. |
+| **Audio Synthesizer** | **Web Audio API Engine** | Tổng hợp âm thanh SFX hoàn thành nhiệm vụ, mua đồ, thăng hạng và bộ lọc tiếng ồn trắng (Mưa rơi, Lửa trại, Gió rừng, Cyber, Sóng biển). |
+| **Mobile PWA** | **vite-plugin-pwa + Workbox** | Đóng gói Progressive Web App, Service Worker precache tài nguyên, hỗ trợ cài đặt trực tiếp lên iOS / Android / Desktop và chạy mượt khi mất mạng. |
+| **Onboarding Guide** | **Driver.js** | Kịch bản hướng dẫn tân thủ 9 bước tương tác, selector động chuyển đổi giữa Desktop Sidebar và Mobile Bottom Nav. |
 
 ---
 
-## 2. HỆ THỐNG BẢNG MÀU & DESIGN TOKENS (COLOR PALETTE SPEC)
-Bảng màu được lấy cảm hứng trực tiếp từ bộ **Palette For Illustration #7 (2026)**, mang phong cách huyền bí, cổ điển nhưng nổi bật:
+## 2. HỆ THỐNG THIẾT KẾ & BẢNG MÀU DARK FANTASY (DESIGN SYSTEM)
 
-### 2.1. Bảng mã màu gốc (Core Palette)
-| Tên Màu | Mã HEX | Mã RGB | Mã CMYK | Vai trò trong Giao diện (UI Role) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Fae Fruit** | `#D97352` | `217, 119, 82` | `12, 64, 68, 2` | **Primary Accent / CTA:** Nút bấm chính, thanh EXP, biểu tượng Xu vàng, viền nổi bật, thông báo lên cấp. |
-| **Opal** | `#6850AD` | `104, 80, 173` | `73, 74, 0, 0` | **Secondary / Mystical Accent:** Huy hiệu phụ, thẻ thống kê, bộ lọc trạng thái, nút hành động phụ. |
-| **Blood Bargain** | `#6B0733` | `107, 7, 51` | `34, 100, 42, 52` | **Surface / Card Background:** Nền của các thẻ nhiệm vụ (Quest Card), thẻ vật phẩm Shop, dòng nổi bật của người chơi trên BXH. |
-| **Thorn Crown** | `#2D1036` | `45, 16, 54` | `88, 100, 40, 57` | **Main Background:** Nền chính toàn trang, nền ô nhập liệu (Input), nền thanh điều hướng. |
+Giao diện của FaeQuest V2.0 sử dụng bảng màu **Dark Fantasy Abyssal** mang phong cách huyền bí, sang trọng và tối ưu độ tương phản cho mắt người dùng khi làm việc ban đêm:
 
-### 2.2. Màu bổ trợ hệ thống (Extended Tokens)
-- **Thorn Dark (`#1D0924`):** Nền sâu cho Modal, khung chứa thanh EXP, Scrollbar track.
-- **Parchment (`#FFF5EE`):** Màu chữ chính (Trắng kem ánh cam nhẹ giúp dịu mắt trên nền tối `#2D1036`).
-- **Fae Light (`#EB9275`):** Màu chữ phụ khi hover hoặc hiển thị số cộng EXP.
-- **Opal Light (`#8770CC`):** Viền phát sáng nhẹ cho các thẻ đặc biệt.
+### 2.1. Bảng mã màu chuẩn hệ thống (Core Design Tokens)
+| Tên Token | Mã HEX | Giá trị RGB | Ứng dụng trong Giao diện |
+| :--- | :--- | :--- | :--- |
+| **Abyssal Base** | `#06141B` | `rgba(6, 20, 27, 1)` | Nền chính toàn trang (Body Background), nền các ô nhập liệu sâu, nền thẻ modal, điểm neo gradient. |
+| **Abyssal Surface** | `#11212D` | `rgba(17, 33, 45, 1)` | Bề mặt thẻ Card nhiệm vụ, thanh KPI tóm tắt, bảng thống kê năng lực, sidebar nền. |
+| **Abyssal Border** | `#253745` | `rgba(37, 55, 69, 1)` | Viền phân tách các khối nội dung, đường lưới lục giác, dải ngăn cách các cột chỉ số. |
+| **Steel Accent** | `#4A5C6A` | `rgba(74, 92, 106, 1)` | Viền sáng nhẹ (Hover Border), nút hành động phụ, badge danh hiệu mặc định. |
+| **Subtext Muted** | `#9BA8AB` | `rgba(155, 168, 171, 1)` | Văn bản thứ cấp, nhãn chú thích, thời gian, đơn vị đo lường, phụ đề mô tả. |
+| **Titanium Text** | `#CCD0CF` | `rgba(204, 208, 207, 1)` | Văn bản chính (Primary Text), tiêu đề mục, giá trị số liệu quan trọng. |
+| **Fae Gold / Amber** | `#F59E0B` | `rgba(245, 158, 11, 1)` | Xu Vàng Fae, chuỗi ngày Streak, nhiệm vụ Trùm Boss, biểu tượng Rank Vàng & Thách Đấu, thông báo thăng hạng. |
+| **Mana Cyan** | `#22D3EE` | `rgba(34, 211, 238, 1)` | Trí tuệ, điểm EXP bay lên, nút Focus tập trung, đường nét đa giác năng lực, tab kích hoạt. |
+| **Life Emerald** | `#10B981` | `rgba(16, 185, 129, 1)` | Thể lực, trạng thái đã hoàn thành, tích xanh, tỷ lệ hoàn tất công việc cao. |
 
-### 2.3. Cấu hình CSS Variables & Tailwind (`tailwind.config.ts`)
-```typescript
-// Copy đoạn này vào tailwind.config.ts trên Antigravity
-colors: {
-  thorn: {
-    DEFAULT: '#2D1036', // Thorn Crown
-    dark: '#1D0924',
-    light: '#3E174B',
-  },
-  bargain: {
-    DEFAULT: '#6B0733', // Blood Bargain
-    dark: '#4D0424',
-    light: '#8A0B43',
-  },
-  opal: {
-    DEFAULT: '#6850AD', // Opal
-    dark: '#4E3A87',
-    light: '#8770CC',
-  },
-  fae: {
-    DEFAULT: '#D97352', // Fae Fruit
-    dark: '#B85A3B',
-    light: '#EB9275',
-  },
-  parchment: '#FFF5EE',
-}
+### 2.2. Quy chuẩn Typography & Phông chữ
+- **RPG Display Font:** `Cinzel`, `Cinzel Decorative` (Class: `font-rpg`) — Dùng cho Tên ứng dụng, Bậc Rank, Tiêu đề phần thưởng, Tên Thợ Săn trên Thẻ Chiến Tích.
+- **Body UI Font:** `Plus Jakarta Sans`, `Inter`, `sans-serif` (Class: `font-sans`) — Dùng cho nội dung nhiệm vụ, mô tả, nút bấm và nhãn chức năng.
+- **Data & Numeric Font:** `JetBrains Mono`, `monospace` (Class: `font-mono`) — Dùng cho điểm EXP, số Xu, đếm ngược Pomodoro, chỉ số thống kê đối chiếu.
+
+---
+
+## 3. ĐẶC TẢ CHI TIẾT 11 PHÂN HỆ CHỨC NĂNG (SYSTEM MODULES)
+
+### 3.1. Phân hệ 1: Quản Lý Nhiệm Vụ Thợ Săn (Quest Board)
+- **Tạo & Quản lý lệnh nhiệm vụ:**
+  - Nhập tiêu đề thử thách, mô tả ghi chú tùy chọn.
+  - Phân loại theo **5 Nhóm Hoạt Động**:
+    1. `hoc-tap`: Học tập, nghiên cứu tri thức (Icon Sách).
+    2. `cong-viec`: Công việc chuyên môn, dự án (Icon Cặp táp).
+    3. `the-luc`: Thể dục, rèn luyện thể chất (Icon Tạ).
+    4. `ca-nhan`: Kế hoạch sinh hoạt cá nhân, gia đình (Icon Trái tim).
+    5. `sang-tao`: Sáng tạo nội dung, nghệ thuật, thiết kế (Icon Bảng vẽ).
+  - Chọn **4 Cấp Độ Thử Thách**:
+    - **Khởi Động (Dễ):** `+30 EXP`, `+2 Xu` (Thời lượng < 15 phút).
+    - **Tiêu Chuẩn (Vừa):** `+60 EXP`, `+5 Xu` (Thời lượng 30 – 60 phút).
+    - **Thử Thách (Khó):** `+110 EXP`, `+10 Xu` (Đòi hỏi tập trung cao độ).
+    - **Trùm Cuối Ngày (Boss):** `+200 EXP`, `+20 Xu` (Nhiệm vụ đột phá quan trọng nhất trong ngày).
+- **Phân tách Thời Gian & Lập Lịch (`target_date`):**
+  - Hệ thống tab kép: **"Hôm nay"** và **"Ngày mai"**.
+  - Nhiệm vụ được gắn cờ `target_date` theo ngày địa phương `YYYY-MM-DD`. Nếu nhiệm vụ được lên lịch cho "Ngày mai", hệ thống kích hoạt cơ chế khóa an toàn: **không cho phép nghiệm thu trước hạn**.
+- **Cơ chế Lặp Lại Định Kỳ (Daily Recurring Tasks):**
+  - Đánh dấu nhiệm vụ là "Lặp lại hằng ngày". Khi bước sang ngày mới (sau 00:00 múi giờ địa phương), hệ thống tự động đưa các nhiệm vụ lặp lại về trạng thái "Chưa xong" mà không làm mất lịch sử EXP đã tích lũy từ trước.
+- **Ngưỡng Giới Hạn Thể Lực Hằng Ngày (Anti-Grind Cap):**
+  - Nhằm bảo vệ sức khỏe và khuyến khích kỷ luật bền vững, hệ thống giới hạn tối đa **20 nhiệm vụ nhận thưởng EXP/Xu mỗi ngày**.
+  - Từ nhiệm vụ thứ 21 trở đi trong ngày, người chơi vẫn có thể đánh dấu hoàn thành để ghi nhận tiến độ công việc, nhưng hệ thống sẽ hiển thị thông báo dịu mắt và không cộng thêm EXP/Xu ảo.
+- **Cơ chế Khóa Chống Gian Lận & Thao Tác Nhanh (Anti-Cheat & Concurrency Lock):**
+  - Chặn spam click liên tục (tự động khóa tạm thời 30 giây nếu bấm hoàn thành quá 2 lần trong 1 phút).
+  - Nhiệm vụ mới tạo dưới 2 phút phải trải qua ngưỡng thời gian tôi luyện thực tế trước khi nghiệm thu.
+
+---
+
+### 3.2. Phân hệ 2: Fae Focus (Pomodoro Deep Work Engine)
+- **Tích hợp đồng hồ tập trung vào từng nhiệm vụ:**
+  - Cho phép người chơi kích hoạt chế độ **Fae Focus** với thời lượng tùy biến (15, 25, 45, 60, 90, 120 phút) gắn liền với nhiệm vụ được chọn.
+  - Hiển thị đồng hồ đếm ngược với hiệu ứng vòng tròn tiến trình neon ma thuật.
+- **Bộ máy Âm thanh Thư giãn Nền (Ambient Sound Engine):**
+  - Tự động phát âm thanh môi trường thư giãn không phụ thuộc file tải ngoài: *Tiếng mưa rơi (Rain)*, *Tiếng lửa trại (Campfire)*, *Tiếng gió rừng (Nature)*, *Sóng âm viễn tưởng (Cyberpunk/Binaural)*.
+  - Tự động dừng âm thanh và phát chuông báo hoàn thành khi hết giờ.
+- **Đồng bộ Media Session & Web Notification:**
+  - Đồng bộ trạng thái đếm ngược lên thanh điều khiển âm thanh hệ thống (Lock screen trên điện thoại và thanh Notification trên Desktop).
+  - Gửi thông báo trình duyệt khi phiên tập trung kết thúc thành công.
+- **Cơ chế cộng thưởng Focus:** Thưởng thêm lượng EXP và Xu tương ứng với số phút tập trung thực tế.
+
+---
+
+### 3.3. Phân hệ 3: Chuỗi Ngày Kỷ Luật & Hệ Thống 7 Bậc Rank
+- **Chuỗi Ngày Kỷ Luật (Daily Streak):**
+  - Tính toán dựa trên múi giờ thực tế của thiết bị (`Asia/Ho_Chi_Minh`), xác định người dùng hoàn thành ít nhất 1 nhiệm vụ mỗi ngày.
+  - Nếu chuỗi $\ge 3$ ngày liên tiếp: Kích hoạt hiệu ứng **Lửa Kỷ Luật** và tặng thêm **+20% EXP Thưởng Chuỗi** cho tất cả nhiệm vụ hoàn thành.
+  - Tự động bảo lưu hoặc nhắc nhở duy trì chuỗi khi bước sang ngày mới.
+- **Hệ Thống 7 Bậc Rank Thợ Săn:**
+  | Bậc Rank | Mã Rank | Ngưỡng EXP | Thưởng Xu Thăng Hạng | Danh Hiệu / Triết Lý Rèn Luyện |
+  | :---: | :--- | :---: | :---: | :--- |
+  | **1** | `dong` (Đồng) | `0 – 199` | Mặc định | Tân Binh Gai Đỏ — Bước đầu xây dựng tính tự giác. |
+  | **2** | `bac` (Bạc) | `200 – 499` | `+50 Xu` | Kiếm Sĩ Tập Sự — Ý chí bắt đầu định hình rõ nét. |
+  | **3** | `vang` (Vàng) | `500 – 999` | `+100 Xu` | Chiến Binh Ánh Kim — Thói quen tốt đã ăn sâu vào tiềm thức. |
+  | **4** | `luc-bao` (Lục Bảo) | `1000 – 1799` | `+160 Xu` | Thợ Săn Lục Bảo — Năng suất vượt trội và bền bỉ. |
+  | **5** | `cao-thu` (Cao Thủ) | `1800 – 2799` | `+250 Xu` | Bậc Thầy Thời Gian — Hoàn toàn làm chủ tiến độ cuộc sống. |
+  | **6** | `dai-cao-thu` (Đại Cao Thủ) | `2800 – 3999` | `+400 Xu` | Huyền Thoại Hắc Ám — Bản lĩnh thép không gì lay chuyển. |
+  | **7** | `thach-dau` (Thách Đấu) | `4000+` | `+700 Xu` | Thần Thoại Tối Cao — Biểu tượng sống của kỷ luật tuyệt đối. |
+- **Modal Chúc Mừng Thăng Cấp (Rank Up Celebration):**
+  - Tự động bật pháo hoa ăn mừng (`canvas-confetti`), hiển thị huy hiệu SVG phát sáng, phát âm thanh kèn thắng trận và chuyển thẳng Xu thưởng vào ví.
+
+---
+
+### 3.4. Phân hệ 4: Danh Hiệu Thợ Săn & Thành Tựu Mùa Giải (Titles & Achievements)
+- **Hệ thống danh hiệu động:**
+  - Danh hiệu gắn liền với độ hiếm: *Hiếm (Rare - Xanh lam)*, *Sử Thi (Epic - Tím)*, *Huyền Thoại (Legendary - Vàng kim)*.
+  - Tự động mở khóa khi đạt các cột mốc: *Kẻ Chế Ngự Thời Gian* (hoàn thành phiên Focus), *Thể Phách Kim Cương* (chuỗi rèn luyện thể lực), *Học Giả Huyền Bí* (nhiệm vụ học tập), *Chiến Binh Bất Khuất* (chuỗi streak cao).
+- **Trang bị & Hiển thị:**
+  - Danh hiệu được chọn sẽ hiển thị trang trọng trên Top Navigation Bar, Thẻ Thợ Săn trong Hồ Sơ, Bảng Xếp Hạng Cộng Đồng và Thẻ Chiến Tích xuất ảnh.
+
+---
+
+### 3.5. Phân hệ 5: Cửa Hàng Tự Thưởng & Kho Vé (Reward Shop & Inventory)
+- **Cửa Hàng Tự Thưởng Cá Nhân Hóa:**
+  - Danh mục quà tặng mẫu: *Ăn món yêu thích (10 Xu)*, *Trà sữa/Cà phê (15 Xu)*, *Chơi Game 1 tiếng (25 Xu)*, *Xem phim rạp (50 Xu)*, *Mua đồ công nghệ/thời trang (120 Xu)*, *Nghỉ xả hơi - Cheat Day (250 Xu)*.
+  - Cho phép người chơi tự thiết lập món quà mơ ước mới: Tên quà, Mô tả, Giá quy đổi Xu và Biểu tượng Emoji.
+- **Đồng bộ hóa tức thì với Supabase:**
+  - Mọi thao tác thêm hoặc xóa vật phẩm trong Shop đều được tự động lưu vào state và kích hoạt hàm đồng bộ mây (`syncToCloud`) để bảo toàn khi F5 hoặc đổi thiết bị.
+- **Kho Vé Thưởng (Inventory):**
+  - Mua quà bằng Xu sẽ tạo ra một tấm "Vé Thưởng Chưa Sử Dụng". Khi hoàn thành việc tự thưởng ngoài đời thực, người chơi bấm "Sử dụng ngay" để lưu vào lịch sử hoàn tất.
+
+---
+
+### 3.6. Phân hệ 6: Đấu Trường & Bảng Xếp Hạng Cộng Đồng (Leaderboard & Rivals)
+- **Bảng Xếp Hạng Cộng Đồng Realtime:**
+  - Hiển thị Top 50 Thợ Săn có EXP cao nhất từ bảng `profiles` trên Supabase (tự động loại trừ các tài khoản admin quản trị để đảm bảo tính công bằng).
+  - Tích hợp các đối thủ giả lập (AI Rivals) để tạo sự so kè liên tục.
+- **Modal Hồ Sơ Mini Của Đối Thủ (`RivalProfileModal`):**
+  - **Khung cuộn chống tràn responsive ở mọi mức zoom:** Container bọc `max-h-[90dvh]` với nút đóng `X` cố định góc trên, ảnh bìa `124px`, thanh cuộn mảnh tối màu, không cắt xén chữ.
+  - **So sánh 3 chỉ số đối chiếu:** Kinh nghiệm (`exp`), Chuỗi ngày (`streak`), Nhiệm vụ đã xong (`completedTasks`) kèm nhãn chênh lệch (Dẫn trước / Bám đuổi / Bằng nhau).
+  - **Tích hợp Tab Mini Sơ Đồ Lục Giác Năng Lực:**
+    - Nút icon Lục Giác đặt gọn gàng cạnh Bậc Rank.
+    - Vẽ biểu đồ radar 6 chỉ số mini (`viewBox 320x270`, bảo đảm đỉnh Kỷ Luật ở đáy cách mép tận 49px, không bao giờ bị cắt).
+    - Hiển thị Hệ Thợ Săn của đối thủ và điểm trung bình `Avg / 5.0`.
+  - **Chế độ "So kèo với bạn":** Vẽ đè đa giác năng lực nét đứt màu vàng hổ phách của chính người dùng lên biểu đồ đối thủ để trực quan hóa tương quan sức mạnh.
+  - **Bảo mật RLS Supabase qua RPC:** Sử dụng hàm `public.rpc_get_hunter_ability_stats` (`SECURITY DEFINER`) để đọc an toàn thống kê danh mục mà không để lộ tiêu đề nhiệm vụ riêng tư.
+
+---
+
+### 3.7. Phân hệ 7: Hồ Sơ Cá Nhân & Phân Tích Năng Suất (Profile & Analytics)
+- **Quản lý Hồ Sơ & Tùy biến Giao diện:**
+  - Chỉnh sửa tên nhân vật, Mã định danh Thợ Săn (`hunter_id`).
+  - Thay đổi Ảnh đại diện và Ảnh bìa cá nhân (tải ảnh từ máy lên Cloudinary CDN hoặc chọn từ Bộ sưu tập cảnh quan Dark Fantasy).
+- **Sơ Đồ Lục Giác Năng Lực 6 Trụ Cột (Thang Điểm 1.0 – 5.0):**
+  - 6 chỉ số đại diện:
+    * **Trí Tuệ** ➔ Tính từ nhóm `Học tập`.
+    * **Sự Nghiệp** ➔ Tính từ nhóm `Công việc`.
+    * **Thể Chất** ➔ Tính từ nhóm `Thể lực`.
+    * **Tự Chủ** ➔ Tính từ nhóm `Cá nhân`.
+    * **Sáng Tạo** ➔ Tính từ nhóm `Sáng tạo`.
+    * **Kỷ Luật** ➔ Tổng hợp từ `Chuỗi Streak` + `Phiên Focus` + `Nhiệm vụ hoàn thành`.
+  - **Công thức tăng tiến mượt theo mốc EXP:**
+    $$\text{0 EXP} \rightarrow 1.0 \quad|\quad \text{100 EXP} \rightarrow 2.0 \quad|\quad \text{300 EXP} \rightarrow 3.0 \quad|\quad \text{600 EXP} \rightarrow 4.0 \quad|\quad \ge \text{1000 EXP} \rightarrow 5.0$$
+  - **Cơ chế bảo toàn lịch sử không bị reset về `0/0`:** Hệ thống tự động bù đắp dữ liệu dựa trên `completedTotal` và tổng `exp` tích lũy vĩnh viễn, người dùng xóa bớt thẻ nhiệm vụ cũ ngoài danh sách thì điểm năng lực vẫn giữ nguyên độ nở đều đặn.
+  - **Khung Phân Tích Thiên Hướng Thợ Săn:**
+    - Tự động nhận diện 7 Hệ Thợ Săn: *Học Giả Hắc Ám*, *Chiến Binh Thép*, *Chiến Lược Gia*, *Hành Giả Tĩnh Tâm*, *Nghệ Sĩ Hư Không*, *Bậc Thầy Thiết Luật*, hoặc *Thợ Săn Toàn Diện* (nếu chỉ số đồng đều $\le 0.5$).
+    - Cung cấp 2 thẻ định hướng: **Điểm Mạnh Nhất** (phát huy) và **Cần Bồi Đắp** (gợi ý tạo thêm nhiệm vụ thuộc nhóm còn thiếu).
+- **Bảng Phân Bổ Hoạt Động & Độ Khó (3 tầng dữ liệu):**
+  - **Tầng 1:** Tiến độ 5 nhóm hoạt động với màu gradient nhận diện riêng biệt, hiển thị `+EXP` và điểm `⭐ X.X/5.0`.
+  - **Tầng 2:** Phân bổ theo 4 độ khó bằng **Stacked Progress Bar** phân đoạn màu kèm 4 ô thống kê Dễ, Vừa, Khó, Trùm Cuối.
+  - **Tầng 3:** Biểu đồ phong độ 7 ngày qua (Hôm nay màu vàng hoàng kim, ngày có hoạt động màu ngọc lam, ngày nghỉ màu tối mờ).
+
+---
+
+### 3.8. Phân hệ 8: Xuất Thẻ Chiến Tích 9:16 (Hunter Battle Card Export)
+- **Tỷ lệ chuẩn 9:16 (1080x1920) tối ưu Story & TikTok:**
+  - Bố cục 4 tầng cân đối: Thanh định danh thương hiệu, Tâm điểm nhân vật (Avatar lớn 136px, Bậc hạng, Danh hiệu), Khung Bậc Hạng & Dải 3 chỉ số chiến tích, Chân thẻ khế ước.
+- **Công nghệ Canvas 2D Pre-compositing khử lỗi đen kịt trên iOS Safari / WebKit:**
+  - Thay vì xếp chồng nhiều lớp `<div>` gradient đè lên `<img>` trong `<foreignObject>` (nguyên nhân gây lỗi composite và vệt đen `#000000` trên iPhone), hệ thống sử dụng hàm `compositeCoverWithGradient`: vẽ trực tiếp ảnh bìa lên `<canvas>` 540x460 và hòa sắc với gradient 4 mốc chuẩn về `#06141B`.
+  - Loại bỏ hoàn toàn các class `blur`, `mix-blend-*`, `backdrop-blur-*` và tuyệt đối không dùng từ khóa `transparent`.
+- **Bọc Logo sắc nét:** Cụm Logo và chữ `FAEQUEST — THẺ CHIẾN TÍCH` được bọc trong khung bo góc tối màu, bảo đảm rõ nét trên cả những ảnh bìa sáng màu.
+- **Cơ chế Cache `profileSignature` `v4_`:** Mở modal xem trước tức thì (0ms) nếu thông số không đổi, tự động làm mới khi có thay đổi.
+- **Hỗ trợ Web Share API:** Bấm nút Chia sẻ sẽ mở thẳng bảng share của điện thoại (Zalo, Facebook, Instagram Stories, Lưu ảnh về máy).
+
+---
+
+### 3.9. Phân hệ 9: Nhật Ký Thợ Săn (Chronicles / Journal)
+- **Nhật ký rèn luyện cá nhân:**
+  - Người chơi ghi lại cảm nghĩ, bài học và đúc kết sau một ngày nỗ lực hoàn thành công việc.
+  - Chọn 5 trạng thái tâm trạng: *Tuyệt vời*, *Tốt*, *Bình thường*, *Căng thẳng*, *Tệ*.
+  - Lưu trữ đám mây an toàn qua bảng `journals` trên Supabase.
+
+---
+
+### 3.10. Phân hệ 10: Hướng Dẫn Tân Thủ Tương Tác (Interactive Onboarding Tour)
+- **Kịch bản trải nghiệm người dùng mới 9 bước:**
+  - Sử dụng thư viện `Driver.js` tùy biến giao diện Dark Fantasy.
+  - Dẫn dắt người dùng khám phá: Top Navigation, Lệnh Nhiệm Vụ, Nút Thêm Lệnh, Chế Độ Lọc, Fae Focus, Cửa Hàng Tự Thưởng, Đấu Trường BXH, Hồ Sơ Cá Nhân & Xuất Thẻ Chiến Tích.
+- **Selector động thích ứng màn hình:**
+  - Tự động chuyển đổi selector giữa Sidebar Desktop và Bottom Navigation Mobile (`() => window.innerWidth >= 768 ? ... : ...`), đảm bảo không có selector mồ côi hay lỗi giật khung hình.
+  - Lưu trạng thái `has_seen_tutorial` vào database Supabase.
+
+---
+
+### 3.11. Phân hệ 11: Quản Trị Live-Ops (Admin Portal)
+- **Phân quyền người dùng (RBAC):**
+  - Nhận diện quyền Quản trị viên (`role = 'admin'`).
+  - Menu Portal chuyên dụng mở ra từ Avatar/Cài đặt.
+- **Các tính năng quản trị:**
+  - **Quản lý Thợ Săn:** Tìm kiếm, xem chi tiết EXP, Xu, Chuỗi ngày, Tạm khóa tài khoản (Ban), Mở khóa, hoặc Xóa tài khoản vi phạm.
+  - **Quản lý Asset hệ thống:** Đăng tải và quản lý logo, rank icon, title badges.
+  - **Thông báo Mùa giải:** Đăng bài viết, ghim thông báo lên đỉnh Bảng Xếp Hạng.
+  - **Reset Mùa Giải:** Đặt lại mốc rank về mùa mới qua RPC `rpc_admin_reset_season_rank`.
+  - **Hòm thư điều hành:** Gửi thư cảnh báo hoặc quà tặng tới từng người chơi.
+
+---
+
+## 4. KIẾN TRÚC DỮ LIỆU & SUPABASE SCHEMA (DATABASE ARCHITECTURE)
+
+### 4.1. Bảng Dữ Liệu Cốt Lõi (Core Tables)
+```sql
+-- 1. Bảng public.profiles (Thông tin công khai & Bảng Xếp Hạng)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  avatar_url TEXT,
+  cover_url TEXT,
+  exp INTEGER DEFAULT 0,
+  coins INTEGER DEFAULT 25,
+  stars INTEGER DEFAULT 0,
+  rank_id TEXT DEFAULT 'dong',
+  equipped_title TEXT DEFAULT 'title_tan_binh_gai_do',
+  streak INTEGER DEFAULT 0,
+  last_streak_date TEXT,
+  completed_tasks_count INTEGER DEFAULT 0,
+  role TEXT DEFAULT 'user', -- 'user' | 'admin'
+  has_seen_tutorial BOOLEAN DEFAULT FALSE,
+  banned_until TIMESTAMPTZ,
+  ban_reason TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index tối ưu hóa truy vấn Top EXP cho BXH
+CREATE INDEX IF NOT EXISTS idx_profiles_exp ON public.profiles (exp DESC);
+
+-- 2. Bảng public.user_states (Snapshot lưu trữ toàn bộ trạng thái chi tiết của user)
+CREATE TABLE IF NOT EXISTS public.user_states (
+  user_id TEXT PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
+  state_json JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Bảng public.journals (Nhật ký hành trình thợ săn)
+CREATE TABLE IF NOT EXISTS public.journals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  mood TEXT DEFAULT 'Tốt',
+  tags TEXT[],
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Bảng public.season_announcements (Thông báo mùa giải trên BXH)
+CREATE TABLE IF NOT EXISTS public.season_announcements (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  season_tag TEXT NOT NULL DEFAULT 'Mùa 2',
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  image_url TEXT,
+  is_pinned BOOLEAN DEFAULT FALSE,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
----
-
-## 3. ĐẶC TẢ CHỨC NĂNG CHI TIẾT (FUNCTIONAL REQUIREMENTS)
-
-### 3.1. Phân hệ Quản lý Nhiệm vụ Hằng ngày (Daily Quests Module)
-- **FR-01 (Thêm nhiệm vụ):** Người dùng nhập tên hoạt động, chọn **Phân loại** và chọn **Độ khó**.
-- **FR-02 (Hệ thống Phân loại):**
-  1. `hoc-tap`: Học tập (Icon Sách)
-  2. `cong-viec`: Công việc (Icon Cặp táp)
-  3. `the-luc`: Thể lực (Icon Tạ)
-  4. `ca-nhan`: Cá nhân (Icon Trái tim)
-  5. `sang-tao`: Sáng tạo & Nghệ thuật (Icon Cọ vẽ)
-- **FR-03 (Hệ thống Độ khó & Quy đổi điểm thưởng):**
-  - **Khởi Động (Dễ):** `+30 EXP`, `+2 Xu` (Việc nhỏ dưới 15 phút).
-  - **Tiêu Chuẩn (Vừa):** `+60 EXP`, `+5 Xu` (Hoạt động 30 - 60 phút).
-  - **Thử Thách (Khó):** `+110 EXP`, `+10 Xu` (Đòi hỏi tập trung sâu).
-  - **Trùm Cuối Ngày (Sử Thi / Boss):** `+200 EXP`, `+20 Xu` (Mục tiêu đột phá lớn nhất trong ngày).
-- **FR-04 (Hoàn thành & Hoàn tác):**
-  - Khi tích chọn hoàn thành: Phát âm thanh RPG, hiển thị hiệu ứng chữ bay (`Floating Text: +EXP, +Xu`) ngay tại vị trí con trỏ, cộng điểm vào tổng EXP và Xu.
-  - Khi bỏ tích (Hoàn tác): Trừ lại số EXP và Xu tương ứng.
-- **FR-05 (Nâng cấp mới - Chuỗi Ngày Liên Tiếp / Streak & Nhiệm vụ Lặp lại):**
-  - Cho phép đánh dấu nhiệm vụ là "Lặp lại hằng ngày" (Daily Reset) để tự động làm mới vào ngày hôm sau.
-
-### 3.2. Phân hệ Thăng Cấp 7 Bậc Rank (7-Tier Rank Progression Engine)
-- **FR-06 (Quy tắc tính Rank):** Tổng điểm EXP quyết định Bậc Rank hiện tại của người chơi theo bảng dưới đây:
-
-| STT | Mã Rank | Tên Bậc Rank | Ngưỡng EXP Yêu Cầu | Thưởng Xu Khi Thăng Hạng | Danh Hiệu / Mô Tả |
-| :-: | :--- | :--- | :--- | :--- | :--- |
-| 1 | `dong` | **Đồng** | `0 - 199 EXP` | `0 Xu` (Mặc định) | Khởi đầu hành trình rèn luyện kỷ luật bản thân. |
-| 2 | `bac` | **Bạc** | `200 - 499 EXP` | `+50 Xu` | Lưỡi kiếm đã bén, thói quen tốt bắt đầu hình thành. |
-| 3 | `vang` | **Vàng** | `500 - 999 EXP` | `+100 Xu` | Ánh hào quang rực rỡ của sự kiên trì mỗi ngày. |
-| 4 | `luc-bao` | **Lục Bảo** | `1000 - 1799 EXP` | `+160 Xu` | Sức sống mãnh liệt, năng suất vượt trội hơn số đông. |
-| 5 | `cao-thu` | **Cao Thủ** | `1800 - 2799 EXP` | `+250 Xu` | Làm chủ thời gian, ngọn lửa Opal huyền bí thức tỉnh. |
-| 6 | `dai-cao-thu`| **Đại Cao Thủ**| `2800 - 3999 EXP` | `+400 Xu` | Huyết ước tối thượng! Không mục tiêu nào cản bước. |
-| 7 | `thach-dau` | **Thách Đấu** | `4000+ EXP` | `+700 Xu` | Đỉnh cao huyền thoại! Chuẩn mực của kỷ luật tuyệt đối. |
-
-- **FR-07 (Sự kiện Thăng Hạng - Rank Up Event):**
-  - Ngay khi tổng EXP vượt ngưỡng sang bậc Rank mới, hệ thống kích hoạt **Modal Chúc Mừng Thăng Hạng** kèm huy hiệu SVG độc quyền của Rank mới, cộng thẳng số **Xu Thưởng Thăng Hạng** vào ví của người chơi.
-
-### 3.3. Phân hệ Cửa Hàng Tự Thưởng & Kho Vé (Reward Shop & Inventory)
-- **FR-08 (Danh mục Vật phẩm Tự thưởng):**
-  - Cung cấp sẵn các phần thưởng mẫu tăng dần theo giá trị:
-    - *Ăn một món yêu thích (10 Xu)*
-    - *Uống Trà sữa / Cà phê ngon (15 Xu)*
-    - *Chơi Game giải trí 1 tiếng (25 Xu)*
-    - *Xem 1 bộ phim chiếu rạp / Anime (50 Xu)*
-    - *Chốt đơn 1 món đồ trong giỏ hàng (120 Xu)*
-    - *Ngày Nghỉ Xả Hơi - Cheat Day (250 Xu)*
-- **FR-09 (Tự tạo Phần thưởng cá nhân):** Người dùng có thể tự thêm món quà mới với Tên, Mô tả, Biểu tượng Emoji và Giá Xu tùy chọn.
-- **FR-10 (Kho Vé Thưởng - Inventory):** Khi mua vật phẩm trong Shop, Xu bị trừ và vật phẩm chuyển vào **Kho Phần Thưởng** dưới dạng "Vé Chưa Sử Dụng". Khi người dùng thực hiện phần thưởng ngoài đời thực, nhấn **"Sử dụng ngay"** để đánh dấu hoàn tất.
-
-### 3.4. Phân hệ Bảng Xếp Hạng Đối Thủ Ảo (Simulated Rivals Leaderboard)
-- **FR-11 (Danh sách Đối thủ giả lập):** Tạo sẵn 7 đối thủ rải đều ở 7 bậc Rank từ Đồng đến Thách Đấu.
-- **FR-12 (Banner Mục tiêu Bứt phá):** Tự động tính toán và hiển thị thông báo: *"Bạn chỉ cần thêm X EXP nữa để vượt qua [Tên Đối Thủ] và chiếm vị trí Hạng #Y!"*.
-- **FR-13 (Mô phỏng Hoạt động của Đối thủ):** Nút **"Cập nhật hoạt động đối thủ"** (hoặc tự động cộng ngẫu nhiên `10 - 50 EXP` mỗi ngày cho các đối thủ) để tạo áp lực cạnh tranh lành mạnh. Cho phép người dùng tự thêm đối thủ mới (ví dụ tên bạn bè để tự thi đua).
+### 4.2. Các Hàm PostgreSQL An Toàn (Stored Procedures / RPC)
+- **`rpc_complete_quest` (`SECURITY DEFINER`):** Nghiệm thu nhiệm vụ, tính toán EXP thưởng chuỗi, cộng Xu, thăng cấp Rank và kiểm tra thời lượng Focus tập trung trong một transaction ACID duy nhất.
+- **`rpc_get_hunter_ability_stats(p_hunter_id text)` (`SECURITY DEFINER`):** Trích xuất an toàn số liệu hoàn thành và EXP theo từng danh mục của người chơi bất kỳ để vẽ Sơ Đồ Lục Giác trên Đấu Trường mà không để lộ nội dung nhiệm vụ riêng tư.
+- **`rpc_admin_reset_season_rank` (`SECURITY DEFINER`):** Cho phép tài khoản Admin đặt lại EXP và Bậc Rank của toàn server khi bắt đầu mùa giải mới.
 
 ---
 
-## 4. CẤU TRÚC THƯ MỤC DỰ ÁN (PROJECT ARCHITECTURE)
-Khi xây dựng trên Antigravity bằng React / Next.js, hãy tổ chức theo cấu trúc sạch sẽ, dễ bảo trì sau:
-
-```text
-faequest-rpg-todo/
-├── public/
-├── src/
-│   ├── app/                        # Next.js App Router (hoặc main entry)
-│   │   ├── globals.css             # Khai báo biến màu, hiệu ứng nổi, custom scrollbar
-│   │   ├── layout.tsx              # Font Cinzel + Plus Jakarta Sans
-│   │   └── page.tsx                # Trang Dashboard chính
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── TopBanner.tsx       # Header nghệ thuật + Bảng màu + Nút Âm thanh
-│   │   │   └── NavigationTabs.tsx  # 4 Tab: Nhiệm Vụ, Cửa Hàng, BXH, Kho Đồ
-│   │   ├── hero/
-│   │   │   ├── PlayerStatusCard.tsx# Hiển thị Rank hiện tại, Thanh EXP, Ví Xu
-│   │   │   ├── RankEmblemSvg.tsx   # Bộ 7 SVG Huy hiệu Rank (Đồng -> Thách Đấu)
-│   │   │   └── RankProgressionStrip.tsx # Thanh 7 bậc tiến trình thu nhỏ
-│   │   ├── quests/
-│   │   │   ├── AddQuestForm.tsx    # Form thêm task + Chọn phân loại + Độ khó
-│   │   │   ├── QuestFilterBar.tsx  # Bộ lọc theo danh mục & trạng thái
-│   │   │   └── QuestList.tsx       # Danh sách task + Hiệu ứng +EXP bay lên
-│   │   ├── shop/
-│   │   │   ├── RewardShopGrid.tsx  # Lưới vật phẩm tự thưởng + Nút mua
-│   │   │   ├── AddShopItemModal.tsx# Modal tự thêm phần thưởng mới
-│   │   │   └── InventoryList.tsx   # Kho vé thưởng đã mua & lịch sử dùng
-│   │   ├── leaderboard/
-│   │   │   ├── LeaderboardTable.tsx# Bảng xếp hạng người chơi + AI Rivals
-│   │   │   ├── RivalTargetBanner.tsx# Banner báo số EXP cần để vượt đối thủ kế tiếp
-│   │   │   └── AddRivalModal.tsx   # Modal thêm đối thủ cạnh tranh mới
-│   │   └── modals/
-│   │       ├── RankUpModal.tsx     # Modal ăn mừng khi thăng hạng + Nhận thưởng Xu
-│   │       └── RankRoadmapModal.tsx# Modal xem chi tiết 7 bậc Rank
-│   ├── constants/
-│   │   ├── ranks.ts                # Cấu hình 7 bậc Rank, ngưỡng EXP, thưởng Xu
-│   │   ├── categories.ts           # 5 phân loại & 4 độ khó nhiệm vụ
-│   │   └── initialData.ts          # Dữ liệu mẫu cho Tasks, Shop, Rivals
-│   ├── store/
-│   │   └── useFaeQuestStore.ts     # Zustand Store xử lý toàn bộ logic EXP, Rank, Xu
-│   ├── types/
-│   │   └── index.ts                # TypeScript Interfaces (Task, RankTier, ShopItem, Rival)
-│   └── utils/
-│       └── soundEffects.ts         # Web Audio API tạo âm thanh RPG
-├── tailwind.config.ts
-├── package.json
-└── tsconfig.json
-```
-
----
-
-## 5. DATA MODELS (TYPESCRIPT INTERFACES)
-Bạn có thể cung cấp sẵn đoạn TypeScript này cho Antigravity để đảm bảo cấu trúc dữ liệu chặt chẽ:
+## 5. MÔ HÌNH DỮ LIỆU FRONTEND (TYPESCRIPT DEFINITIONS)
 
 ```typescript
 export type TaskCategory = 'hoc-tap' | 'cong-viec' | 'the-luc' | 'ca-nhan' | 'sang-tao';
@@ -184,110 +302,101 @@ export type RankId = 'dong' | 'bac' | 'vang' | 'luc-bao' | 'cao-thu' | 'dai-cao-
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   category: TaskCategory;
   difficulty: TaskDifficulty;
   completed: boolean;
+  rewardClaimed?: boolean;
   isDailyRecurring?: boolean;
+  focusDuration?: number | null; // Số phút Pomodoro
+  focusRewardClaimed?: boolean;
   createdAt: number;
+  completedAt?: number;
+  completionDate?: string;
+  target_date?: string; // YYYY-MM-DD
 }
 
-export interface RankTier {
-  id: RankId;
-  name: string;
-  minExp: number;
-  maxExp: number;
-  coinBonus: number;
-  quote: string;
+export interface CategoryStatRecord {
+  completed: number;
+  expGained: number;
 }
 
-export interface ShopItem {
-  id: string;
-  title: string;
-  desc: string;
-  cost: number;
-  emoji: string;
+export interface DailyActivityRecord {
+  completedCount: number;
+  expGained: number;
 }
 
-export interface InventoryTicket {
-  id: string;
-  title: string;
-  emoji: string;
-  cost: number;
-  redeemedAt: string;
-  used: boolean;
-}
-
-export interface Rival {
-  id: string;
-  name: string;
-  title: string;
+export interface UserStateCloud {
+  playerName: string;
+  avatarUrl?: string;
+  coverUrl?: string;
   exp: number;
-  avatar: string;
+  coins: number;
+  stars?: number;
+  completedTotal: number;
+  streakDays: number;
+  lastStreakDate?: string;
+  lastActiveDate?: string;
+  dailyCompletedCount: number;
+  tasks: Task[];
+  shopItems: ShopItem[];
+  inventory: InventoryTicket[];
+  focusSessionsCompleted: number;
+  cumulativeCategoryStats?: Record<TaskCategory, CategoryStatRecord>;
+  cumulativeDifficultyStats?: Record<TaskDifficulty, number>;
+  dailyActivityHistory?: Record<string, DailyActivityRecord>;
 }
 ```
 
 ---
 
-## 6. BỘ MASTER PROMPT ĐỂ COPY VÀO ANTIGRAVITY
+## 6. CẤU TRÚC THƯ MỤC NGUỒN (PROJECT DIRECTORY TREE)
 
-### 6.1. Prompt Khởi Tạo Toàn Bộ Dự Án (Initial Build Prompt)
-> **Hướng dẫn:** Hãy copy toàn bộ nội dung trong khung dưới đây và dán vào khung chat của **Antigravity** để AI tự động thiết lập cấu trúc dự án và viết code hoàn chỉnh.
-
-```markdown
-Hãy đóng vai một Senior Full-Stack Product Engineer và UI/UX Designer chuyên thiết kế ứng dụng Gamification RPG. Tôi muốn bạn xây dựng ứng dụng web mang tên **FaeQuest — Hệ Thống Todo List Nhập Vai (RPG Productivity App)** bằng React + TypeScript + Tailwind CSS + Lucide/Phosphor Icons + Framer Motion.
-
-### 1. YÊU CẦU BẢNG MÀU BẮT BUỘC (STRICT COLOR PALETTE)
-Toàn bộ giao diện phải sử dụng bảng màu Dark Fantasy RPG từ bộ "Palette for Illustration #7":
-- **Thorn Crown (`#2D1036`, RGB: 45, 16, 54)**: Màu nền chính toàn trang (Main Background), kết hợp với `#1D0924` cho phần nền sâu.
-- **Blood Bargain (`#6B0733`, RGB: 107, 7, 51)**: Màu nền của các thẻ Card (Quest Cards, Shop Cards, Player Hero Card) kết hợp hiệu ứng kính mờ (Glassmorphism) và gradient về `#2D1036`.
-- **Opal (`#6850AD`, RGB: 104, 80, 173)**: Màu nhấn phụ (Secondary Accent), dùng cho các huy hiệu, viền phát sáng, tab phụ và thanh tiến trình.
-- **Fae Fruit (`#D97352`, RGB: 217, 119, 82)**: Màu nhấn chính (Primary CTA, Highlights, EXP Bar, Coin Currency, Rank Up Borders).
-- **Chữ chính (Text Primary)**: Màu kem sáng `#FFF5EE` (Parchment) để đảm bảo độ tương phản cao và dễ đọc trên nền tối.
-
-### 2. CÁC CHỨC NĂNG CỐT LÕI CẦN XÂY DỰNG
-1. **Quản lý Nhiệm Vụ Hằng Ngày (Daily Quests)**:
-   - Cho phép thêm nhiệm vụ mới với: Tên nhiệm vụ, Phân loại (`Học tập`, `Công việc`, `Thể lực`, `Cá nhân`, `Sáng tạo`) và Độ khó (`Dễ: +30 EXP / +2 Xu`, `Vừa: +60 EXP / +5 Xu`, `Khó: +110 EXP / +10 Xu`, `Trùm Cuối Ngày: +200 EXP / +20 Xu`).
-   - Có bộ lọc theo Phân loại và Trạng thái (`Tất cả`, `Chưa xong`, `Đã xong`).
-   - Khi tích hoàn thành nhiệm vụ: Phát âm thanh RPG bằng Web Audio API, hiển thị hiệu ứng "+EXP & +Xu" bay lên tại vị trí chuột, cộng EXP và Xu vào hồ sơ người chơi.
-
-2. **Hệ Thống 7 Bậc Rank & Huy Hiệu Độc Quyền**:
-   - Gồm 7 bậc:
-     1. **Đồng** (0 - 199 EXP, thưởng lên cấp: 0 Xu)
-     2. **Bạc** (200 - 499 EXP, thưởng lên cấp: +50 Xu)
-     3. **Vàng** (500 - 999 EXP, thưởng lên cấp: +100 Xu)
-     4. **Lục Bảo** (1000 - 1799 EXP, thưởng lên cấp: +160 Xu)
-     5. **Cao Thủ** (1800 - 2799 EXP, thưởng lên cấp: +250 Xu)
-     6. **Đại Cao Thủ** (2800 - 3999 EXP, thưởng lên cấp: +400 Xu)
-     7. **Thách Đấu** (4000+ EXP, thưởng lên cấp: +700 Xu)
-   - Thiết kế 7 biểu tượng SVG huy hiệu riêng biệt cho từng bậc Rank.
-   - Hiển thị Hero Card trên cùng gồm: Tên người chơi (cho phép đổi tên), Huy hiệu Rank hiện tại, Thanh tiến trình EXP mượt mà, Số EXP còn thiếu để lên bậc tiếp theo, Tổng số Xu hiện có, và Dải lộ trình 7 bậc Rank.
-   - Khi người chơi hoàn thành task và đủ EXP vượt qua mốc Rank mới: Mở ngay **Modal Chúc Mừng Thăng Hạng (Rank Up Celebration)** và cộng số Xu thưởng thăng hạng vào tài khoản.
-
-3. **Cửa Hàng Tự Thưởng (Reward Shop) & Kho Phần Thưởng (Inventory)**:
-   - Người chơi dùng Xu tích lũy được để mua các phần thưởng tự thưởng bản thân ngoài đời thực (VD: Ăn món yêu thích 10 Xu, Uống trà sữa 15 Xu, Chơi game 1 tiếng 25 Xu, Xem phim 50 Xu, Mua đồ yêu thích 120 Xu, Nghỉ xả hơi 250 Xu).
-   - Cho phép người chơi tự tạo thêm vật phẩm mới vào Cửa hàng (Tên, Mô tả, Emoji, Giá Xu).
-   - Khi mua xong, vật phẩm chuyển vào tab **Kho Phần Thưởng** dưới dạng vé thưởng để người chơi bấm "Sử dụng ngay" khi thực hiện ngoài đời.
-
-4. **Bảng Xếp Hạng Đối Thủ Ảo (Simulated Rivals Leaderboard)**:
-   - Tạo sẵn 7 đối thủ giả lập ở các mức EXP khác nhau từ Đồng đến Thách Đấu.
-   - Hiển thị vị trí xếp hạng hiện tại của người chơi so với các đối thủ.
-   - Có Banner chỉ rõ: "Bạn chỉ cần thêm X EXP nữa để vượt qua đối thủ [Tên] phía trước!".
-   - Có nút "Cập nhật hoạt động đối thủ" (cộng ngẫu nhiên 10-50 EXP cho các đối thủ) và nút "Thêm đối thủ mới" để tăng tính cạnh tranh.
-
-5. **Lưu trữ & Trải nghiệm**:
-   - Tự động lưu toàn bộ dữ liệu vào `localStorage`.
-   - Có nút "+150 EXP Thử Nghiệm" trên thanh Header để dễ dàng kiểm thử tính năng lên Rank và nhận Xu.
+```text
+c:\RPG_Todo/
+├── public/                         # Assets tĩnh, âm thanh, icon PWA, manifest.webmanifest
+├── src/
+│   ├── components/
+│   │   ├── analytics/              # ProductivityAnalytics.tsx (Lục giác 6 trụ cột & 3 tầng dữ liệu)
+│   │   ├── bento/                  # RightMiniLeaderboardStrip.tsx
+│   │   ├── chronicles/             # JournalChronicles.tsx (Nhật ký thợ săn)
+│   │   ├── hero/                   # TopBarHero.tsx, PlayerStatusCard.tsx
+│   │   ├── layout/                 # MainLayout.tsx, SidebarDesktop.tsx, MobileBottomNav.tsx
+│   │   ├── leaderboard/            # LeaderboardTable.tsx, RivalTargetBanner.tsx
+│   │   ├── modals/                 # RivalProfileModal.tsx, ChangeCoverModal.tsx, BattleCardPreviewModal.tsx, ...
+│   │   ├── profile/                # ProfileView.tsx, HunterBattleCardExport.tsx (Canvas compositing 9:16)
+│   │   ├── quests/                 # QuestGrid.tsx, QuestCard.tsx, AddQuestModal.tsx
+│   │   ├── shop/                   # RewardShopGrid.tsx, AddShopItemModal.tsx, InventoryModal.tsx
+│   │   └── ui/                     # CoinBurstOverlay.tsx, FloatingReward.tsx, SoundToggle.tsx
+│   ├── constants/                  # ranks.ts, categories.ts, systemQuests.ts, initialData.ts
+│   ├── hooks/                      # useBodyScrollLock.ts, useIsMobile.ts
+│   ├── store/                      # useFaeQuestStore.ts (State Zustand tập trung & Cloud Sync Engine)
+│   ├── types/                      # index.ts (TypeScript interfaces)
+│   └── utils/
+│       ├── dateUtils.ts            # Xử lý múi giờ địa phương Asia/Ho_Chi_Minh
+│       ├── imageExportHelper.ts    # compositeCoverWithGradient, imageUrlToBase64, toPng
+│       ├── onboardingTour.ts       # Driver.js 9 bước tương tác
+│       ├── soundEffects.ts         # Web Audio API Synth SFX
+│       ├── soundEngine.ts          # Bộ phát Ambient Loops thư giãn
+│       ├── supabaseClient.ts       # Cấu hình kết nối Supabase
+│       └── syncManager.ts          # Đồng bộ Profile & State_json lên đám mây
+├── GEMINI.md                       # Bộ quy tắc phát triển dự án (Git push safety & Tour sync)
+├── SRS_TrienKhai.md                # Tài liệu SRS & Hướng dẫn triển khai hệ thống (Tệp này)
+├── package.json
+├── tailwind.config.js
+└── vite.config.ts
 ```
 
 ---
 
-### 6.2. Prompt Nâng Cấp Giai Đoạn 2 (Phase 2 Upgrade Prompt cho Antigravity)
-Sau khi Antigravity đã tạo xong bản chạy ổn định ở Bước 1, bạn có thể dùng tiếp Prompt dưới đây để nâng cấp thêm các tính năng nâng cao:
+## 7. QUY CHUẨN AN TOÀN TRIỂN KHAI & BẢO TRÌ (DEV & OPS RULES)
 
-```markdown
-Hãy nâng cấp ứng dụng FaeQuest hiện tại với 4 tính năng nâng cao sau mà vẫn giữ nguyên bảng màu (`#2D1036`, `#6B0733`, `#6850AD`, `#D97352`):
-1. **Chuỗi Ngày Kỷ Luật (Daily Streak & Combo Bonus)**: Theo dõi số ngày liên tiếp người chơi hoàn thành ít nhất 1 nhiệm vụ. Nếu đạt chuỗi từ 3 ngày trở lên, cộng thêm 20% Bonus EXP cho mỗi nhiệm vụ hoàn thành.
-2. **Đồng Hồ Tập Trung Pomodoro (Fae Focus Timer)**: Tích hợp một đồng hồ đếm ngược 25 phút ngay trong mỗi nhiệm vụ. Khi người chơi bật Pomodoro và hoàn thành phiên tập trung cho nhiệm vụ đó, thưởng thêm +10 Xu.
-3. **Biểu Đồ Thống Kê Năng Suất (Productivity Analytics)**: Thêm một khu vực biểu đồ hiển thị tỷ lệ phần trăm các nhóm hoạt động đã làm (Học tập, Công việc, Thể lực, Cá nhân, Sáng tạo) và lượng EXP kiếm được trong 7 ngày gần nhất.
-4. **Nhiệm Vụ Định Kỳ (Daily Reset)**: Cho phép đánh dấu các thói quen hằng ngày để hệ thống tự động làm mới trạng thái "Chưa hoàn thành" khi bước sang ngày mới mà không làm mất lịch sử EXP đã tích lũy.
-```
+1. **Quy tắc An Toàn Git & Remote Repository:**
+   - **Tuyệt đối không tự ý `git push`**: Chỉ thực hiện lệnh đẩy code lên GitHub khi và chỉ khi có chỉ thị rõ ràng từ người dùng.
+   - Luôn chạy kiểm tra `npm run build` thành công và tạo local commit trước khi thực hiện các bước tiếp theo.
+2. **Quy tắc Toàn Vẹn Hướng Dẫn Tân Thủ (Interactive Tour):**
+   - Bất cứ khi nào thay đổi layout UI, ID hoặc class cốt lõi, bắt buộc rà soát file `src/utils/onboardingTour.ts` để cập nhật selector động tương ứng, tránh để selector mồ côi gây lỗi trên Desktop hoặc Mobile.
+3. **Quy chuẩn Múi Giờ Hệ Thống:**
+   - Mọi phép toán liên quan đến Streak, Nhiệm vụ hôm nay/ngày mai, Giới hạn thể lực đều phải sử dụng hàm tiện ích `getTodayString()` hoặc `getLocalDateStr()` để đảm bảo sự đồng bộ trên múi giờ địa phương Việt Nam (`Asia/Ho_Chi_Minh`), không phụ thuộc vào giờ UTC của máy chủ.
+4. **Quy chuẩn Xuất Ảnh Không Lỗi Màu:**
+   - Luôn sử dụng kỹ thuật gộp Canvas 2D (`compositeCoverWithGradient`) trước khi chụp `toPng`, tránh dùng các thuộc tính CSS `blur`, `backdrop-blur-*` hay từ khóa `transparent` trong các node xuất ảnh nhằm đảm bảo tính tương thích 100% trên thiết bị iOS Safari.
