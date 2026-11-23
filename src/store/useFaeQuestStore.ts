@@ -694,6 +694,37 @@ export const recordQuickCompletion = () => {
   } catch { }
 };
 
+const FAESTORE_CUSTOM_SHOP_ITEMS_KEY = 'faequest_custom_shop_items';
+
+/**
+ * Lấy danh sách vật phẩm tự thưởng từ LocalStorage để bảo toàn vĩnh viễn khi F5
+ */
+export const getStoredShopItems = (): ShopItem[] => {
+  if (typeof window === 'undefined') return INITIAL_SHOP_ITEMS;
+  try {
+    const raw = localStorage.getItem(FAESTORE_CUSTOM_SHOP_ITEMS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Lỗi đọc faequest_custom_shop_items:', e);
+  }
+  return INITIAL_SHOP_ITEMS;
+};
+
+/**
+ * Lưu danh sách vật phẩm tự thưởng vào LocalStorage tức thời
+ */
+export const saveStoredShopItems = (items: ShopItem[]): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(FAESTORE_CUSTOM_SHOP_ITEMS_KEY, JSON.stringify(items));
+  } catch (e) {
+    console.warn('Lỗi lưu faequest_custom_shop_items:', e);
+  }
+};
+
 let isSyncingStreakLock = false;
 
 export const useFaeQuestStore = create<FaeQuestState>()(
@@ -718,7 +749,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       dailyCompletedCount: 0,
       dailyBossCompletedCount: 0,
       tasks: INITIAL_TASKS,
-      shopItems: INITIAL_SHOP_ITEMS,
+      shopItems: getStoredShopItems(),
       inventory: INITIAL_INVENTORY,
       rivals: [],
       communityProfiles: [],
@@ -2710,19 +2741,23 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           cost: Math.max(1, cost),
           emoji: emoji || '🎁',
         };
-        set((prev) => ({
-          shopItems: [...prev.shopItems, newItem],
+        const nextShopItems = [...get().shopItems, newItem];
+        set({
+          shopItems: nextShopItems,
           isAddShopItemOpen: false,
-        }));
+        });
+        saveStoredShopItems(nextShopItems);
         get().addToast(`Đã thêm món quà "${newItem.title}" vào Cửa Hàng!`, 'success');
         debouncedAutoSync(get());
         get().syncToCloud(true);
       },
 
       deleteShopItem: (itemId: string) => {
-        set((prev) => ({
-          shopItems: prev.shopItems.filter((i) => i.id !== itemId),
-        }));
+        const nextShopItems = get().shopItems.filter((i) => i.id !== itemId);
+        set({
+          shopItems: nextShopItems,
+        });
+        saveStoredShopItems(nextShopItems);
         get().addToast('Đã xóa món quà khỏi Cửa Hàng', 'info');
         debouncedAutoSync(get());
         get().syncToCloud(true);
@@ -3786,7 +3821,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             lastActiveDate: isCloudNewDay ? today : savedActiveDate,
             lastStreakDate: s.lastStreakDate || '',
             tasks: Array.isArray(s.tasks) ? s.tasks : get().tasks,
-            shopItems: Array.isArray(s.shopItems) ? s.shopItems : get().shopItems,
+            shopItems: Array.isArray(s.shopItems) ? (() => {
+              saveStoredShopItems(s.shopItems);
+              return s.shopItems;
+            })() : get().shopItems,
             inventory: Array.isArray(s.inventory) ? s.inventory : get().inventory,
             rivals: Array.isArray(s.rivals) ? s.rivals : get().rivals,
             systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : get().systemQuests,
@@ -3967,7 +4005,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 lastActiveDate: isCloudNewDay ? today : savedActiveDate,
                 lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
-                shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
+                shopItems: Array.isArray(s.shopItems) ? (() => {
+                  saveStoredShopItems(s.shopItems);
+                  return s.shopItems;
+                })() : getStoredShopItems(),
                 inventory: Array.isArray(s.inventory) ? s.inventory : [],
                 rivals: [],
                 systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : INITIAL_SYSTEM_QUESTS,
@@ -4027,7 +4068,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 dailyCompletedCount: 0,
                 dailyBossCompletedCount: 0,
                 tasks: starterTasks,
-                shopItems: INITIAL_SHOP_ITEMS,
+                shopItems: getStoredShopItems(),
                 inventory: [],
                 rivals: [],
                 systemQuests: INITIAL_SYSTEM_QUESTS,
@@ -4158,7 +4199,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             dailyCompletedCount: 0,
             dailyBossCompletedCount: 0,
             tasks: starterTasks,
-            shopItems: INITIAL_SHOP_ITEMS,
+            shopItems: getStoredShopItems(),
             inventory: [],
             rivals: [],
             systemQuests: INITIAL_SYSTEM_QUESTS,
@@ -4192,7 +4233,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               dailyCompletedCount: 0,
               dailyBossCompletedCount: 0,
               tasks: starterTasks,
-              shopItems: INITIAL_SHOP_ITEMS,
+              shopItems: getStoredShopItems(),
               inventory: [],
               rivals: [],
               systemQuests: INITIAL_SYSTEM_QUESTS,
@@ -4238,7 +4279,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 dailyCompletedCount: 0,
                 dailyBossCompletedCount: 0,
                 tasks: starterTasks,
-                shopItems: INITIAL_SHOP_ITEMS,
+                shopItems: getStoredShopItems(),
                 inventory: [],
                 rivals: [],
                 systemQuests: INITIAL_SYSTEM_QUESTS,
@@ -4408,7 +4449,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               lastActiveDate: isCloudNewDay ? today : savedActiveDate,
               lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
-              shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
+              shopItems: Array.isArray(s.shopItems) ? (() => {
+                saveStoredShopItems(s.shopItems);
+                return s.shopItems;
+              })() : getStoredShopItems(),
               inventory: Array.isArray(s.inventory) ? s.inventory : [],
               rivals: Array.isArray(s.rivals) ? s.rivals : [],
               systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : INITIAL_SYSTEM_QUESTS,
@@ -4468,7 +4512,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               dailyCompletedCount: 0,
               dailyBossCompletedCount: 0,
               tasks: starterTasks,
-              shopItems: INITIAL_SHOP_ITEMS,
+              shopItems: getStoredShopItems(),
               inventory: [],
               rivals: [],
               systemQuests: INITIAL_SYSTEM_QUESTS,
@@ -4570,6 +4614,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         focusAmbient: state.focusAmbient ?? 'rain',
         language: state.language || 'vi',
         isSidebarCollapsed: state.isSidebarCollapsed,
+        shopItems: state.shopItems,
       }),
     }
   )
