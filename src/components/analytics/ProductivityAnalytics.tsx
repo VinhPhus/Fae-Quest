@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
-import { TaskCategory, TaskDifficulty } from '../../types';
+import { TaskCategory, TaskDifficulty, Task } from '../../types';
+import { getLocalDateStr, getTodayString } from '../../utils/dateUtils';
 import {
   Flame,
   CheckCircle,
@@ -17,12 +18,18 @@ import {
   Shield,
   Zap,
   Info,
+  BarChart3,
+  Crown,
+  Swords,
+  Target,
+  Compass,
 } from 'lucide-react';
 
 interface RadarStat {
   key: string;
   name: string;
   shortName: string;
+  categoryKey?: TaskCategory;
   score: number;
   completedTasks: number;
   totalTasks: number;
@@ -30,6 +37,110 @@ interface RadarStat {
   description: string;
   icon: React.ReactNode;
 }
+
+/**
+ * Công thức tính điểm thang 1.0 -> 5.0 tăng tiến mượt theo mốc EXP / hoạt động:
+ * 0 EXP = 1.0
+ * 100 EXP = 2.0
+ * 300 EXP = 3.0
+ * 600 EXP = 4.0
+ * >= 1000 EXP = 5.0
+ * Kèm thưởng nhẹ từ số nhiệm vụ hoàn tất để điểm nở đều rõ rệt qua từng ngày.
+ */
+export const calcExpMilestoneScore = (expGained: number, completedCount: number = 0): number => {
+  const effectiveExp = Math.max(0, expGained) + Math.min(100, completedCount * 12);
+  let score = 1.0;
+
+  if (effectiveExp <= 0) {
+    score = completedCount > 0 ? 1.0 + Math.min(0.5, completedCount * 0.1) : 1.0;
+  } else if (effectiveExp < 100) {
+    // 0 -> 100 EXP: 1.0 -> 2.0
+    score = 1.0 + (effectiveExp / 100) * 1.0;
+  } else if (effectiveExp < 300) {
+    // 100 -> 300 EXP: 2.0 -> 3.0
+    score = 2.0 + ((effectiveExp - 100) / 200) * 1.0;
+  } else if (effectiveExp < 600) {
+    // 300 -> 600 EXP: 3.0 -> 4.0
+    score = 3.0 + ((effectiveExp - 300) / 300) * 1.0;
+  } else if (effectiveExp < 1000) {
+    // 600 -> 1000 EXP: 4.0 -> 5.0
+    score = 4.0 + ((effectiveExp - 600) / 400) * 1.0;
+  } else {
+    // >= 1000 EXP: 5.0
+    score = 5.0;
+  }
+
+  return Math.min(5.0, Math.max(1.0, parseFloat(score.toFixed(1))));
+};
+
+/**
+ * Helper tính toán dữ liệu phong độ 7 ngày gần nhất
+ */
+const getLast7DaysData = (
+  tasks: Task[],
+  dailyActivityHistory?: Record<string, { completedCount: number; expGained: number }>,
+  todayCompletedCount?: number
+) => {
+  const result: Array<{
+    dateStr: string;
+    dayLabel: string;
+    subLabel: string;
+    isToday: boolean;
+    completedCount: number;
+    expGained: number;
+  }> = [];
+
+  const now = new Date();
+  const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+  // Map từ tasks hiện hữu trong store
+  const taskMap: Record<string, { count: number; exp: number }> = {};
+  tasks.forEach((t) => {
+    if (t.completed) {
+      let dStr = t.completionDate;
+      if (!dStr && t.completedAt) {
+        dStr = getLocalDateStr(new Date(t.completedAt));
+      }
+      if (dStr) {
+        if (!taskMap[dStr]) taskMap[dStr] = { count: 0, exp: 0 };
+        taskMap[dStr].count += 1;
+        taskMap[dStr].exp += t.lastAwardedExp || DIFFICULTIES[t.difficulty]?.exp || 40;
+      }
+    }
+  });
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const dateStr = getLocalDateStr(d);
+    const isToday = i === 0;
+
+    const fromHistory = dailyActivityHistory?.[dateStr];
+    const fromTasks = taskMap[dateStr];
+
+    let count = Math.max(fromHistory?.completedCount || 0, fromTasks?.count || 0);
+    let expVal = Math.max(fromHistory?.expGained || 0, fromTasks?.exp || 0);
+
+    if (isToday && todayCompletedCount && count < todayCompletedCount) {
+      count = todayCompletedCount;
+      if (expVal === 0) expVal = count * 50;
+    }
+
+    const dayOfWeek = dayNames[d.getDay()];
+    const dayOfMonth = `${d.getDate()}/${d.getMonth() + 1}`;
+
+    result.push({
+      dateStr,
+      dayLabel: isToday ? 'Hôm nay' : dayOfWeek,
+      subLabel: dayOfMonth,
+      isToday,
+      completedCount: count,
+      expGained: expVal,
+    });
+  }
+
+  return result;
+};
 
 export const ProductivityAnalyticsHeader: React.FC = () => {
   const { tasks, completedTotal, streakDays, exp } = useFaeQuestStore();
@@ -66,7 +177,7 @@ export const ProductivityAnalyticsHeader: React.FC = () => {
         </div>
       </div>
 
-      {/* TẦNG 1: 4 Thẻ KPI Tóm Tắt (Summary Cards) */}
+      {/* TẦNG KPI Tóm Tắt */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Chuỗi Kỷ Luật */}
         <div className="rounded-2xl p-3 sm:p-3.5 bg-[#11212D] border border-[#253745] flex items-center gap-3 shadow-md">
@@ -125,84 +236,150 @@ export const ProductivityAnalyticsHeader: React.FC = () => {
 };
 
 export const ProductivityAnalytics: React.FC = () => {
-  const { tasks, completedTotal, streakDays, exp, focusSessionsCompleted } = useFaeQuestStore();
+  const {
+    tasks,
+    completedTotal,
+    streakDays,
+    exp,
+    focusSessionsCompleted,
+    dailyCompletedCount,
+    cumulativeCategoryStats,
+    cumulativeDifficultyStats,
+    dailyActivityHistory,
+  } = useFaeQuestStore();
 
   const [activeStatIndex, setActiveStatIndex] = useState<number | null>(null);
 
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter((t) => t.completed).length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  // 1. TỔNG HỢP & BẢO TOÀN DỮ LIỆU LỊCH SỬ KHÔNG BỊ RESET VỀ 0 KHI DỌN TASK
+  const { effectiveCategoryData, effectiveDifficultyCounts, totalRecordedCompleted } = useMemo(() => {
+    const catData: Record<TaskCategory, { total: number; completed: number; expGained: number }> = {
+      'hoc-tap': { total: 0, completed: 0, expGained: 0 },
+      'cong-viec': { total: 0, completed: 0, expGained: 0 },
+      'the-luc': { total: 0, completed: 0, expGained: 0 },
+      'ca-nhan': { total: 0, completed: 0, expGained: 0 },
+      'sang-tao': { total: 0, completed: 0, expGained: 0 },
+    };
 
-  // Breakdown by category and difficulty
-  const categoryData: Record<
-    TaskCategory,
-    { total: number; completed: number; expGained: number }
-  > = {
-    'hoc-tap': { total: 0, completed: 0, expGained: 0 },
-    'cong-viec': { total: 0, completed: 0, expGained: 0 },
-    'the-luc': { total: 0, completed: 0, expGained: 0 },
-    'ca-nhan': { total: 0, completed: 0, expGained: 0 },
-    'sang-tao': { total: 0, completed: 0, expGained: 0 },
-  };
+    const diffCounts: Record<TaskDifficulty, number> = {
+      easy: 0,
+      medium: 0,
+      hard: 0,
+      boss: 0,
+    };
 
-  const difficultyCounts: Record<TaskDifficulty, number> = {
-    easy: 0,
-    medium: 0,
-    hard: 0,
-    boss: 0,
-  };
-
-  tasks.forEach((t) => {
-    if (categoryData[t.category]) {
-      categoryData[t.category].total += 1;
+    // Quét task hiện có trong store
+    tasks.forEach((t) => {
+      const cat = catData[t.category] ? t.category : 'ca-nhan';
+      catData[cat].total += 1;
       if (t.completed) {
-        categoryData[t.category].completed += 1;
+        catData[cat].completed += 1;
         const awarded = t.lastAwardedExp || DIFFICULTIES[t.difficulty]?.exp || 40;
-        categoryData[t.category].expGained += awarded;
+        catData[cat].expGained += awarded;
 
-        if (difficultyCounts[t.difficulty] !== undefined) {
-          difficultyCounts[t.difficulty] += 1;
-        }
+        const diffKey = diffCounts[t.difficulty] !== undefined ? t.difficulty : 'medium';
+        diffCounts[diffKey] += 1;
       }
+    });
+
+    // Kết hợp với cumulativeCategoryStats (nếu có dữ liệu tích lũy lớn hơn)
+    const allCategories: TaskCategory[] = ['hoc-tap', 'cong-viec', 'the-luc', 'ca-nhan', 'sang-tao'];
+    allCategories.forEach((cat) => {
+      const cum = cumulativeCategoryStats?.[cat];
+      if (cum) {
+        catData[cat].completed = Math.max(catData[cat].completed, cum.completed || 0);
+        catData[cat].expGained = Math.max(catData[cat].expGained, cum.expGained || 0);
+        catData[cat].total = Math.max(catData[cat].total, catData[cat].completed);
+      }
+    });
+
+    // Kết hợp với cumulativeDifficultyStats
+    const allDiffs: TaskDifficulty[] = ['easy', 'medium', 'hard', 'boss'];
+    allDiffs.forEach((df) => {
+      const cumDiff = cumulativeDifficultyStats?.[df];
+      if (typeof cumDiff === 'number') {
+        diffCounts[df] = Math.max(diffCounts[df], cumDiff);
+      }
+    });
+
+    // Thuật toán phục hồi & bảo tồn thông minh:
+    // Nếu completedTotal lớn hơn tổng nhiệm vụ đang ghi nhận (do người dùng xóa các task cũ trước đó)
+    const currentCompletedSum = allCategories.reduce((acc, c) => acc + catData[c].completed, 0);
+    const targetCompleted = Math.max(completedTotal || 0, currentCompletedSum);
+
+    if (targetCompleted > currentCompletedSum) {
+      const missingTasks = targetCompleted - currentCompletedSum;
+      const perCat = Math.floor(missingTasks / 5);
+      const remainder = missingTasks % 5;
+
+      allCategories.forEach((cat, index) => {
+        const bonus = perCat + (index < remainder ? 1 : 0);
+        catData[cat].completed += bonus;
+        catData[cat].total = Math.max(catData[cat].total, catData[cat].completed);
+      });
+
+      // Phân bổ phần thiếu vào độ khó theo tỉ lệ thực tế: Dễ 30%, Vừa 40%, Khó 20%, Trùm 10%
+      diffCounts.easy += Math.round(missingTasks * 0.3);
+      diffCounts.medium += Math.round(missingTasks * 0.4);
+      diffCounts.hard += Math.round(missingTasks * 0.2);
+      diffCounts.boss += Math.max(0, missingTasks - Math.round(missingTasks * 0.3) - Math.round(missingTasks * 0.4) - Math.round(missingTasks * 0.2));
     }
-  });
 
-  // Calculate 6 RPG Ability Parameters (0.0 -> 5.0)
-  // 1. TRÍ TUỆ (Học tập)
-  const calcScore = (completed: number, expG: number) => {
-    const raw = 1.0 + completed * 0.7 + expG / 250;
-    return Math.min(5.0, Math.max(1.0, parseFloat(raw.toFixed(1))));
-  };
+    // Bảo tồn tổng EXP: nếu exp lớn hơn tổng expGained của 5 nhóm, phân bổ phần chênh lệch
+    const currentExpSum = allCategories.reduce((acc, c) => acc + catData[c].expGained, 0);
+    if (exp > currentExpSum && (currentExpSum === 0 || currentCompletedSum === 0)) {
+      const missingExp = exp - currentExpSum;
+      const perCatExp = Math.floor(missingExp / 5);
+      allCategories.forEach((cat) => {
+        catData[cat].expGained += perCatExp;
+      });
+    }
 
-  const triTueScore = calcScore(
-    categoryData['hoc-tap'].completed,
-    categoryData['hoc-tap'].expGained
+    return {
+      effectiveCategoryData: catData,
+      effectiveDifficultyCounts: diffCounts,
+      totalRecordedCompleted: targetCompleted,
+    };
+  }, [tasks, completedTotal, exp, cumulativeCategoryStats, cumulativeDifficultyStats]);
+
+  // 2. CÔNG THỨC 6 ĐỈNH NĂNG LỰC (THANG 1.0 -> 5.0)
+  // Trí Tuệ ➔ Học tập
+  const triTueScore = calcExpMilestoneScore(
+    effectiveCategoryData['hoc-tap'].expGained,
+    effectiveCategoryData['hoc-tap'].completed
   );
 
-  const suNghiepScore = calcScore(
-    categoryData['cong-viec'].completed,
-    categoryData['cong-viec'].expGained
+  // Sự Nghiệp ➔ Công việc
+  const suNghiepScore = calcExpMilestoneScore(
+    effectiveCategoryData['cong-viec'].expGained,
+    effectiveCategoryData['cong-viec'].completed
   );
 
-  const theLucScore = calcScore(
-    categoryData['the-luc'].completed,
-    categoryData['the-luc'].expGained
+  // Thể Chất ➔ Thể lực
+  const theLucScore = calcExpMilestoneScore(
+    effectiveCategoryData['the-luc'].expGained,
+    effectiveCategoryData['the-luc'].completed
   );
 
-  const rawKyLuat = 1.0 + (focusSessionsCompleted || 0) * 0.6 + (streakDays || 0) * 0.4;
-  const kyLuatScore = Math.min(5.0, Math.max(1.0, parseFloat(rawKyLuat.toFixed(1))));
-
-  const tuChuScore = calcScore(
-    categoryData['ca-nhan'].completed,
-    categoryData['ca-nhan'].expGained
+  // Tự Chủ ➔ Cá nhân
+  const tuChuScore = calcExpMilestoneScore(
+    effectiveCategoryData['ca-nhan'].expGained,
+    effectiveCategoryData['ca-nhan'].completed
   );
 
-  const sangTaoScore = calcScore(
-    categoryData['sang-tao'].completed,
-    categoryData['sang-tao'].expGained
+  // Sáng Tạo ➔ Sáng tạo
+  const sangTaoScore = calcExpMilestoneScore(
+    effectiveCategoryData['sang-tao'].expGained,
+    effectiveCategoryData['sang-tao'].completed
   );
 
-  // 6 Radar Stats in clock-wise order starting from top (-90 deg):
+  // Kỷ Luật ➔ Tổng hợp từ Chuỗi Streak + Số phiên Focus + Tỷ lệ / số lệnh hoàn thành
+  const disciplinePoints =
+    (streakDays || 0) * 65 +
+    (focusSessionsCompleted || 0) * 85 +
+    Math.min(300, (totalRecordedCompleted || 0) * 15);
+  const kyLuatScore = calcExpMilestoneScore(disciplinePoints, (streakDays || 0) + (focusSessionsCompleted || 0));
+
+  // 6 Radar Stats theo chiều kim đồng hồ bắt đầu từ đỉnh trên (-90 deg):
   // 0: TRÍ TUỆ (Top)
   // 1: SỰ NGHIỆP (Top-Right)
   // 2: THỂ CHẤT (Bottom-Right)
@@ -214,33 +391,36 @@ export const ProductivityAnalytics: React.FC = () => {
       key: 'tri-tue',
       name: 'TRÍ TUỆ',
       shortName: 'Trí Tuệ',
+      categoryKey: 'hoc-tap',
       score: triTueScore,
-      completedTasks: categoryData['hoc-tap'].completed,
-      totalTasks: categoryData['hoc-tap'].total,
-      expGained: categoryData['hoc-tap'].expGained,
-      description: 'Học tập, đọc sách, nghiên cứu tri thức và rèn luyện trí tuệ.',
+      completedTasks: effectiveCategoryData['hoc-tap'].completed,
+      totalTasks: effectiveCategoryData['hoc-tap'].total,
+      expGained: effectiveCategoryData['hoc-tap'].expGained,
+      description: 'Học tập, đọc sách, tích lũy tri thức và rèn luyện tư duy phản biện.',
       icon: <BookOpen className="w-3.5 h-3.5 text-cyan-300" />,
     },
     {
       key: 'su-nghiep',
       name: 'SỰ NGHIỆP',
       shortName: 'Sự Nghiệp',
+      categoryKey: 'cong-viec',
       score: suNghiepScore,
-      completedTasks: categoryData['cong-viec'].completed,
-      totalTasks: categoryData['cong-viec'].total,
-      expGained: categoryData['cong-viec'].expGained,
-      description: 'Công việc chuyên môn, quản lý dự án và các mục tiêu thăng tiến.',
-      icon: <Briefcase className="w-3.5 h-3.5 text-blue-300" />,
+      completedTasks: effectiveCategoryData['cong-viec'].completed,
+      totalTasks: effectiveCategoryData['cong-viec'].total,
+      expGained: effectiveCategoryData['cong-viec'].expGained,
+      description: 'Công việc chuyên môn, quản trị dự án và các mục tiêu thăng tiến bền vững.',
+      icon: <Briefcase className="w-3.5 h-3.5 text-blue-400" />,
     },
     {
       key: 'the-chat',
       name: 'THỂ CHẤT',
       shortName: 'Thể Chất',
+      categoryKey: 'the-luc',
       score: theLucScore,
-      completedTasks: categoryData['the-luc'].completed,
-      totalTasks: categoryData['the-luc'].total,
-      expGained: categoryData['the-luc'].expGained,
-      description: 'Thể thao, gym, chạy bộ, dinh dưỡng và tái tạo năng lượng.',
+      completedTasks: effectiveCategoryData['the-luc'].completed,
+      totalTasks: effectiveCategoryData['the-luc'].total,
+      expGained: effectiveCategoryData['the-luc'].expGained,
+      description: 'Thể thao, gym, chạy bộ, dinh dưỡng và tái tạo năng lượng sống.',
       icon: <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />,
     },
     {
@@ -250,37 +430,39 @@ export const ProductivityAnalytics: React.FC = () => {
       score: kyLuatScore,
       completedTasks: focusSessionsCompleted || 0,
       totalTasks: focusSessionsCompleted || 0,
-      expGained: (streakDays || 0) * 50,
-      description: 'Chuỗi ngày liên tiếp và các phiên tập trung Fae Focus không xao nhãng.',
+      expGained: disciplinePoints,
+      description: 'Ý chí kiên định qua chuỗi ngày liên tiếp và các phiên tập trung sâu Fae Focus.',
       icon: <Flame className="w-3.5 h-3.5 text-orange-400" />,
     },
     {
       key: 'tu-chu',
       name: 'TỰ CHỦ',
       shortName: 'Tự Chủ',
+      categoryKey: 'ca-nhan',
       score: tuChuScore,
-      completedTasks: categoryData['ca-nhan'].completed,
-      totalTasks: categoryData['ca-nhan'].total,
-      expGained: categoryData['ca-nhan'].expGained,
-      description: 'Kế hoạch cá nhân, thói quen sinh hoạt và quản lý cuộc sống.',
+      completedTasks: effectiveCategoryData['ca-nhan'].completed,
+      totalTasks: effectiveCategoryData['ca-nhan'].total,
+      expGained: effectiveCategoryData['ca-nhan'].expGained,
+      description: 'Kế hoạch cá nhân, thói quen sinh hoạt và khả năng làm chủ bản thân.',
       icon: <Heart className="w-3.5 h-3.5 text-pink-400" />,
     },
     {
       key: 'sang-tao',
       name: 'SÁNG TẠO',
       shortName: 'Sáng Tạo',
+      categoryKey: 'sang-tao',
       score: sangTaoScore,
-      completedTasks: categoryData['sang-tao'].completed,
-      totalTasks: categoryData['sang-tao'].total,
-      expGained: categoryData['sang-tao'].expGained,
-      description: 'Nghệ thuật, viết lách, ý tưởng đổi mới và giải pháp đột phá.',
+      completedTasks: effectiveCategoryData['sang-tao'].completed,
+      totalTasks: effectiveCategoryData['sang-tao'].total,
+      expGained: effectiveCategoryData['sang-tao'].expGained,
+      description: 'Nghệ thuật, viết lách, giải pháp đổi mới và những sáng kiến đột phá.',
       icon: <Palette className="w-3.5 h-3.5 text-amber-300" />,
     },
   ];
 
-  // Radar geometry calculations
-  const cx = 190;
-  const cy = 160;
+  // 3. HÌNH HỌC LỤC GIÁC (SVG ViewBox 0 0 420 380, An Toàn Tuyệt Đối Cho Đỉnh Dưới)
+  const cx = 210;
+  const cy = 175;
   const radius = 95;
   const totalLevels = 5;
 
@@ -293,7 +475,6 @@ export const ProductivityAnalytics: React.FC = () => {
     (7 * Math.PI) / 6, // 5: Top-Left (210 deg)
   ];
 
-  // Helper to generate polygon points string for a given level
   const getHexagonPoints = (r: number) => {
     return angles
       .map((ang) => {
@@ -304,178 +485,171 @@ export const ProductivityAnalytics: React.FC = () => {
       .join(' ');
   };
 
-  // Player polygon points
-  const playerPoints = radarStats
-    .map((stat, idx) => {
-      const valRadius = (Math.max(0.6, Math.min(5.0, stat.score)) / 5.0) * radius;
-      const x = cx + valRadius * Math.cos(angles[idx]);
-      const y = cy + valRadius * Math.sin(angles[idx]);
-      return { x, y, score: stat.score, name: stat.name };
-    });
+  const playerPoints = radarStats.map((stat, idx) => {
+    const valRadius = (Math.max(0.6, Math.min(5.0, stat.score)) / 5.0) * radius;
+    const x = cx + valRadius * Math.cos(angles[idx]);
+    const y = cy + valRadius * Math.sin(angles[idx]);
+    return { x, y, score: stat.score, name: stat.name, stat };
+  });
 
   const playerPointsString = playerPoints
     .map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(' ');
 
-  // Archetype & Power Rank Computation
+  // 4. PHÂN TÍCH THIÊN HƯỚNG THỢ SĂN (Hệ Thợ Săn & Gợi Ý Phát Triển)
   const sortedStats = [...radarStats].sort((a, b) => b.score - a.score);
+  const strongestStat = sortedStats[0];
+  const weakestStat = sortedStats[sortedStats.length - 1];
+  const scoreDiff = strongestStat.score - weakestStat.score;
+
   const avgScore = parseFloat(
     (radarStats.reduce((sum, s) => sum + s.score, 0) / 6).toFixed(1)
   );
 
-  const getArchetype = () => {
-    const diff = sortedStats[0].score - sortedStats[5].score;
-    if (diff <= 0.6) {
+  const getHunterArchetype = () => {
+    // Nếu các chỉ số chênh lệch không đáng kể (<= 0.5) hoặc đều rất cao
+    if (scoreDiff <= 0.5 && avgScore >= 2.0) {
       return {
-        title: 'Chiến Binh Toàn Năng',
-        badge: '🔥 Toàn Năng',
-        description: 'Chỉ số phát triển đồng đều, cân bằng hoàn hảo giữa kỷ luật, trí tuệ và sự nghiệp.',
+        title: 'Thợ Săn Toàn Diện',
+        badge: '⭐ Toàn Diện',
+        icon: '⭐',
+        desc: 'Cân bằng hoàn hảo cả 6 trụ cột năng lực, bản lĩnh vững vàng và không có điểm yếu nào.',
       };
     }
-    const pair = `${sortedStats[0].key}_${sortedStats[1].key}`;
-    if (pair.includes('tri-tue') && pair.includes('ky-luat')) {
-      return {
-        title: 'Học Giả Kỷ Luật',
-        badge: '⚔️ Trí Tuệ & Ý Chí',
-        description: 'Ý chí sắt đá kết hợp kiến thức sâu rộng, biến việc rèn luyện thành sức mạnh tuyệt đối.',
-      };
+
+    switch (strongestStat.key) {
+      case 'tri-tue':
+        return {
+          title: 'Học Giả Hắc Ám',
+          badge: '📜 Học Giả Hắc Ám',
+          icon: '📜',
+          desc: 'Am hiểu bí thuật tri thức, lấy trí tuệ và tư duy sắc bén làm vũ khí tối thượng.',
+        };
+      case 'the-chat':
+        return {
+          title: 'Chiến Binh Thép',
+          badge: '🛡️ Chiến Binh Thép',
+          icon: '🛡️',
+          desc: 'Sở hữu thể chất kiên cường, sức bền dẻo dai và tinh thần bất khuất qua tôi luyện.',
+        };
+      case 'su-nghiep':
+        return {
+          title: 'Chiến Lược Gia',
+          badge: '👑 Chiến Lược Gia',
+          icon: '👑',
+          desc: 'Nhìn thấu đại cục, hoàn thành xuất sắc mọi dự án và thăng tiến vững vàng trên sự nghiệp.',
+        };
+      case 'tu-chu':
+        return {
+          title: 'Hành Giả Tĩnh Tâm',
+          badge: '🧘 Hành Giả Tĩnh Tâm',
+          icon: '🧘',
+          desc: 'Tâm trí vững như bàn thạch, làm chủ lối sống ngăn nắp và khắc chế mọi cám dỗ thường nhật.',
+        };
+      case 'sang-tao':
+        return {
+          title: 'Nghệ Sĩ Hư Không',
+          badge: '🎨 Nghệ Sĩ Hư Không',
+          icon: '🎨',
+          desc: 'Khơi nguồn cảm hứng vô tận, biến ý tưởng vô hình thành những kiệt tác đột phá.',
+        };
+      case 'ky-luat':
+        return {
+          title: 'Bậc Thầy Thiết Luật',
+          badge: '⚡ Bậc Thầy Thiết Luật',
+          icon: '⚡',
+          desc: 'Ý chí sắt đá cùng chuỗi ngày bất bại, duy trì kỷ luật thép và sự tập trung cao độ.',
+        };
+      default:
+        return {
+          title: 'Thợ Săn Tinh Anh',
+          badge: '⚔️ Tinh Anh',
+          icon: '⚔️',
+          desc: 'Phát triển nổi trội ở nhóm năng lực chủ đạo và không ngừng bứt phá giới hạn.',
+        };
     }
-    if (pair.includes('su-nghiep') && pair.includes('ky-luat')) {
-      return {
-        title: 'Chỉ Huy Tinh Anh',
-        badge: '👑 Lãnh Đạo',
-        description: 'Hiệu suất công việc vượt trội cùng tính kỷ luật nghiêm ngặt, luôn làm chủ mọi mục tiêu.',
-      };
-    }
-    if (pair.includes('the-chat') && pair.includes('ky-luat')) {
-      return {
-        title: 'Đấu Sĩ Thép',
-        badge: '🛡️ Thể Chất Vững Vàng',
-        description: 'Thể lực dồi dào và tinh thần thép kiên định, không bao giờ chùn bước trước nghịch cảnh.',
-      };
-    }
-    if (pair.includes('sang-tao') && pair.includes('su-nghiep')) {
-      return {
-        title: 'Kiến Trúc Sư Đổi Mới',
-        badge: '✨ Sáng Tạo & Đột Phá',
-        description: 'Tư duy đổi mới không ngừng kết hợp năng lực thực thi sắc bén trong công việc.',
-      };
-    }
-    if (pair.includes('tri-tue') && pair.includes('sang-tao')) {
-      return {
-        title: 'Hiền Nhân Khai Phá',
-        badge: '🔮 Khai Phóng',
-        description: 'Trí tuệ uyên thâm cùng óc sáng tạo không giới hạn, luôn tìm ra lối đi riêng.',
-      };
-    }
-    if (pair.includes('tu-chu') && pair.includes('ky-luat')) {
-      return {
-        title: 'Thợ Săn Khắc Kỷ',
-        badge: '📜 Khắc Kỷ',
-        description: 'Bậc thầy kiểm soát tâm trí và thói quen, vững vàng trước mọi cám dỗ thường nhật.',
-      };
-    }
-    return {
-      title: `${sortedStats[0].shortName} & ${sortedStats[1].shortName}`,
-      badge: '⚡ Tinh Anh',
-      description: `Thiên hướng phát triển mạnh mẽ nhất ở nhóm ${sortedStats[0].shortName} và ${sortedStats[1].shortName}.`,
-    };
   };
 
-  const archetype = getArchetype();
+  const archetype = getHunterArchetype();
 
   const getPowerRank = (avg: number) => {
-    if (avg >= 4.5) {
-      return {
-        rank: 'S',
-        title: 'Huyền Thoại (Legendary)',
-        badgeClass: 'text-amber-300 border-amber-400/50 bg-amber-500/20 shadow-amber-500/20',
-      };
-    }
-    if (avg >= 3.8) {
-      return {
-        rank: 'A',
-        title: 'Bậc Thầy (Master)',
-        badgeClass: 'text-purple-300 border-purple-400/50 bg-purple-500/20 shadow-purple-500/20',
-      };
-    }
-    if (avg >= 3.0) {
-      return {
-        rank: 'B',
-        title: 'Tinh Anh (Elite)',
-        badgeClass: 'text-cyan-300 border-cyan-400/50 bg-cyan-500/20 shadow-cyan-500/20',
-      };
-    }
-    if (avg >= 2.2) {
-      return {
-        rank: 'C',
-        title: 'Tiêu Chuẩn (Standard)',
-        badgeClass: 'text-emerald-300 border-emerald-400/50 bg-emerald-500/20 shadow-emerald-500/20',
-      };
-    }
-    if (avg >= 1.5) {
-      return {
-        rank: 'D',
-        title: 'Tân Binh (Novice)',
-        badgeClass: 'text-[#CCD0CF] border-[#4A5C6A] bg-[#253745]/40',
-      };
-    }
-    return {
-      rank: 'E',
-      title: 'Khởi Đầu (Initiate)',
-      badgeClass: 'text-[#9BA8AB] border-[#253745] bg-[#06141B]',
-    };
+    if (avg >= 4.5) return { rank: 'S', title: 'Huyền Thoại (Legendary)' };
+    if (avg >= 3.8) return { rank: 'A', title: 'Bậc Thầy (Master)' };
+    if (avg >= 3.0) return { rank: 'B', title: 'Tinh Anh (Elite)' };
+    if (avg >= 2.2) return { rank: 'C', title: 'Tiêu Chuẩn (Standard)' };
+    if (avg >= 1.5) return { rank: 'D', title: 'Tân Binh (Novice)' };
+    return { rank: 'E', title: 'Khởi Đầu (Initiate)' };
   };
 
   const powerRank = getPowerRank(avgScore);
-
   const activeStat = activeStatIndex !== null ? radarStats[activeStatIndex] : null;
+
+  // Dữ liệu phong độ 7 ngày qua
+  const last7Days = useMemo(
+    () => getLast7DaysData(tasks, dailyActivityHistory, dailyCompletedCount),
+    [tasks, dailyActivityHistory, dailyCompletedCount]
+  );
+  const maxDayExp = Math.max(...last7Days.map((d) => d.expGained), 100);
+
+  // Tổng số nhiệm vụ theo độ khó để tính % Stacked Bar
+  const totalDiffTasks =
+    effectiveDifficultyCounts.easy +
+    effectiveDifficultyCounts.medium +
+    effectiveDifficultyCounts.hard +
+    effectiveDifficultyCounts.boss;
+
+  const easyPct = totalDiffTasks > 0 ? (effectiveDifficultyCounts.easy / totalDiffTasks) * 100 : 25;
+  const mediumPct = totalDiffTasks > 0 ? (effectiveDifficultyCounts.medium / totalDiffTasks) * 100 : 35;
+  const hardPct = totalDiffTasks > 0 ? (effectiveDifficultyCounts.hard / totalDiffTasks) * 100 : 25;
+  const bossPct = totalDiffTasks > 0 ? (effectiveDifficultyCounts.boss / totalDiffTasks) * 100 : 15;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* TẦNG 2: BENTO GRID 2 CỘT */}
+      {/* BENTO GRID 2 CỘT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* CỘT TRÁI (6/12): Card "🕸️ SƠ ĐỒ LỤC GIÁC NĂNG LỰC (THANG ĐIỂM 5)" */}
+        {/* ================= CỘT TRÁI (6/12): SƠ ĐỒ LỤC GIÁC NĂNG LỰC ================= */}
         <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-4">
           {/* Card Header */}
           <div className="flex items-center justify-between pb-3 border-b border-[#253745]">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF]">
+              <div className="w-8 h-8 rounded-xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF] shadow-inner">
                 <Zap className="w-4 h-4 text-cyan-300" />
               </div>
               <div>
                 <h3 className="font-rpg font-bold text-base text-white tracking-wide">
                   Sơ Đồ Lục Giác Năng Lực
                 </h3>
-                <span className="text-[10px] text-[#9BA8AB] uppercase tracking-wider font-semibold">
-                  Ability Parameters (Thang Điểm 5.0)
+                <span className="text-[10px] text-cyan-300/90 uppercase tracking-wider font-semibold">
+                  6 CHỈ SỐ CỐT LÕI (THANG 5.0)
                 </span>
               </div>
             </div>
 
-            <span className="px-2.5 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[11px] font-mono font-bold text-amber-300">
+            <span className="px-2.5 py-1 rounded-full bg-[#06141B] border border-[#4A5C6A] text-[11px] font-mono font-bold text-amber-300 shadow-sm">
               Avg: {avgScore} / 5.0
             </span>
           </div>
 
-          {/* SVG Hexagonal Radar */}
-          <div className="relative py-2 flex flex-col items-center justify-center">
+          {/* SVG Hexagonal Radar với đệm py-4 sm:py-6 bảo đảm không cắt đỉnh KỶ LUẬT */}
+          <div className="relative py-4 sm:py-6 flex flex-col items-center justify-center">
             <svg
-              viewBox="0 0 380 340"
-              className="w-full h-auto max-w-[340px] sm:max-w-[380px] overflow-visible drop-shadow-[0_8px_24px_rgba(0,0,0,0.8)]"
+              viewBox="0 0 420 380"
+              className="w-full h-auto max-w-[360px] sm:max-w-[420px] overflow-visible drop-shadow-[0_12px_28px_rgba(0,0,0,0.9)]"
             >
               <defs>
-                <filter id="radar-glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
+                <filter id="fae-radar-glow" x="-25%" y="-25%" width="150%" height="150%">
+                  <feGaussianBlur stdDeviation="3.5" result="blur" />
+                  <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#38BDF8" floodOpacity="0.35" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
-                <linearGradient id="poly-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#CCD0CF" stopOpacity="0.32" />
-                  <stop offset="100%" stopColor="#4A5C6A" stopOpacity="0.12" />
+                <linearGradient id="fae-poly-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#06B6D4" stopOpacity="0.40" />
+                  <stop offset="50%" stopColor="#38BDF8" stopOpacity="0.28" />
+                  <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.25" />
                 </linearGradient>
               </defs>
 
-              {/* 5 Concentric Hexagonal Grids */}
+              {/* 5 Vòng Lục Giác Đồng Tâm */}
               {Array.from({ length: totalLevels }, (_, i) => i + 1).map((lvl) => {
                 const r = (lvl / totalLevels) * radius;
                 const isOuter = lvl === totalLevels;
@@ -484,14 +658,14 @@ export const ProductivityAnalytics: React.FC = () => {
                     key={lvl}
                     points={getHexagonPoints(r)}
                     fill="none"
-                    stroke={isOuter ? '#4A5C6A' : '#253745'}
+                    stroke={isOuter ? '#4A5C6A' : '#1C2C38'}
                     strokeWidth={isOuter ? 1.5 : 1}
                     strokeDasharray={isOuter ? undefined : '3 3'}
                   />
                 );
               })}
 
-              {/* 6 Radial Axes */}
+              {/* 6 Trục Hướng Tâm */}
               {angles.map((ang, i) => {
                 const x2 = cx + radius * Math.cos(ang);
                 const y2 = cy + radius * Math.sin(ang);
@@ -508,7 +682,7 @@ export const ProductivityAnalytics: React.FC = () => {
                 );
               })}
 
-              {/* Axis Level Numbers along the Top Axis */}
+              {/* Nhãn mốc điểm 1 -> 5 trên trục thẳng đứng */}
               {Array.from({ length: totalLevels }, (_, i) => i + 1).map((lvl) => {
                 const r = (lvl / totalLevels) * radius;
                 return (
@@ -526,17 +700,17 @@ export const ProductivityAnalytics: React.FC = () => {
                 );
               })}
 
-              {/* Player Data Polygon Area */}
+              {/* Đa Giác Năng Lực Người Chơi (Dark Fantasy Gradient + Glow) */}
               <polygon
                 points={playerPointsString}
-                fill="url(#poly-gradient)"
-                stroke="#CCD0CF"
+                fill="url(#fae-poly-grad)"
+                stroke="#38BDF8"
                 strokeWidth="2.5"
-                filter="url(#radar-glow)"
+                filter="url(#fae-radar-glow)"
                 className="transition-all duration-300"
               />
 
-              {/* Data Vertices & Pulsing Dots */}
+              {/* 6 Đỉnh với Vòng Phát Sáng & Điểm Tâm */}
               {playerPoints.map((p, idx) => {
                 const isHovered = activeStatIndex === idx;
                 return (
@@ -547,25 +721,25 @@ export const ProductivityAnalytics: React.FC = () => {
                     onMouseLeave={() => setActiveStatIndex(null)}
                     onClick={() => setActiveStatIndex(isHovered ? null : idx)}
                   >
-                    {/* Invisible larger hover hotspot */}
-                    <circle cx={p.x} cy={p.y} r="16" fill="transparent" />
+                    {/* Hotspot chạm hover lớn hơn */}
+                    <circle cx={p.x} cy={p.y} r="18" fill="transparent" />
 
-                    {/* Outer Glow Halo */}
+                    {/* Vòng hào quang bên ngoài */}
                     <circle
                       cx={p.x}
                       cy={p.y}
-                      r={isHovered ? 8 : 5}
-                      fill="#CCD0CF"
-                      fillOpacity={isHovered ? 0.6 : 0.25}
+                      r={isHovered ? 9 : 6}
+                      fill={isHovered ? '#38BDF8' : '#22D3EE'}
+                      fillOpacity={isHovered ? 0.7 : 0.3}
                       className="transition-all duration-200"
                     />
 
-                    {/* Center Point */}
+                    {/* Điểm tâm phát sáng */}
                     <circle
                       cx={p.x}
                       cy={p.y}
-                      r={isHovered ? 4.5 : 3.5}
-                      fill={isHovered ? '#FFFFFF' : '#CCD0CF'}
+                      r={isHovered ? 5 : 3.5}
+                      fill={isHovered ? '#FFFFFF' : '#E0F2FE'}
                       stroke="#06141B"
                       strokeWidth="1.5"
                       className="transition-all duration-200"
@@ -574,11 +748,9 @@ export const ProductivityAnalytics: React.FC = () => {
                 );
               })}
 
-              {/* Outer Vertex Labels */}
+              {/* Nhãn Đỉnh & Điểm Số 6 Trục (Tọa độ mở rộng an toàn, không cắt mép) */}
               {radarStats.map((stat, idx) => {
                 const isHovered = activeStatIndex === idx;
-
-                // Label positions around vertices
                 let lx = cx;
                 let ly = cy;
                 let anchor: 'start' | 'middle' | 'end' = 'middle';
@@ -590,27 +762,27 @@ export const ProductivityAnalytics: React.FC = () => {
                   anchor = 'middle';
                 } else if (idx === 1) {
                   // SỰ NGHIỆP (Top-Right)
-                  lx = cx + radius * Math.cos(angles[idx]) + 10;
+                  lx = cx + radius * Math.cos(angles[idx]) + 12;
                   ly = cy + radius * Math.sin(angles[idx]) - 4;
                   anchor = 'start';
                 } else if (idx === 2) {
                   // THỂ CHẤT (Bottom-Right)
-                  lx = cx + radius * Math.cos(angles[idx]) + 10;
+                  lx = cx + radius * Math.cos(angles[idx]) + 12;
                   ly = cy + radius * Math.sin(angles[idx]) + 14;
                   anchor = 'start';
                 } else if (idx === 3) {
-                  // KỶ LUẬT (Bottom)
+                  // KỶ LUẬT (Bottom) — Tọa độ y = 292 an toàn trong viewBox 380
                   lx = cx;
                   ly = cy + radius + 22;
                   anchor = 'middle';
                 } else if (idx === 4) {
                   // TỰ CHỦ (Bottom-Left)
-                  lx = cx - radius * Math.cos(Math.PI / 6) - 10;
+                  lx = cx - radius * Math.cos(Math.PI / 6) - 12;
                   ly = cy + radius * Math.sin(angles[idx]) + 14;
                   anchor = 'end';
                 } else if (idx === 5) {
                   // SÁNG TẠO (Top-Left)
-                  lx = cx - radius * Math.cos(Math.PI / 6) - 10;
+                  lx = cx - radius * Math.cos(Math.PI / 6) - 12;
                   ly = cy + radius * Math.sin(angles[idx]) - 4;
                   anchor = 'end';
                 }
@@ -636,12 +808,12 @@ export const ProductivityAnalytics: React.FC = () => {
                     </text>
                     <text
                       x={lx}
-                      y={ly + 11}
+                      y={ly + 12}
                       textAnchor={anchor}
-                      fontSize="9"
+                      fontSize="9.5"
                       fontFamily="monospace"
-                      fontWeight="600"
-                      fill={isHovered ? '#FBBF24' : '#9BA8AB'}
+                      fontWeight="700"
+                      fill={isHovered ? '#FBBF24' : '#38BDF8'}
                       className="select-none transition-colors duration-200"
                     >
                       {stat.score.toFixed(1)} / 5.0
@@ -652,7 +824,7 @@ export const ProductivityAnalytics: React.FC = () => {
             </svg>
 
             {/* Interactive Tooltip Banner */}
-            <div className="w-full mt-2 min-h-[48px] px-3.5 py-2 rounded-2xl bg-[#06141B] border border-[#253745] flex items-center justify-between gap-2 shadow-inner">
+            <div className="w-full mt-2 min-h-[50px] px-3.5 py-2 rounded-2xl bg-[#06141B] border border-[#253745] flex items-center justify-between gap-2 shadow-inner">
               {activeStat ? (
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="p-1.5 rounded-lg bg-[#253745] border border-[#4A5C6A] text-[#CCD0CF] shrink-0">
@@ -665,15 +837,15 @@ export const ProductivityAnalytics: React.FC = () => {
                     </span>
                     <p className="text-[11px] text-[#9BA8AB] truncate">
                       {activeStat.key === 'ky-luat'
-                        ? `${focusSessionsCompleted} phiên Focus • ${streakDays} ngày chuỗi`
-                        : `Đã hoàn thành ${activeStat.completedTasks} nhiệm vụ (+${activeStat.expGained} EXP)`}
+                        ? `${focusSessionsCompleted || 0} phiên Focus • ${streakDays || 0} ngày chuỗi (${activeStat.expGained} EXP quy đổi)`
+                        : `Đã xong ${activeStat.completedTasks} nhiệm vụ (+${activeStat.expGained} EXP tích lũy)`}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-xs text-[#9BA8AB]">
-                  <Info className="w-3.5 h-3.5 text-[#4A5C6A] shrink-0" />
-                  <span className="text-[11px]">Rê chuột hoặc chạm vào từng đỉnh lục giác để xem chi tiết chỉ số.</span>
+                  <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="text-[11px]">Chạm hoặc rê chuột vào 6 đỉnh để xem EXP và số lệnh hoàn thành.</span>
                 </div>
               )}
 
@@ -685,8 +857,9 @@ export const ProductivityAnalytics: React.FC = () => {
             </div>
           </div>
 
-          {/* Archetype & Combat Rank Showcase Footer */}
+          {/* KHUNG PHÂN TÍCH THIÊN HƯỚNG THỢ SĂN & GỢI Ý BỒI ĐẮP */}
           <div className="pt-3 border-t border-[#253745] space-y-2.5">
+            {/* Thẻ Thiên Hướng Chính */}
             <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#06141B] via-[#11212D] to-[#06141B] border border-[#253745] flex items-center justify-between gap-3 shadow-sm">
               <div className="space-y-0.5 min-w-0">
                 <div className="flex items-center gap-2">
@@ -694,11 +867,11 @@ export const ProductivityAnalytics: React.FC = () => {
                     {archetype.badge}
                   </span>
                   <h4 className="font-rpg font-bold text-sm text-white truncate">
-                    ⚔️ Thiên Hướng: {archetype.title}
+                    ⚔️ Hệ Thợ Săn: {archetype.title}
                   </h4>
                 </div>
                 <p className="text-[11px] text-[#9BA8AB] line-clamp-1 leading-relaxed">
-                  {archetype.description}
+                  {archetype.desc}
                 </p>
               </div>
 
@@ -707,75 +880,113 @@ export const ProductivityAnalytics: React.FC = () => {
                 <span className="text-xs font-black text-cyan-300 font-mono">Rank {powerRank.rank}</span>
               </div>
             </div>
+
+            {/* 2 Thẻ Gợi Ý: Điểm Mạnh Nhất & Cần Bồi Đắp */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Điểm Mạnh Nhất */}
+              <div className="p-2.5 rounded-xl bg-[#06141B]/80 border border-emerald-500/30 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 text-xs">
+                  <Target className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-emerald-400 block">Mạnh Nhất</span>
+                  <span className="text-[11px] font-black text-white truncate block">
+                    {strongestStat.shortName} ({strongestStat.score.toFixed(1)})
+                  </span>
+                </div>
+              </div>
+
+              {/* Cần Bồi Đắp */}
+              <div className="p-2.5 rounded-xl bg-[#06141B]/80 border border-amber-500/30 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 text-xs">
+                  <Compass className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-amber-400 block">Cần Bồi Đắp</span>
+                  <span className="text-[11px] font-black text-white truncate block">
+                    {weakestStat.shortName} ({weakestStat.score.toFixed(1)})
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* CỘT PHẢI (6/12): Card "📊 PHÂN BỔ HOẠT ĐỘNG & ĐỘ KHÓ NHIỆM VỤ" */}
-        <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-5">
+        {/* ================= CỘT PHẢI (6/12): PHÂN BỔ HOẠT ĐỘNG, ĐỘ KHÓ & PHONG ĐỘ 7 NGÀY ================= */}
+        <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-4">
           {/* Card Header */}
           <div className="flex items-center justify-between pb-3 border-b border-[#253745]">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF]">
+              <div className="w-8 h-8 rounded-xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF] shadow-inner">
                 <PieChart className="w-4 h-4 text-emerald-400" />
               </div>
               <div>
                 <h3 className="font-rpg font-bold text-base text-white tracking-wide">
                   Phân Bổ Hoạt Động & Độ Khó
                 </h3>
-                <span className="text-[10px] text-[#9BA8AB] uppercase tracking-wider font-semibold">
-                  Breakdown by Category & Difficulty
+                <span className="text-[10px] text-emerald-400/90 uppercase tracking-wider font-semibold">
+                  THỐNG KÊ DANH MỤC, ĐỘ KHÓ & PHONG ĐỘ 7 NGÀY
                 </span>
               </div>
             </div>
 
-            <span className="text-xs text-[#9BA8AB]">
-              {completedTasks} / {totalTasks} hoàn thành
+            <span className="text-xs font-mono font-bold text-[#CCD0CF]">
+              {totalRecordedCompleted} nhiệm vụ đã xong
             </span>
           </div>
 
-          {/* NỬA TRÊN: 5 Thanh Tiến Độ Phân Bổ Hoạt Động Theo Nhóm */}
-          <div className="space-y-3">
-            <span className="text-xs font-bold text-[#CCD0CF] flex items-center justify-between">
-              <span>Tiến Độ Theo Nhóm Hoạt Động</span>
+          {/* TẦNG 1: 5 Thanh Tiến Độ Phân Bổ Theo 5 Nhóm Hoạt Động */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#CCD0CF]">Tiến Độ 5 Nhóm Hoạt Động</span>
               <span className="text-[10px] text-[#9BA8AB]">Điểm Lục Giác / 5.0</span>
-            </span>
+            </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {(Object.keys(CATEGORIES) as TaskCategory[]).map((catKey) => {
                 const cat = CATEGORIES[catKey];
-                const stat = categoryData[catKey];
-                const pct = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0;
+                const stat = effectiveCategoryData[catKey];
 
-                // Match with radar stat
-                const matchingRadar = radarStats.find((r) => r.key === catKey.replace('-', ''));
-                const catScore = matchingRadar ? matchingRadar.score : calcScore(stat.completed, stat.expGained);
+                // Tìm radar stat tương ứng
+                const radarMatch = radarStats.find((r) => r.categoryKey === catKey);
+                const score = radarMatch ? radarMatch.score : calcExpMilestoneScore(stat.expGained, stat.completed);
+
+                // Tỷ lệ % thanh tiến trình (dựa trên mốc 1000 EXP hoặc score/5)
+                const barPct = Math.min(100, Math.max(6, Math.round((score / 5.0) * 100)));
+
+                // Gradient riêng cho từng category
+                let gradColor = 'from-cyan-500 to-blue-500';
+                if (catKey === 'cong-viec') gradColor = 'from-blue-500 to-indigo-500';
+                if (catKey === 'the-luc') gradColor = 'from-emerald-400 to-teal-500';
+                if (catKey === 'ca-nhan') gradColor = 'from-pink-500 to-rose-500';
+                if (catKey === 'sang-tao') gradColor = 'from-amber-400 to-orange-500';
 
                 return (
-                  <div key={catKey} className="p-2.5 rounded-2xl bg-[#06141B] border border-[#253745] space-y-1.5">
+                  <div key={catKey} className="p-2.5 rounded-2xl bg-[#06141B] border border-[#253745] space-y-1.5 shadow-sm">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-bold text-white flex items-center gap-1.5 truncate">
                           <span>{cat.label}</span>
                         </span>
-                        <span className="text-[10px] font-mono text-cyan-300/90 font-semibold">
+                        <span className="text-[10px] font-mono text-cyan-300 font-semibold">
                           +{stat.expGained} EXP
                         </span>
                       </div>
 
                       <div className="flex items-center gap-2 font-mono shrink-0">
-                        <span className="text-amber-300 font-bold text-[11px]">
-                          ⭐ {catScore.toFixed(1)}/5
+                        <span className="text-amber-300 font-black text-[11px]">
+                          ⭐ {score.toFixed(1)}/5
                         </span>
-                        <span className="text-[#9BA8AB] text-[11px]">
-                          ({stat.completed}/{stat.total} - {pct}%)
+                        <span className="text-[#9BA8AB] text-[10px]">
+                          ({stat.completed} việc xong)
                         </span>
                       </div>
                     </div>
 
                     <div className="w-full bg-[#11212D] h-2 rounded-full overflow-hidden border border-[#253745]">
                       <div
-                        className="bg-gradient-to-r from-[#4A5C6A] via-[#9BA8AB] to-[#CCD0CF] h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(4, pct)}%` }}
+                        className={`bg-gradient-to-r ${gradColor} h-full rounded-full transition-all duration-500 shadow`}
+                        style={{ width: `${barPct}%` }}
                       />
                     </div>
                   </div>
@@ -784,96 +995,158 @@ export const ProductivityAnalytics: React.FC = () => {
             </div>
           </div>
 
-          {/* NỬA DƯỚI: 4 Thẻ Phân Bổ Tỷ Trọng Độ Khó Đã Chinh Phục */}
-          <div className="pt-3 border-t border-[#253745] space-y-2.5">
-            <span className="text-xs font-bold text-[#CCD0CF] block">
-              Tỷ Trọng Độ Khó Đã Chinh Phục
-            </span>
+          {/* TẦNG 2: Phân Bổ Theo Độ Khó (Stacked Progress Bar & 4 Ô Thống Kê) */}
+          <div className="pt-2.5 border-t border-[#253745] space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#CCD0CF]">Phân Bổ Độ Khó Đã Chinh Phục</span>
+              <span className="text-[10px] text-[#9BA8AB] font-mono">{totalDiffTasks} nhiệm vụ</span>
+            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {/* Khởi Động */}
-              <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-emerald-500/40 transition flex flex-col justify-between space-y-1.5">
+            {/* Stacked Progress Bar */}
+            <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-[#06141B] border border-[#253745]">
+              <div
+                className="bg-emerald-500 transition-all duration-500"
+                style={{ width: `${easyPct}%` }}
+                title={`Dễ: ${effectiveDifficultyCounts.easy} việc (${easyPct.toFixed(0)}%)`}
+              />
+              <div
+                className="bg-cyan-500 transition-all duration-500"
+                style={{ width: `${mediumPct}%` }}
+                title={`Vừa: ${effectiveDifficultyCounts.medium} việc (${mediumPct.toFixed(0)}%)`}
+              />
+              <div
+                className="bg-orange-500 transition-all duration-500"
+                style={{ width: `${hardPct}%` }}
+                title={`Khó: ${effectiveDifficultyCounts.hard} việc (${hardPct.toFixed(0)}%)`}
+              />
+              <div
+                className="bg-rose-500 transition-all duration-500"
+                style={{ width: `${bossPct}%` }}
+                title={`Trùm: ${effectiveDifficultyCounts.boss} việc (${bossPct.toFixed(0)}%)`}
+              />
+            </div>
+
+            {/* 4 Ô Thống Kê Nhỏ */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {/* Dễ */}
+              <div className="p-2 rounded-xl bg-[#06141B] border border-[#253745] hover:border-emerald-500/40 transition">
                 <div className="flex items-center justify-between text-emerald-400">
-                  <span className="text-sm">🌱</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/30 font-bold">
+                  <span className="text-xs">🌱</span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/30 font-bold">
                     Dễ
                   </span>
                 </div>
-                <div>
-                  <span className="text-lg font-black text-white font-mono block leading-none">
-                    {difficultyCounts.easy}
+                <div className="mt-1">
+                  <span className="text-base font-black text-white font-mono block leading-none">
+                    {effectiveDifficultyCounts.easy}
                   </span>
-                  <span className="text-[10px] text-[#9BA8AB] block mt-0.5 font-semibold">
-                    Khởi Động
-                  </span>
+                  <span className="text-[9px] text-[#9BA8AB] block mt-0.5">Khởi Động</span>
                 </div>
-                <span className="text-[9px] text-[#9BA8AB]/70 font-mono">
-                  +30 EXP / task
-                </span>
               </div>
 
-              {/* Tiêu Chuẩn */}
-              <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-cyan-500/40 transition flex flex-col justify-between space-y-1.5">
+              {/* Vừa */}
+              <div className="p-2 rounded-xl bg-[#06141B] border border-[#253745] hover:border-cyan-500/40 transition">
                 <div className="flex items-center justify-between text-cyan-300">
-                  <span className="text-sm">⚔️</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/30 font-bold">
+                  <span className="text-xs">⚔️</span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-500/10 border border-cyan-500/30 font-bold">
                     Vừa
                   </span>
                 </div>
-                <div>
-                  <span className="text-lg font-black text-white font-mono block leading-none">
-                    {difficultyCounts.medium}
+                <div className="mt-1">
+                  <span className="text-base font-black text-white font-mono block leading-none">
+                    {effectiveDifficultyCounts.medium}
                   </span>
-                  <span className="text-[10px] text-[#9BA8AB] block mt-0.5 font-semibold">
-                    Tiêu Chuẩn
-                  </span>
+                  <span className="text-[9px] text-[#9BA8AB] block mt-0.5">Tiêu Chuẩn</span>
                 </div>
-                <span className="text-[9px] text-[#9BA8AB]/70 font-mono">
-                  +60 EXP / task
-                </span>
               </div>
 
-              {/* Thử Thách */}
-              <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-orange-500/40 transition flex flex-col justify-between space-y-1.5">
+              {/* Khó */}
+              <div className="p-2 rounded-xl bg-[#06141B] border border-[#253745] hover:border-orange-500/40 transition">
                 <div className="flex items-center justify-between text-orange-400">
-                  <span className="text-sm">🔥</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-orange-500/10 border border-orange-500/30 font-bold">
+                  <span className="text-xs">🔥</span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-orange-500/10 border border-orange-500/30 font-bold">
                     Khó
                   </span>
                 </div>
-                <div>
-                  <span className="text-lg font-black text-white font-mono block leading-none">
-                    {difficultyCounts.hard}
+                <div className="mt-1">
+                  <span className="text-base font-black text-white font-mono block leading-none">
+                    {effectiveDifficultyCounts.hard}
                   </span>
-                  <span className="text-[10px] text-[#9BA8AB] block mt-0.5 font-semibold">
-                    Thử Thách
-                  </span>
+                  <span className="text-[9px] text-[#9BA8AB] block mt-0.5">Thử Thách</span>
                 </div>
-                <span className="text-[9px] text-[#9BA8AB]/70 font-mono">
-                  +110 EXP / task
-                </span>
               </div>
 
-              {/* Trùm Cuối */}
-              <div className="p-3 rounded-2xl bg-[#06141B] border border-[#253745] hover:border-rose-500/40 transition flex flex-col justify-between space-y-1.5">
+              {/* Trùm */}
+              <div className="p-2 rounded-xl bg-[#06141B] border border-[#253745] hover:border-rose-500/40 transition">
                 <div className="flex items-center justify-between text-rose-400">
-                  <span className="text-sm">👑</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-rose-500/10 border border-rose-500/30 font-bold">
+                  <span className="text-xs">👑</span>
+                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-rose-500/10 border border-rose-500/30 font-bold">
                     Boss
                   </span>
                 </div>
-                <div>
-                  <span className="text-lg font-black text-white font-mono block leading-none">
-                    {difficultyCounts.boss}
+                <div className="mt-1">
+                  <span className="text-base font-black text-white font-mono block leading-none">
+                    {effectiveDifficultyCounts.boss}
                   </span>
-                  <span className="text-[10px] text-[#9BA8AB] block mt-0.5 font-semibold">
-                    Trùm Cuối
-                  </span>
+                  <span className="text-[9px] text-[#9BA8AB] block mt-0.5">Trùm Cuối</span>
                 </div>
-                <span className="text-[9px] text-[#9BA8AB]/70 font-mono">
-                  +200 EXP / task
-                </span>
               </div>
+            </div>
+          </div>
+
+          {/* TẦNG 3: Biểu Đồ Phong Độ 7 Ngày Qua */}
+          <div className="pt-2.5 border-t border-[#253745] space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold text-[#CCD0CF] flex items-center gap-1.5">
+                <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Phong Độ Rèn Luyện 7 Ngày Qua</span>
+              </span>
+              <span className="text-[10px] text-amber-300 font-mono font-bold">
+                {last7Days.reduce((sum, d) => sum + d.completedCount, 0)} việc đã xong
+              </span>
+            </div>
+
+            {/* 7 Cột Phong Độ Mini */}
+            <div className="p-2.5 rounded-2xl bg-[#06141B] border border-[#253745] flex items-end justify-between gap-1.5 h-24">
+              {last7Days.map((day) => {
+                const heightPct = Math.max(14, Math.round((day.expGained / maxDayExp) * 100));
+
+                let barStyle = 'bg-[#253745]/50 border border-[#253745]';
+                if (day.isToday) {
+                  barStyle = 'bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 border border-amber-300/80 shadow-[0_0_12px_rgba(245,158,11,0.5)]';
+                } else if (day.completedCount > 0) {
+                  barStyle = 'bg-gradient-to-t from-emerald-600 to-cyan-400 border border-cyan-400/50';
+                }
+
+                return (
+                  <div
+                    key={day.dateStr}
+                    className="flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer"
+                  >
+                    {/* Tooltip Hover cho mỗi ngày */}
+                    <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-[#11212D] border border-[#4A5C6A] px-2 py-1 rounded-lg text-[10px] font-mono text-white whitespace-nowrap shadow-xl z-20">
+                      <span className="font-bold text-amber-300">{day.dateStr}:</span> {day.completedCount} việc (+{day.expGained} EXP)
+                    </div>
+
+                    {/* Cột Chiều Cao */}
+                    <div className="w-full flex items-end justify-center h-14">
+                      <div
+                        className={`w-full max-w-[28px] rounded-t-md transition-all duration-500 ${barStyle}`}
+                        style={{ height: `${heightPct}%` }}
+                      />
+                    </div>
+
+                    {/* Nhãn Thứ / Ngày */}
+                    <span
+                      className={`text-[9px] mt-1 font-mono font-bold block truncate max-w-full ${
+                        day.isToday ? 'text-amber-300 font-extrabold' : 'text-[#9BA8AB]'
+                      }`}
+                    >
+                      {day.dayLabel}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

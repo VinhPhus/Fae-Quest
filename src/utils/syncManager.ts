@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getRankIndexByExp, RANK_TIERS } from '../constants/ranks';
-import { Task, ShopItem, InventoryTicket, Rival, SystemQuest, UserRole } from '../types';
+import { Task, ShopItem, InventoryTicket, Rival, SystemQuest, UserRole, TaskCategory, TaskDifficulty, CategoryStatRecord, DailyActivityRecord } from '../types';
 
 export interface HunterProfileCloud {
   id: string;
@@ -42,6 +42,9 @@ export interface UserStateCloud {
   unlockedTitleIds: string[];
   equippedTitleId: string;
   focusSessionsCompleted: number;
+  cumulativeCategoryStats?: Record<TaskCategory, CategoryStatRecord>;
+  cumulativeDifficultyStats?: Record<TaskDifficulty, number>;
+  dailyActivityHistory?: Record<string, DailyActivityRecord>;
 }
 
 const HUNTER_ID_KEY = 'faequest_hunter_id';

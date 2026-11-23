@@ -27,6 +27,8 @@ import {
   SeasonAnnouncement,
   AdminAsset,
   AdminAssetCategory,
+  CategoryStatRecord,
+  DailyActivityRecord,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import {
@@ -390,6 +392,9 @@ interface FaeQuestState {
   unlockedTitleIds: string[];
   equippedTitleId: string;
   focusSessionsCompleted: number;
+  cumulativeCategoryStats: Record<TaskCategory, CategoryStatRecord>;
+  cumulativeDifficultyStats: Record<TaskDifficulty, number>;
+  dailyActivityHistory: Record<string, DailyActivityRecord>;
 
   // Anti-Cheat & Concurrency Lock
   processingTaskIds: string[];
@@ -639,6 +644,9 @@ function cloudSnapshot(state: FaeQuestState): UserStateCloud {
     unlockedTitleIds: state.unlockedTitleIds,
     equippedTitleId: state.equippedTitleId,
     focusSessionsCompleted: state.focusSessionsCompleted,
+    cumulativeCategoryStats: state.cumulativeCategoryStats,
+    cumulativeDifficultyStats: state.cumulativeDifficultyStats,
+    dailyActivityHistory: state.dailyActivityHistory,
   };
 }
 
@@ -718,6 +726,20 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       unlockedTitleIds: ['title_tan_binh_gai_do'],
       equippedTitleId: 'title_tan_binh_gai_do',
       focusSessionsCompleted: 2,
+      cumulativeCategoryStats: {
+        'hoc-tap': { completed: 0, expGained: 0 },
+        'cong-viec': { completed: 0, expGained: 0 },
+        'the-luc': { completed: 0, expGained: 0 },
+        'ca-nhan': { completed: 0, expGained: 0 },
+        'sang-tao': { completed: 0, expGained: 0 },
+      },
+      cumulativeDifficultyStats: {
+        easy: 0,
+        medium: 0,
+        hard: 0,
+        boss: 0,
+      },
+      dailyActivityHistory: {},
 
       // Anti-Cheat & Concurrency Lock
       processingTaskIds: [],
@@ -2413,30 +2435,67 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             if (state.currentUser || !result.already_completed) {
               const isCompletedToday = savedTask.completed && savedTask.completedAt &&
                 getLocalDateStr(new Date(savedTask.completedAt)) === completedDate;
-              set((prev) => ({
-                exp: newExp,
-                coins: result.new_coins,
-                completedTotal: result.completed_total,
-                focusSessionsCompleted: result.focus_sessions_completed,
-                ...((!result.already_completed || isCompletedToday) && {
-                  dailyCompletedCount: result.daily_completed_count,
-                  dailyBossCompletedCount: result.daily_boss_completed_count,
-                  lastActiveDate: completedDate,
-                  lastCompletedTimestamp: savedTask.completedAt,
-                  tasks: prev.tasks.map((t) => t.id === id ? {
-                    ...t,
-                    completed: savedTask.completed,
-                    completedAt: savedTask.completedAt,
-                    completionDate: savedTask.completionDate,
-                    lastFocusSessionId: savedTask.lastFocusSessionId ?? t.lastFocusSessionId,
-                    rewardClaimed: savedTask.rewardClaimed,
-                    focusRewardClaimed: savedTask.focusRewardClaimed,
-                    lastAwardedExp: savedTask.lastAwardedExp,
-                    lastAwardedCoins: savedTask.lastAwardedCoins,
-                    lastRankUpBonus: savedTask.lastRankUpBonus,
-                  } : t),
-                }),
-              }));
+              set((prev) => {
+                const targetCategory = (savedTask.category || currentTask.category || 'ca-nhan') as TaskCategory;
+                const targetDiff = (savedTask.difficulty || currentTask.difficulty || 'medium') as TaskDifficulty;
+                const currentCatStats = prev.cumulativeCategoryStats || {
+                  'hoc-tap': { completed: 0, expGained: 0 },
+                  'cong-viec': { completed: 0, expGained: 0 },
+                  'the-luc': { completed: 0, expGained: 0 },
+                  'ca-nhan': { completed: 0, expGained: 0 },
+                  'sang-tao': { completed: 0, expGained: 0 },
+                };
+                const currentDiffStats = prev.cumulativeDifficultyStats || { easy: 0, medium: 0, hard: 0, boss: 0 };
+                const currentDailyHist = prev.dailyActivityHistory || {};
+                const dayRec = currentDailyHist[completedDate] || { completedCount: 0, expGained: 0 };
+
+                const nextCatStats = {
+                  ...currentCatStats,
+                  [targetCategory]: {
+                    completed: (currentCatStats[targetCategory]?.completed || 0) + 1,
+                    expGained: (currentCatStats[targetCategory]?.expGained || 0) + (awardedExp || 0),
+                  },
+                };
+                const nextDiffStats = {
+                  ...currentDiffStats,
+                  [targetDiff]: (currentDiffStats[targetDiff] || 0) + 1,
+                };
+                const nextDailyHist = {
+                  ...currentDailyHist,
+                  [completedDate]: {
+                    completedCount: dayRec.completedCount + 1,
+                    expGained: dayRec.expGained + (awardedExp || 0),
+                  },
+                };
+
+                return {
+                  exp: newExp,
+                  coins: result.new_coins,
+                  completedTotal: result.completed_total,
+                  focusSessionsCompleted: result.focus_sessions_completed,
+                  cumulativeCategoryStats: nextCatStats,
+                  cumulativeDifficultyStats: nextDiffStats,
+                  dailyActivityHistory: nextDailyHist,
+                  ...((!result.already_completed || isCompletedToday) && {
+                    dailyCompletedCount: result.daily_completed_count,
+                    dailyBossCompletedCount: result.daily_boss_completed_count,
+                    lastActiveDate: completedDate,
+                    lastCompletedTimestamp: savedTask.completedAt,
+                    tasks: prev.tasks.map((t) => t.id === id ? {
+                      ...t,
+                      completed: savedTask.completed,
+                      completedAt: savedTask.completedAt,
+                      completionDate: savedTask.completionDate,
+                      lastFocusSessionId: savedTask.lastFocusSessionId ?? t.lastFocusSessionId,
+                      rewardClaimed: savedTask.rewardClaimed,
+                      focusRewardClaimed: savedTask.focusRewardClaimed,
+                      lastAwardedExp: savedTask.lastAwardedExp,
+                      lastAwardedCoins: savedTask.lastAwardedCoins,
+                      lastRankUpBonus: savedTask.lastRankUpBonus,
+                    } : t),
+                  }),
+                };
+              });
             }
 
             if (session) {
@@ -3734,6 +3793,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : get().unlockedTitleIds,
             equippedTitleId: s.equippedTitleId || get().equippedTitleId,
             focusSessionsCompleted: s.focusSessionsCompleted || 0,
+            cumulativeCategoryStats: s.cumulativeCategoryStats || get().cumulativeCategoryStats,
+            cumulativeDifficultyStats: s.cumulativeDifficultyStats || get().cumulativeDifficultyStats,
+            dailyActivityHistory: s.dailyActivityHistory || get().dailyActivityHistory,
             cloudSyncStatus: 'synced',
             lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
               hour: '2-digit',

@@ -113,6 +113,16 @@ export type ActiveTab =
   | 'profile'
   | 'admin';
 
+export interface CategoryStatRecord {
+  completed: number;
+  expGained: number;
+}
+
+export interface DailyActivityRecord {
+  completedCount: number;
+  expGained: number;
+}
+
 export type JournalMood = 'Tuyệt vời' | 'Tốt' | 'Bình thường' | 'Căng thẳng' | 'Tệ';
 
 export interface JournalEntry {
