@@ -47,6 +47,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['focus-notifications.js'],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

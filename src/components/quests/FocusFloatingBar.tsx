@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { Timer, Play, Pause, X, Maximize2, Zap } from 'lucide-react';
-import { startFocusAmbient, stopFocusAmbient } from '../../utils/soundEngine';
+import { Timer, Play, Pause, X, Maximize2, Zap, RotateCcw, Loader2 } from 'lucide-react';
+import { formatFocusTime } from '../../utils/focusSession';
 
 export const FocusFloatingBar: React.FC = () => {
   const {
@@ -14,42 +14,13 @@ export const FocusFloatingBar: React.FC = () => {
     toggleFocusRunning,
     cancelFocus,
     setFocusModalOpen,
-    tickFocusTimer,
-    soundEnabled,
-    soundVolume,
-    focusAmbient,
+    focusSession,
+    isFocusCompleting,
+    completeQuest,
   } = useFaeQuestStore();
 
   const task = tasks.find((t) => t.id === activeFocusTaskId);
-
-  // Global 1-second timer tick interval
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isFocusRunning && activeFocusTaskId && focusTimeLeft > 0) {
-      interval = setInterval(() => {
-        tickFocusTimer();
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isFocusRunning, activeFocusTaskId, focusTimeLeft, tickFocusTimer]);
-
-  // Ambient sound sync with focus timer state
-  useEffect(() => {
-    if (activeFocusTaskId && isFocusRunning && soundEnabled && focusAmbient !== 'off') {
-      startFocusAmbient(focusAmbient, soundVolume);
-    } else {
-      stopFocusAmbient(0.3);
-    }
-  }, [activeFocusTaskId, isFocusRunning, soundEnabled, soundVolume, focusAmbient]);
-
-  // Cleanup ambient sound when unmounted
-  useEffect(() => {
-    return () => {
-      stopFocusAmbient(0);
-    };
-  }, []);
+  const pending = Boolean(focusSession?.finishRequested);
 
   const totalSeconds = (focusTargetMinutes || 25) * 60;
   const progressPercent = Math.min(
@@ -57,13 +28,11 @@ export const FocusFloatingBar: React.FC = () => {
     Math.max(0, ((totalSeconds - focusTimeLeft) / totalSeconds) * 100)
   );
 
-  const minutes = Math.floor(focusTimeLeft / 60);
-  const seconds = focusTimeLeft % 60;
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const formattedTime = formatFocusTime(focusTimeLeft);
 
   return (
     <AnimatePresence>
-      {Boolean(activeFocusTaskId && task) && (
+      {focusSession && (
         <motion.div
           key="focus-floating-bar"
           initial={{ opacity: 0, y: 28, scale: 0.94 }}
@@ -105,7 +74,7 @@ export const FocusFloatingBar: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm font-semibold text-[#CCD0CF] truncate group-hover:text-white transition leading-tight">
-                  {task?.title}
+                  {task?.title ?? focusSession.questTitle}
                 </p>
               </div>
             </div>
@@ -126,11 +95,19 @@ export const FocusFloatingBar: React.FC = () => {
               {/* Play / Pause Button */}
               <button
                 type="button"
-                onClick={toggleFocusRunning}
+                onClick={() => {
+                  if (pending) void completeQuest(focusSession.questId, { completedViaFocus: true });
+                  else toggleFocusRunning();
+                }}
+                disabled={isFocusCompleting}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#CCD0CF] hover:bg-white active:scale-95 text-[#06141B] flex items-center justify-center font-bold shadow-[0_2px_10px_rgba(204,208,207,0.2)] transition cursor-pointer"
-                title={isFocusRunning ? 'Tạm dừng đếm giờ' : 'Bắt đầu đếm giờ'}
+                title={isFocusCompleting ? 'Đang nghiệm thu' : pending ? 'Thử nghiệm thu lại' : isFocusRunning ? 'Tạm dừng đếm giờ' : 'Tiếp tục đếm giờ'}
               >
-                {isFocusRunning ? (
+                {isFocusCompleting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : pending ? (
+                  <RotateCcw className="w-3.5 h-3.5" />
+                ) : isFocusRunning ? (
                   <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-[#06141B]" />
                 ) : (
                   <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-[#06141B] ml-0.5" />
@@ -151,6 +128,7 @@ export const FocusFloatingBar: React.FC = () => {
               <button
                 type="button"
                 onClick={cancelFocus}
+                disabled={isFocusCompleting}
                 className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#06141B] hover:bg-rose-950/70 border border-[#253745] hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 flex items-center justify-center transition active:scale-95 cursor-pointer"
                 title="Hủy phiên tập trung"
               >

@@ -133,7 +133,7 @@ export const syncProfileAndStateToCloud = async (
         });
       }
     } else {
-      const { error: updErr } = await supabase.from('profiles').update({
+      const { data: updatedProfile, error: updErr } = await supabase.from('profiles').update({
         username: state.playerName || 'Thợ Săn Fae',
         avatar_url: state.avatarUrl || null,
         cover_url: state.coverUrl || null,
@@ -145,10 +145,15 @@ export const syncProfileAndStateToCloud = async (
         completed_tasks_count: state.completedTotal || 0,
         has_seen_tutorial: state.hasSeenTutorial ?? false,
         updated_at: new Date().toISOString(),
-      }).eq('id', hunterId);
+      })
+        .eq('id', hunterId)
+        // Quest completion updates the profile and increments this counter in one transaction.
+        .eq('completed_tasks_count', state.completedTotal || 0)
+        .select('id')
+        .maybeSingle();
 
-      if (updErr) {
-        // Fallback update cơ bản nếu một số cột tùy chọn chưa có
+      if (updErr || !updatedProfile) {
+        // A stale snapshot can still save display preferences.
         await supabase.from('profiles').update({
           username: state.playerName || 'Thợ Săn Fae',
           avatar_url: state.avatarUrl || null,

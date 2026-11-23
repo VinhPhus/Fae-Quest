@@ -52,7 +52,9 @@ import {
   resolveTitleObject,
 } from '../constants/systemQuests';
 import { playSoundEffect } from '../utils/soundEffects';
-import { playSound, setMasterVolume, startFocusAmbient, stopFocusAmbient, AmbientType } from '../utils/soundEngine';
+import { playSound, setMasterVolume, AmbientType } from '../utils/soundEngine';
+import { getFocusRemainingMs, getFocusRewardMinutes, readFocusSession, saveFocusSession, type FocusSession } from '../utils/focusSession';
+import { notifyFocusCompletion, requestFocusNotifications, stopFocusMedia, syncFocusMedia, updateFocusMediaTitle } from '../utils/focusMedia';
 import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import { deleteCloudinaryImages } from '../utils/cloudinaryDelete';
 import { localizeError } from '../utils/errorLocalization';
@@ -442,6 +444,8 @@ interface FaeQuestState {
   focusTimeLeft: number;
   focusTargetMinutes: number;
   isFocusModalOpen: boolean;
+  focusSession: FocusSession | null;
+  isFocusCompleting: boolean;
   hasSeenTutorial: boolean;
   deferredInstallPrompt: any | null;
   setDeferredInstallPrompt: (prompt: any | null) => void;
@@ -539,12 +543,12 @@ interface FaeQuestState {
   ) => void;
   updateTaskFocusDuration: (taskId: string, duration: number) => void;
   toggleTask: (id: string, coords?: { x: number; y: number }, forceSkipAgeCheck?: boolean) => Promise<void> | void;
+  completeQuest: (id: string, options?: { completedViaFocus?: boolean; coords?: { x: number; y: number }; forceSkipAgeCheck?: boolean }) => Promise<boolean>;
   confirmEarlyTaskCompletion: () => void;
   cancelEarlyTaskConfirmation: () => void;
   deleteTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   setEditingTask: (task: Task | null) => void;
-  completePomodoro: (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => Promise<void> | void;
   buyShopItem: (itemId: string, coords?: { x: number; y: number }) => Promise<void> | void;
   addShopItem: (title: string, desc: string, cost: number, emoji: string) => void;
   deleteShopItem: (itemId: string) => void;
@@ -570,9 +574,10 @@ interface FaeQuestState {
   startFocusForTask: (taskId: string, durationMinutes?: number) => void;
   toggleFocusRunning: () => void;
   setFocusRunning: (running: boolean) => void;
-  setFocusTimeLeft: (seconds: number) => void;
   setFocusTargetMinutes: (minutes: number) => void;
   tickFocusTimer: () => void;
+  restoreFocusSession: () => void;
+  refreshFocusMedia: () => void;
   cancelFocus: () => void;
   setFocusModalOpen: (open: boolean) => void;
   resetAllData: () => Promise<boolean>;
@@ -601,6 +606,54 @@ interface FaeQuestState {
 
 let autoSyncTimer: any = null;
 let rewardPopupTimer: any = null;
+let cloudWrite = Promise.resolve();
+let authInitInFlight = false;
+let authListenerRegistered = false;
+
+function queueCloudWrite<T>(write: () => Promise<T>): Promise<T> {
+  const next = cloudWrite.then(write);
+  cloudWrite = next.then(() => {}, () => {});
+  return next;
+}
+
+function cloudSnapshot(state: FaeQuestState): UserStateCloud {
+  return {
+    playerName: state.playerName,
+    avatarUrl: state.avatarUrl,
+    coverUrl: state.coverUrl,
+    exp: state.exp,
+    coins: state.coins,
+    stars: state.stars,
+    completedTotal: state.completedTotal,
+    streakDays: state.streakDays,
+    lastStreakDate: state.lastStreakDate || '',
+    lastActiveDate: state.lastActiveDate || getTodayString(),
+    dailyCompletedCount: state.dailyCompletedCount,
+    dailyBossCompletedCount: state.dailyBossCompletedCount,
+    hasSeenTutorial: state.hasSeenTutorial,
+    tasks: state.tasks,
+    shopItems: state.shopItems,
+    inventory: state.inventory,
+    rivals: state.rivals,
+    systemQuests: state.systemQuests,
+    unlockedTitleIds: state.unlockedTitleIds,
+    equippedTitleId: state.equippedTitleId,
+    focusSessionsCompleted: state.focusSessionsCompleted,
+  };
+}
+
+const focusOwner = (state: FaeQuestState) => state.currentUser?.id || state.hunterId;
+
+function focusState(session: FocusSession | null) {
+  return {
+    focusSession: session,
+    activeFocusTaskId: session?.questId ?? null,
+    activePomodoroTaskId: session?.questId ?? null,
+    isFocusRunning: Boolean(session && !session.isPaused),
+    focusTargetMinutes: session ? session.durationMs / 60_000 : 25,
+    focusTimeLeft: session ? Math.ceil(getFocusRemainingMs(session) / 1000) : 0,
+  };
+}
 const debouncedAutoSync = (store: any) => {
   if (autoSyncTimer) clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(() => {
@@ -2004,6 +2057,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       focusTimeLeft: 25 * 60,
       focusTargetMinutes: 25,
       isFocusModalOpen: false,
+      focusSession: null,
+      isFocusCompleting: false,
       editingTask: null,
       isEditQuestOpen: false,
       hasSeenTutorial: false,
@@ -2195,8 +2250,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           isEditQuestOpen: false,
         }));
 
-        if (get().activeFocusTaskId === id && duration !== undefined && duration !== null) {
-          get().setFocusTargetMinutes(duration);
+        const session = get().focusSession;
+        if (session?.questId === id) {
+          if (titleTrimmed !== undefined) {
+            const updated = { ...session, questTitle: titleTrimmed };
+            saveFocusSession(focusOwner(get()), updated);
+            set({ focusSession: updated });
+            get().refreshFocusMedia();
+          }
+          if (duration !== undefined && duration !== null) get().setFocusTargetMinutes(duration);
         }
 
         playSound('ui_click', get().soundEnabled);
@@ -2218,297 +2280,253 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      toggleTask: async (id: string, coords, forceSkipAgeCheck?: boolean) => {
-        const state = get();
-        const task = state.tasks.find((t) => t.id === id);
-        if (!task) return;
+      toggleTask: async (id, coords, forceSkipAgeCheck) => {
+        await get().completeQuest(id, { coords, forceSkipAgeCheck });
+      },
+
+      completeQuest: async (id, { completedViaFocus = false, coords, forceSkipAgeCheck = false } = {}) => {
+        const initial = get();
+        const owner = focusOwner(initial);
+        const task = initial.tasks.find((t) => t.id === id);
+        if (!task || initial.authLoading || initial.processingTaskIds.includes(id)) return false;
 
         const now = Date.now();
+        const today = getTodayString();
+        const session = completedViaFocus ? initial.focusSession : null;
+        if (completedViaFocus && (!session || session.questId !== id || initial.isFocusCompleting)) return false;
 
-        // 1. Chống Double-Click: Nếu task đang được xử lý thì chặn ngay
-        if (state.processingTaskIds?.includes(id)) {
-          return;
-        }
-
-        // 2. Chống Spam Toggle: Nếu task đang bị tạm khóa thì báo warning và chặn
-        const lockUntil = state.taskLocks?.[id] || 0;
-        if (lockUntil > now) {
-          const remSec = Math.max(1, Math.ceil((lockUntil - now) / 1000));
-          playSoundEffect('warning', state.soundEnabled);
-          get().addToast(`Thao tác quá nhanh! Nút trạng thái của nhiệm vụ này đang bị tạm khóa trong ${remSec} giây.`, 'info');
-          return;
-        }
-
-        // Cập nhật lịch sử toggle của task này trong 1 phút qua
-        const oneMinuteAgo = now - 60 * 1000;
-        const recentToggles = (state.taskToggleHistory?.[id] || []).filter((t) => t > oneMinuteAgo);
-        if (recentToggles.length >= 2) {
-          // Đã bấm quá 2 lần trong 1 phút -> Khóa thẻ 30 giây
-          const newLock = now + 30 * 1000;
-          set((prev) => ({
-            taskLocks: { ...(prev.taskLocks || {}), [id]: newLock },
-            taskToggleHistory: {
-              ...(prev.taskToggleHistory || {}),
-              [id]: [...recentToggles, now],
-            },
-          }));
-          playSoundEffect('warning', state.soundEnabled);
-          get().addToast('Phát hiện thao tác liên tục! Nút hoàn thành của nhiệm vụ này đã bị tạm khóa trong 30 giây.', 'info');
-          return;
-        }
-
-        // Ghi nhận lần bấm này và đưa vào processingTaskIds
-        set((prev) => ({
-          taskToggleHistory: {
-            ...(prev.taskToggleHistory || {}),
-            [id]: [...recentToggles, now],
-          },
-          processingTaskIds: [...(prev.processingTaskIds || []), id],
-        }));
-
-        try {
-          const today = getTodayString();
-          const isCompletedToday =
-            task.completed &&
-            task.completedAt &&
-            getLocalDateStr(new Date(task.completedAt)) === today;
-
-          if (isCompletedToday) {
-            // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành hôm nay
-            return;
+        if (!session) {
+          if (task.completed && task.completedAt && getLocalDateStr(new Date(task.completedAt)) === today) return false;
+          const lockUntil = initial.taskLocks[id] || 0;
+          if (lockUntil > now) {
+            playSoundEffect('warning', initial.soundEnabled);
+            initial.addToast(`Thao tác quá nhanh! Nút trạng thái của nhiệm vụ này đang bị tạm khóa trong ${Math.ceil((lockUntil - now) / 1000)} giây.`, 'info');
+            return false;
           }
-
-          // Chống gian lận: Khóa hoàn thành đối với nhiệm vụ thuộc Ngày Mai / Tương lai
+          const recentToggles = (initial.taskToggleHistory[id] || []).filter((t) => t > now - 60_000);
+          const isLocked = recentToggles.length >= 2;
+          set({
+            taskToggleHistory: { ...initial.taskToggleHistory, [id]: [...recentToggles, now] },
+            ...(isLocked && { taskLocks: { ...initial.taskLocks, [id]: now + 30_000 } }),
+          });
+          if (isLocked) {
+            playSoundEffect('warning', initial.soundEnabled);
+            initial.addToast('Phát hiện thao tác liên tục! Nút hoàn thành của nhiệm vụ này đã bị tạm khóa trong 30 giây.', 'info');
+            return false;
+          }
           if (task.target_date && task.target_date > today) {
-            playSoundEffect('warning', state.soundEnabled);
-            get().addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
-            return;
+            playSoundEffect('warning', initial.soundEnabled);
+            initial.addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
+            return false;
           }
-
-          // Tính tuổi thọ nhiệm vụ (taskAgeMs)
-          const createdAtMs =
-            typeof task.createdAt === 'number' && task.createdAt > 0
-              ? task.createdAt
-              : (task as any).created_at
-                ? new Date((task as any).created_at).getTime()
-                : now;
-          const taskAgeMs = Math.max(0, now - createdAtMs);
-
-          // KIỂM TRA 1: Nhiệm vụ có gắn thời gian Focus (focusDuration >= 15 phút)
-          // Nếu không hoàn thành qua bộ đếm Focus Timer (forceSkipAgeCheck), yêu cầu taskAgeMs >= 30% focusDuration
-          if (!forceSkipAgeCheck && task.focusDuration && task.focusDuration >= 15) {
-            const minRequiredFocusAgeMs = 0.3 * (task.focusDuration * 60 * 1000);
-            if (taskAgeMs < minRequiredFocusAgeMs) {
-              playSoundEffect('warning', state.soundEnabled);
-              get().addToast('Thử thách cần thêm thời gian rèn luyện hoặc hãy bật chế độ Focus để nghiệm thu!', 'info');
-              return;
-            }
+          const createdAt = task.createdAt || Date.parse((task as Task & { created_at?: string }).created_at ?? '');
+          const ageMs = Number.isFinite(createdAt) ? Math.max(0, now - createdAt) : 0;
+          if (!forceSkipAgeCheck && task.focusDuration && task.focusDuration >= 15 && ageMs < task.focusDuration * 18_000) {
+            playSoundEffect('warning', initial.soundEnabled);
+            initial.addToast('Thử thách cần thêm thời gian rèn luyện hoặc hãy bật chế độ Focus để nghiệm thu!', 'info');
+            return false;
           }
-
-          // KIỂM TRA 2: Tuổi thọ nhiệm vụ & Anti-Spam Farming
-          // Nếu taskAgeMs >= 3 phút (3 * 60 * 1000): Quy tắc Batch Check-off hợp lệ -> Tick liên tiếp tốc độ bất kỳ!
-          if (taskAgeMs < 3 * 60 * 1000) {
-            // Nếu task có tuổi thọ ngắn (< 2 phút):
-            if (taskAgeMs < 2 * 60 * 1000) {
-              const tenMinsAgo = now - 10 * 60 * 1000;
-              const recentQuick = getQuickCompletions().filter((t) => t > tenMinsAgo);
-
-              // 1 đến 2 lần đầu trong vòng 10 phút: Cho phép bình thường
-              // Từ lần thứ 3 trở đi trong vòng 10 phút: Chặn thao tác
-              if (recentQuick.length >= 2) {
-                playSoundEffect('warning', state.soundEnabled);
-                get().addToast('Lệnh vừa khắc chưa đủ thời gian tôi luyện. Hãy hoàn thành thử thách thực tế trước khi nghiệm thu!', 'info');
-                return;
-              }
-
-              // Ghi nhận lần hoàn thành ngắn hợp lệ
-              recordQuickCompletion();
+          if (ageMs < 120_000) {
+            if (getQuickCompletions().length >= 2) {
+              playSoundEffect('warning', initial.soundEnabled);
+              initial.addToast('Lệnh vừa khắc chưa đủ thời gian tôi luyện. Hãy hoàn thành thử thách thực tế trước khi nghiệm thu!', 'info');
+              return false;
             }
+            recordQuickCompletion();
           }
-
-          // KIỂM TRA 3: Ngưỡng Thể Lực Ngày (Daily Reward Cap: tối đa 20 nhiệm vụ nhận thưởng/ngày)
-          const actualCompletedToday = state.tasks.filter(
-            (t) => t.completed && t.completedAt && getLocalDateStr(new Date(t.completedAt)) === today
-          ).length;
-          const isNewDay = state.lastActiveDate !== today;
-          const effectiveDailyCount = isNewDay
-            ? 0
-            : Math.min(state.dailyCompletedCount || 0, actualCompletedToday);
-          const isDailyCapReached = effectiveDailyCount >= 20;
-
-          const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
-          const oldRankIdx = getRankIndexByExp(state.exp);
-
-          let streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
-          let awardedExp = isDailyCapReached ? 0 : Math.round(diff.exp * streakBonusMultiplier);
-          let awardedCoins = isDailyCapReached ? 0 : diff.coins;
-          let newExp = state.exp + awardedExp;
-          let finalCoins = state.coins + awardedCoins;
-          let rankUpBonus = 0;
-          let newRankTier: RankTier | null = null;
-
-          if (isDailyCapReached) {
-            // Đã chạm ngưỡng 20 nhiệm vụ trong ngày: Vẫn ghi nhận hoàn thành nhưng không cộng thêm EXP / Xu
-            get().addToast('Thợ săn đã chạm ngưỡng thể lực hôm nay — nhiệm vụ được ghi nhận nhưng không cộng thêm EXP', 'info');
-          } else {
-            // Chưa chạm ngưỡng: Gửi xác thực qua Server-Side RPC nếu đã đăng nhập
-            if (state.currentUser) {
-              try {
-                let { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
-                  p_difficulty: task.difficulty,
-                  p_focus_minutes: 0,
-                  p_is_focus_completed: false,
-                  p_category: task.category,
-                });
-
-                if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
-                  try { await supabase.rpc('rpc_ensure_profile'); } catch { }
-                  await get().syncToCloud(true);
-                  const retry = await supabase.rpc('rpc_complete_task', {
-                    p_difficulty: task.difficulty,
-                    p_focus_minutes: 0,
-                    p_is_focus_completed: false,
-                    p_category: task.category,
-                  });
-                  rpcRes = retry.data;
-                  rpcErr = retry.error;
-                }
-
-                if (rpcErr) {
-                  playSoundEffect('warning', state.soundEnabled);
-                  get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể hoàn thành nhiệm vụ!')}`, 'error');
-                  return;
-                }
-
-                if (rpcRes) {
-                  awardedExp = rpcRes.awarded_exp ?? awardedExp;
-                  awardedCoins = rpcRes.awarded_coins ?? awardedCoins;
-                  newExp = rpcRes.new_exp ?? newExp;
-                  finalCoins = rpcRes.new_coins ?? finalCoins;
-                  rankUpBonus = rpcRes.rank_bonus_coins ?? 0;
-                  if (rpcRes.rank_up_occurred) {
-                    const newRankIdx = getRankIndexByExp(newExp);
-                    newRankTier = RANK_TIERS[newRankIdx];
-                  }
-                }
-              } catch (e: any) {
-                console.warn('RPC complete_task error:', e);
-              }
-            } else {
-              // Fallback offline / guest
-              const newRankIdx = getRankIndexByExp(newExp);
-              if (newRankIdx > oldRankIdx) {
-                for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
-                  rankUpBonus += RANK_TIERS[i].coinBonus;
-                }
-                newRankTier = RANK_TIERS[newRankIdx];
-              }
-              finalCoins = state.coins + awardedCoins + rankUpBonus;
-            }
-
-            // Spawn floating reward & coin burst chỉ khi có thưởng
-            if (coords && (awardedExp > 0 || awardedCoins > 0)) {
-              triggerCoinBurst(coords.x, coords.y, 8);
-              const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
-              const text =
-                streakBonusMultiplier > 1
-                  ? `+${awardedExp} EXP (+20% Streak!)  •  +${awardedCoins} Xu`
-                  : `+${awardedExp} EXP  •  +${awardedCoins} Xu`;
-              set((prev) => ({
-                floatingRewards: [...prev.floatingRewards, { id: rewardId, x: coords.x, y: coords.y, text }],
-              }));
-              setTimeout(() => {
-                set((prev) => ({
-                  floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
-                }));
-              }, 1400);
-            }
-          }
-
-          set((prev) => ({
-            exp: newExp,
-            coins: finalCoins,
-            completedTotal: prev.completedTotal + 1,
-            dailyCompletedCount: effectiveDailyCount + 1,
-            dailyBossCompletedCount:
-              task.difficulty === 'boss' ? prev.dailyBossCompletedCount + 1 : prev.dailyBossCompletedCount,
-            lastActiveDate: today,
-            lastCompletedTimestamp: now,
-            tasks: prev.tasks.map((t) =>
-              t.id === id
-                ? {
-                  ...t,
-                  completed: true,
-                  rewardClaimed: !isDailyCapReached,
-                  completedAt: now,
-                  lastAwardedExp: awardedExp,
-                  lastAwardedCoins: awardedCoins,
-                  lastRankUpBonus: rankUpBonus,
-                }
-                : t
-            ),
-          }));
-
-          get().checkSystemMilestones();
-
-          const diffSoundMap: Record<string, 'quest_easy' | 'quest_medium' | 'quest_hard' | 'quest_boss'> = {
-            easy: 'quest_easy',
-            medium: 'quest_medium',
-            hard: 'quest_hard',
-            boss: 'quest_boss',
-          };
-          const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
-
-          const newRankIdx = getRankIndexByExp(newExp);
-          const isLevelUp = newRankIdx > oldRankIdx;
-          const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
-
-          if (!isDailyCapReached) {
-            // Kích hoạt Floating Reward & Level Up Overlay khi có thưởng
-            get().triggerRewardPopup({
-              avatarUrl: state.avatarUrl,
-              oldExp: state.exp,
-              newExp,
-              maxExp: effectiveTier.maxExp,
-              addedExp: awardedExp,
-              addedCoins: awardedCoins,
-              isLevelUp,
-              newRankName: effectiveTier.name,
-            });
-
-            if (newRankTier) {
-              triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
-              try {
-                confetti({
-                  particleCount: 80,
-                  spread: 70,
-                  origin: { y: 0.6 },
-                  colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
-                });
-              } catch (e) { }
-              playSound('rank_up', state.soundEnabled);
-              // Đợi RewardPopupOverlay phát xong 3s mới hiển thị RankUpModal chi tiết
-              setTimeout(() => {
-                set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
-              }, 3200);
-            } else {
-              playSound(questSound, state.soundEnabled);
-              get().addToast(`Hoàn thành! Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
-            }
-          } else {
-            playSound(questSound, state.soundEnabled);
-          }
-
-          debouncedAutoSync(get());
-        } finally {
-          // Giải phóng cờ đang xử lý của task
-          set((prev) => ({
-            processingTaskIds: (prev.processingTaskIds || []).filter((tId) => tId !== id),
-          }));
         }
+
+        let focusMinutes: number | null = null;
+        if (session) {
+          const remainingMs = getFocusRemainingMs(session, now);
+          const elapsedMs = session.durationMs - remainingMs;
+          if (!session.finishRequested && elapsedMs < session.durationMs / 2) return false;
+          focusMinutes = getFocusRewardMinutes(elapsedMs);
+          const pending = { ...session, isPaused: true, remainingWhenPaused: remainingMs, finishRequested: true };
+          saveFocusSession(owner, pending);
+          set({ ...focusState(pending), isFocusCompleting: true });
+          stopFocusMedia(!session.finishRequested && initial.soundEnabled ? initial.soundVolume : 0);
+        }
+        set((state) => ({ processingTaskIds: [...state.processingTaskIds, id] }));
+
+        return queueCloudWrite(async () => {
+          try {
+            const state = get();
+            const currentTask = state.tasks.find((t) => t.id === id);
+            if (focusOwner(state) !== owner || state.authLoading || !currentTask) return false;
+
+            const completedAt = Date.now();
+            const completedDate = getTodayString();
+            const sameDay = state.lastActiveDate === completedDate;
+            const currentDailyCount = sameDay ? state.dailyCompletedCount : 0;
+            const difficulty = DIFFICULTIES[currentTask.difficulty] || DIFFICULTIES.medium;
+            const streakBonus = state.streakDays >= 3 ? 1.2 : 1;
+            const oldRank = getRankIndexByExp(state.exp);
+            const localCap = currentDailyCount >= 20;
+            const bonusMinutes = focusMinutes && !currentTask.focusRewardClaimed ? focusMinutes : 0;
+            const localExp = localCap ? 0 : Math.round(difficulty.exp * streakBonus) + bonusMinutes;
+            const localCoins = localCap ? 0 : difficulty.coins + (bonusMinutes ? Math.max(1, Math.floor(bonusMinutes * 0.4)) : 0);
+            const localRank = getRankIndexByExp(state.exp + localExp);
+            const localRankBonus = RANK_TIERS.slice(oldRank + 1, localRank + 1).reduce((sum, rank) => sum + rank.coinBonus, 0);
+            let result = {
+              task: {
+                ...currentTask,
+                completed: true,
+                completedAt,
+                completionDate: completedDate,
+                rewardClaimed: !localCap,
+                focusRewardClaimed: session ? !localCap : currentTask.focusRewardClaimed,
+                lastAwardedExp: localExp,
+                lastAwardedCoins: localCoins,
+                lastRankUpBonus: localRankBonus,
+              },
+              awarded_exp: localExp,
+              awarded_coins: localCoins,
+              new_exp: state.exp + localExp,
+              new_coins: state.coins + localCoins + localRankBonus,
+              rank_bonus_coins: localRankBonus,
+              completed_total: state.completedTotal + 1,
+              daily_completed_count: currentDailyCount + 1,
+              daily_boss_completed_count: (sameDay ? state.dailyBossCompletedCount : 0) + Number(currentTask.difficulty === 'boss'),
+              focus_sessions_completed: state.focusSessionsCompleted + Number(Boolean(session)),
+              reward_cap: localCap,
+              already_completed: Boolean(currentTask.completed && currentTask.completedAt &&
+                getLocalDateStr(new Date(currentTask.completedAt)) === completedDate),
+            };
+
+            if (state.currentUser) {
+              const args = { p_quest_id: id, p_focus_minutes: focusMinutes, p_focus_session_id: session?.id ?? null };
+              let { data, error } = await supabase.rpc('rpc_complete_quest', args);
+              // A quest created moments ago can still be waiting for autosave.
+              if (error?.message?.includes('QuestNotFound') && focusOwner(get()) === owner) {
+                const saved = await syncProfileAndStateToCloud(owner, cloudSnapshot(get()));
+                if (saved.success && focusOwner(get()) === owner) {
+                  ({ data, error } = await supabase.rpc('rpc_complete_quest', args));
+                }
+              }
+              if (error || !data?.task) throw error ?? new Error('QuestCompletionMissing');
+              if (focusOwner(get()) !== owner) return false;
+              result = data;
+            }
+
+            const { awarded_exp: awardedExp, awarded_coins: awardedCoins, new_exp: newExp, task: savedTask } = result;
+            if (state.currentUser || !result.already_completed) {
+              const isCompletedToday = savedTask.completed && savedTask.completedAt &&
+                getLocalDateStr(new Date(savedTask.completedAt)) === completedDate;
+              set((prev) => ({
+                exp: newExp,
+                coins: result.new_coins,
+                completedTotal: result.completed_total,
+                focusSessionsCompleted: result.focus_sessions_completed,
+                ...((!result.already_completed || isCompletedToday) && {
+                  dailyCompletedCount: result.daily_completed_count,
+                  dailyBossCompletedCount: result.daily_boss_completed_count,
+                  lastActiveDate: completedDate,
+                  lastCompletedTimestamp: savedTask.completedAt,
+                  tasks: prev.tasks.map((t) => t.id === id ? {
+                    ...t,
+                    completed: savedTask.completed,
+                    completedAt: savedTask.completedAt,
+                    completionDate: savedTask.completionDate,
+                    lastFocusSessionId: savedTask.lastFocusSessionId ?? t.lastFocusSessionId,
+                    rewardClaimed: savedTask.rewardClaimed,
+                    focusRewardClaimed: savedTask.focusRewardClaimed,
+                    lastAwardedExp: savedTask.lastAwardedExp,
+                    lastAwardedCoins: savedTask.lastAwardedCoins,
+                    lastRankUpBonus: savedTask.lastRankUpBonus,
+                  } : t),
+                }),
+              }));
+            }
+
+            if (session) {
+              const savedSession = readFocusSession(owner);
+              if (savedSession?.id === session.id) saveFocusSession(owner, null);
+              if (get().focusSession?.id === session.id) {
+                set({ ...focusState(null), isFocusModalOpen: false, isFocusCompleting: false });
+              }
+              if (!result.already_completed || (savedSession?.id === session.id && savedTask.lastFocusSessionId === session.id)) {
+                void notifyFocusCompletion(session);
+              }
+            } else if (get().activeFocusTaskId === id && !get().isFocusCompleting) {
+              get().cancelFocus();
+            }
+
+            if (result.already_completed) return true;
+            get().checkSystemMilestones();
+            debouncedAutoSync(get());
+
+            const newRank = getRankIndexByExp(newExp);
+            const tier = RANK_TIERS[newRank];
+            if (awardedExp > 0 || awardedCoins > 0) {
+              if (coords) {
+                triggerCoinBurst(coords.x, coords.y, 8);
+                const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
+                const bonusText = streakBonus > 1 ? ' (+20% Streak!)' : '';
+                const text = `+${awardedExp} EXP${bonusText}  •  +${awardedCoins} Xu`;
+                set((prev) => ({
+                  floatingRewards: [...prev.floatingRewards, { id: rewardId, x: coords.x, y: coords.y, text }],
+                }));
+                setTimeout(() => {
+                  set((prev) => ({ floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId) }));
+                }, 1400);
+              } else if (session) {
+                triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 16);
+              }
+              get().triggerRewardPopup({
+                avatarUrl: state.avatarUrl,
+                oldExp: state.exp,
+                newExp,
+                maxExp: tier.maxExp,
+                addedExp: awardedExp,
+                addedCoins: awardedCoins,
+                isLevelUp: newRank > oldRank,
+                newRankName: tier.name,
+              });
+              if (newRank > oldRank) {
+                triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 18);
+                try {
+                  confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
+                  });
+                } catch { }
+                if (!session) playSound('rank_up', state.soundEnabled);
+                setTimeout(() => {
+                  set({ rankUpData: { achievedTier: tier, bonusCoins: result.rank_bonus_coins } });
+                }, 3200);
+              }
+              get().addToast(`${session ? '⚔️ Hoàn thành Focus!' : 'Hoàn thành!'} Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
+            }
+            if (result.reward_cap) {
+              get().addToast('Nhiệm vụ đã được nghiệm thu. Thợ săn đã chạm ngưỡng thể lực hôm nay.', 'info');
+            }
+            if (!session && newRank <= oldRank) playSound(`quest_${currentTask.difficulty}`, state.soundEnabled);
+            return true;
+          } catch (error) {
+            if (focusOwner(get()) === owner) {
+              const fallback = session
+                ? 'Chưa thể nghiệm thu Focus. Phiên đã lưu, hãy thử lại khi có kết nối.'
+                : 'Không thể hoàn thành nhiệm vụ!';
+              get().addToast(localizeError(error, fallback), 'error');
+              if (!session) playSoundEffect('warning', get().soundEnabled);
+            }
+            return false;
+          } finally {
+            if (focusOwner(get()) === owner) {
+              set((prev) => ({
+                processingTaskIds: prev.processingTaskIds.filter((taskId) => taskId !== id),
+                ...(session && prev.focusSession?.id === session.id && { isFocusCompleting: false }),
+              }));
+            }
+          }
+        });
       },
 
       deleteTask: (id: string) => {
+        if (get().processingTaskIds.includes(id)) return;
         if (get().activeFocusTaskId === id || get().activePomodoroTaskId === id) {
           get().cancelFocus();
         }
@@ -2516,173 +2534,6 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           tasks: prev.tasks.filter((t) => t.id !== id),
         }));
         get().addToast('Đã xóa nhiệm vụ khỏi danh sách', 'info');
-        debouncedAutoSync(get());
-      },
-
-      completePomodoro: async (taskId: string, elapsedMinutes?: number, targetMinutes?: number) => {
-        const state = get();
-        const task = state.tasks.find((t) => t.id === taskId);
-        if (!task) return;
-
-        const target = targetMinutes || task.focusDuration || 25;
-        const actualMinutes = elapsedMinutes !== undefined ? elapsedMinutes : target;
-        const cleanElapsed = Math.min(180, Math.max(5, actualMinutes));
-
-        // Task base rewards (if task is not already completed)
-        const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
-        const oldRankIdx = getRankIndexByExp(state.exp);
-        const streakBonusMultiplier = state.streakDays >= 3 ? 1.2 : 1.0;
-        const isAlreadyCompleted = Boolean(task.completed);
-        const taskExp = !isAlreadyCompleted ? Math.round(diff.exp * streakBonusMultiplier) : 0;
-        const taskCoins = !isAlreadyCompleted ? diff.coins : 0;
-        const earnedFocusExp = task.focusRewardClaimed ? 0 : Math.round(cleanElapsed * 1);
-        const earnedFocusCoins = task.focusRewardClaimed ? 0 : Math.max(1, Math.floor(cleanElapsed * 0.4));
-
-        let totalExp = taskExp + earnedFocusExp;
-        let totalCoins = taskCoins + earnedFocusCoins;
-        let newExp = state.exp + totalExp;
-        let finalCoins = state.coins + totalCoins;
-        let newRankTier: RankTier | null = null;
-        let rankUpBonus = 0;
-
-        // BẢO MẬT MÁY CHỦ: Gọi Server RPC
-        if (state.currentUser) {
-          try {
-            let { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_complete_task', {
-              p_difficulty: task.difficulty,
-              p_focus_minutes: cleanElapsed,
-              p_is_focus_completed: true,
-              p_category: task.category,
-            });
-
-            if (rpcErr && rpcErr.message?.includes('ProfileNotFound')) {
-              try { await supabase.rpc('rpc_ensure_profile'); } catch { }
-              await get().syncToCloud(true);
-              const retry = await supabase.rpc('rpc_complete_task', {
-                p_difficulty: task.difficulty,
-                p_focus_minutes: cleanElapsed,
-                p_is_focus_completed: true,
-                p_category: task.category,
-              });
-              rpcRes = retry.data;
-              rpcErr = retry.error;
-            }
-
-            if (rpcErr) {
-              playSoundEffect('warning', state.soundEnabled);
-              get().addToast(`⚠️ ${localizeError(rpcErr.message, 'Không thể hoàn thành nhiệm vụ!')}`, 'error');
-              return;
-            }
-
-            if (rpcRes) {
-              newExp = rpcRes.new_exp ?? newExp;
-              finalCoins = rpcRes.new_coins ?? finalCoins;
-              totalExp = rpcRes.awarded_exp ?? totalExp;
-              totalCoins = rpcRes.awarded_coins ?? totalCoins;
-              rankUpBonus = rpcRes.rank_bonus_coins ?? 0;
-              if (rpcRes.rank_up_occurred) {
-                const newRankIdx = getRankIndexByExp(newExp);
-                newRankTier = RANK_TIERS[newRankIdx];
-              }
-            }
-          } catch (e: any) {
-            console.warn('RPC complete_task error:', e);
-          }
-        } else {
-          const newRankIdx = getRankIndexByExp(newExp);
-          if (newRankIdx > oldRankIdx) {
-            for (let i = oldRankIdx + 1; i <= newRankIdx; i++) {
-              rankUpBonus += RANK_TIERS[i].coinBonus;
-            }
-            newRankTier = RANK_TIERS[newRankIdx];
-          }
-          finalCoins = state.coins + totalCoins + rankUpBonus;
-        }
-        const today = getTodayString();
-        const now = Date.now();
-
-        stopFocusAmbient(0);
-
-        set((prev) => ({
-          exp: newExp,
-          coins: finalCoins,
-          activePomodoroTaskId: null,
-          activeFocusTaskId: null,
-          isFocusRunning: false,
-          isFocusModalOpen: false,
-          completedTotal: !isAlreadyCompleted ? prev.completedTotal + 1 : prev.completedTotal,
-          dailyCompletedCount: !isAlreadyCompleted ? prev.dailyCompletedCount + 1 : prev.dailyCompletedCount,
-          dailyBossCompletedCount:
-            !isAlreadyCompleted && task.difficulty === 'boss'
-              ? prev.dailyBossCompletedCount + 1
-              : prev.dailyBossCompletedCount,
-          focusSessionsCompleted: prev.focusSessionsCompleted + 1,
-          lastActiveDate: today,
-          lastCompletedTimestamp: now,
-          tasks: prev.tasks.map((t) =>
-            t.id === taskId
-              ? {
-                ...t,
-                completed: true,
-                rewardClaimed: true,
-                focusRewardClaimed: true,
-                completedAt: now,
-                lastAwardedExp: taskExp,
-                lastAwardedCoins: taskCoins,
-                lastRankUpBonus: rankUpBonus,
-              }
-              : t
-          ),
-        }));
-
-        get().checkSystemMilestones();
-
-        triggerCoinBurst(window.innerWidth / 2, window.innerHeight * 0.45, 16);
-
-        const diffSoundMap: Record<string, 'quest_easy' | 'quest_medium' | 'quest_hard' | 'quest_boss'> = {
-          easy: 'quest_easy',
-          medium: 'quest_medium',
-          hard: 'quest_hard',
-          boss: 'quest_boss',
-        };
-        const questSound = diffSoundMap[task.difficulty] || 'quest_medium';
-
-        const newRankIdx = getRankIndexByExp(newExp);
-        const isLevelUp = newRankIdx > oldRankIdx;
-        const effectiveTier = newRankTier || RANK_TIERS[newRankIdx];
-
-        get().triggerRewardPopup({
-          avatarUrl: state.avatarUrl,
-          oldExp: state.exp,
-          newExp,
-          maxExp: effectiveTier.maxExp,
-          addedExp: totalExp,
-          addedCoins: totalCoins,
-          isLevelUp,
-          newRankName: effectiveTier.name,
-        });
-
-        if (newRankTier) {
-          try {
-            confetti({
-              particleCount: 90,
-              spread: 80,
-              origin: { y: 0.6 },
-              colors: ['#CCD0CF', '#9BA8AB', '#4A5C6A', '#253745', '#FFFFFF', '#FBBF24'],
-            });
-          } catch (e) { }
-          playSound('rank_up', state.soundEnabled);
-          setTimeout(() => {
-            set({ rankUpData: { achievedTier: newRankTier, bonusCoins: rankUpBonus } });
-          }, 3200);
-        } else {
-          playSound(questSound, state.soundEnabled);
-        }
-
-        get().addToast(
-          `🎉 Tuyệt vời! Đã hoàn thành nhiệm vụ & phiên Focus: Nhận tổng +${totalExp} EXP và +${totalCoins} Xu Vàng!`,
-          'success'
-        );
         debouncedAutoSync(get());
       },
 
@@ -2993,94 +2844,127 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       startFocusForTask: (taskId: string, durationMinutes?: number) => {
-        const task = get().tasks.find((t) => t.id === taskId);
-        if (!task) return;
-        const targetMin = durationMinutes || task.focusDuration || 25;
-        if (!task.focusDuration) {
-          get().updateTaskFocusDuration(taskId, targetMin);
+        const state = get();
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task || task.completed || state.authLoading || (task.target_date && task.target_date > getTodayString())) return;
+        if (state.focusSession?.questId === taskId) {
+          set({ isFocusModalOpen: true });
+          state.refreshFocusMedia();
+          return;
         }
-        set({
-          activeFocusTaskId: taskId,
-          activePomodoroTaskId: taskId,
-          focusTargetMinutes: targetMin,
-          focusTimeLeft: targetMin * 60,
-          isFocusRunning: true,
-          isFocusModalOpen: false,
-        });
-        const { soundEnabled, soundVolume, focusAmbient } = get();
-        if (soundEnabled && focusAmbient !== 'off') {
-          startFocusAmbient(focusAmbient, soundVolume);
+        if (state.focusSession?.finishRequested || state.isFocusCompleting) {
+          state.addToast('Phiên Focus trước đang chờ nghiệm thu.', 'info');
+          return;
         }
+        if (state.focusSession && getFocusRemainingMs(state.focusSession) === 0) {
+          state.tickFocusTimer();
+          return;
+        }
+        const targetMin = Math.max(5, Math.min(180, Math.round(durationMinutes || task.focusDuration || 25)));
+        if (!task.focusDuration) state.updateTaskFocusDuration(taskId, targetMin);
+        const durationMs = targetMin * 60_000;
+        const session: FocusSession = {
+          id: crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          questId: taskId,
+          questTitle: task.title,
+          durationMs,
+          endTime: Date.now() + durationMs,
+          isPaused: false,
+          remainingWhenPaused: 0,
+        };
+        saveFocusSession(focusOwner(state), session);
+        set({ ...focusState(session), isFocusModalOpen: false });
+        state.refreshFocusMedia();
+        requestFocusNotifications();
       },
 
       toggleFocusRunning: () => {
-        const nextState = !get().isFocusRunning;
-        set({ isFocusRunning: nextState });
-        const { soundEnabled, soundVolume, focusAmbient } = get();
-        if (nextState && soundEnabled && focusAmbient !== 'off') {
-          startFocusAmbient(focusAmbient, soundVolume);
-        } else if (!nextState) {
-          stopFocusAmbient(0.3);
-        }
+        const state = get();
+        state.setFocusRunning(!state.isFocusRunning);
       },
 
       setFocusRunning: (running: boolean) => {
-        set({ isFocusRunning: running });
-        const { soundEnabled, soundVolume, focusAmbient } = get();
-        if (running && soundEnabled && focusAmbient !== 'off') {
-          startFocusAmbient(focusAmbient, soundVolume);
-        } else if (!running) {
-          stopFocusAmbient(0.3);
+        const state = get();
+        const session = state.focusSession;
+        if (!session || session.finishRequested || state.isFocusCompleting) return;
+        const now = Date.now();
+        const remainingMs = getFocusRemainingMs(session, now);
+        if (remainingMs === 0) {
+          state.tickFocusTimer();
+          return;
         }
-      },
-
-      setFocusTimeLeft: (seconds: number) => {
-        set({ focusTimeLeft: seconds });
+        if (running === session.isPaused) {
+          const updated = {
+            ...session,
+            isPaused: !running,
+            endTime: running ? now + remainingMs : session.endTime,
+            remainingWhenPaused: running ? 0 : remainingMs,
+          };
+          saveFocusSession(focusOwner(state), updated);
+          set(focusState(updated));
+        }
+        state.refreshFocusMedia();
       },
 
       setFocusTargetMinutes: (minutes: number) => {
-        const clean = Math.min(180, Math.max(5, minutes));
-        set({
-          focusTargetMinutes: clean,
-          focusTimeLeft: clean * 60,
-        });
-        const activeId = get().activeFocusTaskId;
-        if (activeId) {
-          get().updateTaskFocusDuration(activeId, clean);
+        const state = get();
+        const session = state.focusSession;
+        if (!session || session.finishRequested || !Number.isFinite(minutes)) return;
+        if (getFocusRemainingMs(session) === 0) {
+          state.tickFocusTimer();
+          return;
         }
+        const clean = Math.min(180, Math.max(5, Math.round(minutes)));
+        const durationMs = clean * 60_000;
+        const updated = {
+          ...session,
+          durationMs,
+          endTime: Date.now() + durationMs,
+          remainingWhenPaused: session.isPaused ? durationMs : 0,
+        };
+        saveFocusSession(focusOwner(state), updated);
+        set(focusState(updated));
+        state.updateTaskFocusDuration(session.questId, clean);
+        state.refreshFocusMedia();
       },
 
       tickFocusTimer: () => {
-        const { focusTimeLeft, activeFocusTaskId, focusTargetMinutes, soundEnabled } = get();
-        if (!activeFocusTaskId) return;
-
-        if (focusTimeLeft <= 1) {
-          stopFocusAmbient(0);
-          playSound('quest_easy', soundEnabled);
-          const task = get().tasks.find((t) => t.id === activeFocusTaskId);
-          if (task) {
-            get().completePomodoro(task.id, focusTargetMinutes, focusTargetMinutes);
-          }
-          set({
-            activeFocusTaskId: null,
-            activePomodoroTaskId: null,
-            isFocusRunning: false,
-            focusTimeLeft: 0,
-            isFocusModalOpen: false,
-          });
-        } else {
-          set({ focusTimeLeft: focusTimeLeft - 1 });
+        const state = get();
+        const session = state.focusSession;
+        if (!session || state.authLoading || state.isFocusCompleting) return;
+        const remainingMs = getFocusRemainingMs(session);
+        const seconds = Math.ceil(remainingMs / 1000);
+        if (seconds !== state.focusTimeLeft) set({ focusTimeLeft: seconds });
+        if (session.finishRequested || remainingMs === 0) {
+          void state.completeQuest(session.questId, { completedViaFocus: true });
+        } else if (!session.isPaused) {
+          updateFocusMediaTitle(session, seconds);
         }
       },
 
+      restoreFocusSession: () => {
+        const state = get();
+        if (state.authLoading || state.isFocusCompleting) return;
+        const session = readFocusSession(focusOwner(state));
+        if (!session && !state.focusSession) return;
+        if (!session) stopFocusMedia();
+        set({ ...focusState(session), isFocusModalOpen: session?.id === state.focusSession?.id && state.isFocusModalOpen });
+        state.tickFocusTimer();
+        state.refreshFocusMedia();
+      },
+
+      refreshFocusMedia: () => {
+        const { focusSession, focusTimeLeft, focusAmbient, soundEnabled, soundVolume, setFocusRunning } = get();
+        if (!focusSession || focusSession.finishRequested || getFocusRemainingMs(focusSession) === 0) return;
+        syncFocusMedia(focusSession, focusTimeLeft, soundEnabled ? focusAmbient : 'off', soundVolume, setFocusRunning);
+      },
+
       cancelFocus: () => {
-        stopFocusAmbient(0);
-        set({
-          activeFocusTaskId: null,
-          activePomodoroTaskId: null,
-          isFocusRunning: false,
-          isFocusModalOpen: false,
-        });
+        const state = get();
+        if (state.isFocusCompleting) return;
+        saveFocusSession(focusOwner(state), null);
+        stopFocusMedia();
+        set({ ...focusState(null), isFocusModalOpen: false });
       },
 
       setFocusModalOpen: (open: boolean) => {
@@ -3111,6 +2995,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       resetAllData: async (): Promise<boolean> => {
         const state = get();
+        if (state.isFocusCompleting) return false;
+        if (state.focusSession) state.cancelFocus();
         const currentUser = state.currentUser;
         const hunterId = currentUser?.id || state.hunterId;
 
@@ -3621,7 +3507,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               task.completed &&
               (!task.completedAt || getLocalDateStr(new Date(task.completedAt)) < today);
 
-            if (task.isDailyRecurring || isCompletedBeforeToday) {
+            if ((isNewDay && task.isDailyRecurring) || isCompletedBeforeToday) {
               return {
                 ...task,
                 completed: false,
@@ -3783,52 +3669,29 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       syncToCloud: async (silent = false) => {
-        const state = get();
-        const activeUserId = state.currentUser?.id || state.hunterId;
-        if (!activeUserId) return false;
-        set({ cloudSyncStatus: 'syncing' });
-
-        const snapshot: UserStateCloud = {
-          playerName: state.playerName,
-          avatarUrl: state.avatarUrl,
-          coverUrl: state.coverUrl,
-          exp: state.exp,
-          coins: state.coins,
-          completedTotal: state.completedTotal,
-          streakDays: state.streakDays,
-          lastStreakDate: state.lastStreakDate || '',
-          lastActiveDate: state.lastActiveDate || getTodayString(),
-          dailyCompletedCount: state.dailyCompletedCount,
-          dailyBossCompletedCount: state.dailyBossCompletedCount,
-          tasks: state.tasks,
-          shopItems: state.shopItems,
-          inventory: state.inventory,
-          rivals: state.rivals,
-          systemQuests: state.systemQuests,
-          unlockedTitleIds: state.unlockedTitleIds,
-          equippedTitleId: state.equippedTitleId,
-          focusSessionsCompleted: state.focusSessionsCompleted,
-        };
-
-        const res = await syncProfileAndStateToCloud(activeUserId, snapshot);
-        if (res.success) {
-          const nowStr = new Date().toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          });
-          set({ cloudSyncStatus: 'synced', lastSyncedAt: nowStr });
-          if (!silent) {
-            get().addToast('☁️ Đã đồng bộ dữ liệu lên máy chủ thành công!', 'success');
+        const initial = get();
+        if (initial.authLoading || (silent && !initial.currentUser)) return false;
+        const owner = focusOwner(initial);
+        return queueCloudWrite(async () => {
+          const state = get();
+          if (!owner || focusOwner(state) !== owner || state.authLoading || (silent && !state.currentUser)) return false;
+          set({ cloudSyncStatus: 'syncing' });
+          const res = await syncProfileAndStateToCloud(owner, cloudSnapshot(state));
+          if (focusOwner(get()) !== owner) return false;
+          if (res.success) {
+            const nowStr = new Date().toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            });
+            set({ cloudSyncStatus: 'synced', lastSyncedAt: nowStr });
+            if (!silent) get().addToast('☁️ Đã đồng bộ dữ liệu lên máy chủ thành công!', 'success');
+            return true;
           }
-          return true;
-        } else {
           set({ cloudSyncStatus: 'error' });
-          if (!silent) {
-            get().addToast(`⚠️ Lỗi đồng bộ đám mây: ${localizeError(res.error, 'Kết nối gián đoạn')}`, 'error');
-          }
+          if (!silent) get().addToast(`⚠️ Lỗi đồng bộ đám mây: ${localizeError(res.error, 'Kết nối gián đoạn')}`, 'error');
           return false;
-        }
+        });
       },
 
       restoreFromCloud: async (targetHunterId: string) => {
@@ -3904,6 +3767,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       initAuth: async () => {
+        if (authInitInFlight) return;
+        authInitInFlight = true;
         set({ authLoading: true });
         try {
           const { data: { session } } = await supabase.auth.getSession();
@@ -3913,11 +3778,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             setStoredHunterId(hunterId);
 
             // Fetch user profile and state from Supabase
-            let { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', hunterId)
               .maybeSingle();
+            if (profileError) throw profileError;
 
             const hunterName =
               profile?.username ||
@@ -3962,11 +3828,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               try { await supabase.rpc('rpc_admin_set_user_role', { p_target_user_id: hunterId, p_new_role: 'admin' }); } catch { }
             }
 
-            const { data: stateRow } = await supabase
+            const { data: stateRow, error: stateError } = await supabase
               .from('user_states')
               .select('*')
               .eq('user_id', hunterId)
               .maybeSingle();
+            if (stateError) throw stateError;
 
             const bannedUntil = profile?.banned_until || null;
             const banReason = profile?.ban_reason || null;
@@ -4132,12 +3999,24 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         } catch (err) {
           console.error('Error in initAuth:', err);
           set({ currentUser: null, authLoading: false });
+        } finally {
+          authInitInFlight = false;
         }
 
         // Keep auth session listener
-        supabase.auth.onAuthStateChange(async (event) => {
+        if (authListenerRegistered) return;
+        authListenerRegistered = true;
+        supabase.auth.onAuthStateChange((event) => {
           if (event === 'SIGNED_OUT') {
-            set({ currentUser: null, cloudSyncStatus: 'idle' });
+            stopFocusMedia();
+            set({
+              ...focusState(null),
+              isFocusModalOpen: false,
+              isFocusCompleting: false,
+              processingTaskIds: [],
+              currentUser: null,
+              cloudSyncStatus: 'idle',
+            });
           }
         });
       },
@@ -4579,7 +4458,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
 
         // 3. Reset in-memory store
+        stopFocusMedia();
         set({
+          ...focusState(null),
+          isFocusModalOpen: false,
+          isFocusCompleting: false,
+          processingTaskIds: [],
           currentUser: null,
           userRole: 'user',
           bannedUntil: null,

@@ -37,11 +37,13 @@ import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
 import { CoinBurstOverlay } from './components/ui/CoinBurstOverlay';
 import { useRealtimeSync } from './hooks/useRealtimeSync';
+import { useFocusTimer } from './hooks/useFocusTimer';
 import { PAGE_VARIANTS, EASING_SPRING } from './constants/motion';
 import { startOnboardingTour } from './utils/onboardingTour';
 
 export const App: React.FC = () => {
   useRealtimeSync();
+  useFocusTimer();
 
   const {
     currentUser,
@@ -59,6 +61,15 @@ export const App: React.FC = () => {
   useEffect(() => {
     initAuth();
   }, [initAuth]);
+
+  useEffect(() => {
+    const retryAuth = () => {
+      const state = useFaeQuestStore.getState();
+      if (!state.currentUser && !state.authLoading) void state.initAuth();
+    };
+    window.addEventListener('online', retryAuth);
+    return () => window.removeEventListener('online', retryAuth);
+  }, []);
 
   // Lưu trữ sự kiện cài đặt PWA (beforeinstallprompt) ở cấp độ toàn cục ngay khi trang tải
   useEffect(() => {

@@ -33,7 +33,8 @@ export const purgeLegacySensitiveLocalStorage = (): void => {
       if (
         key === 'faequest_auth_session' ||
         key === 'faequest_hunter_id' ||
-        key === 'faequest_ui_preferences'
+        key === 'faequest_ui_preferences' ||
+        key.startsWith('faequest_focus_session:')
       ) {
         continue;
       }

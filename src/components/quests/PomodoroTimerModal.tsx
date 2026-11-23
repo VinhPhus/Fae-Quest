@@ -6,6 +6,7 @@ import { CoinIcon } from '../ui/CoinIcon';
 import { Timer, Play, Pause, RotateCcw, X, Check, Sparkles, Info, Minimize2 } from 'lucide-react';
 import { AmbientType } from '../../utils/soundEngine';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { formatFocusTime, getFocusRewardMinutes } from '../../utils/focusSession';
 
 const FOCUS_PRESETS = [10, 15, 25, 45, 60];
 
@@ -22,7 +23,9 @@ export const PomodoroTimerModal: React.FC = () => {
     cancelFocus,
     tasks,
     streakDays,
-    completePomodoro,
+    completeQuest,
+    focusSession,
+    isFocusCompleting,
     focusAmbient = 'rain',
     setFocusAmbient,
   } = useFaeQuestStore();
@@ -63,11 +66,7 @@ export const PomodoroTimerModal: React.FC = () => {
   const targetMinutes = focusTargetMinutes || 25;
   const totalSeconds = targetMinutes * 60;
   const elapsedSeconds = totalSeconds - focusTimeLeft;
-  const elapsedMinutes = elapsedSeconds / 60;
-
-  const minutes = Math.floor(focusTimeLeft / 60);
-  const seconds = focusTimeLeft % 60;
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const formattedTime = formatFocusTime(focusTimeLeft);
 
   const progress = Math.min(100, Math.max(0, (elapsedSeconds / totalSeconds) * 100));
 
@@ -85,14 +84,16 @@ export const PomodoroTimerModal: React.FC = () => {
   const totalCombinedCoins = taskCoins + (task.focusRewardClaimed ? 0 : maxFocusCoins);
 
   // Proportional Early Finish Rewards
-  const earlyFocusExp = Math.max(1, Math.floor(maxFocusExp * (elapsedMinutes / targetMinutes)));
-  const earlyFocusCoins = Math.max(1, Math.floor(maxFocusCoins * (elapsedMinutes / targetMinutes)));
+  const earlyFocusExp = getFocusRewardMinutes(elapsedSeconds * 1000);
+  const earlyFocusCoins = Math.max(1, Math.floor(earlyFocusExp * 0.4));
   const earlyTotalExp = taskExp + (task.focusRewardClaimed ? 0 : earlyFocusExp);
   const earlyTotalCoins = taskCoins + (task.focusRewardClaimed ? 0 : earlyFocusCoins);
 
   // Soft Anti-Cheat: Need at least 50% elapsed time
-  const isPristine = !isFocusRunning && focusTimeLeft === totalSeconds;
-  const canFinishEarly = !isPristine && elapsedSeconds >= totalSeconds * 0.5;
+  const pending = Boolean(focusSession?.finishRequested);
+  const isPristine = !pending && !isFocusRunning && focusTimeLeft === totalSeconds;
+  const canFinishEarly = !pending && !isPristine && elapsedSeconds >= totalSeconds * 0.5;
+  const canSubmit = !isFocusCompleting && (pending || canFinishEarly);
 
   const handleSelectDuration = (min: number) => {
     if (!isPristine) return;
@@ -137,6 +138,7 @@ export const PomodoroTimerModal: React.FC = () => {
           </button>
           <button
             onClick={cancelFocus}
+            disabled={isFocusCompleting}
             className="p-1.5 rounded-full bg-[#06141B] border border-[#253745] hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 transition"
             title="Hủy toàn bộ phiên tập trung"
           >
@@ -320,10 +322,11 @@ export const PomodoroTimerModal: React.FC = () => {
             {/* Play / Pause */}
             <button
               onClick={toggleFocusRunning}
+              disabled={pending}
               className="px-6 py-3 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition cursor-pointer"
             >
               {isFocusRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
-              <span>{isFocusRunning ? 'Tạm Dừng' : 'Bắt Đầu'}</span>
+              <span>{isFocusRunning ? 'Tạm Dừng' : 'Tiếp Tục'}</span>
             </button>
 
             {/* Reset */}
@@ -331,6 +334,7 @@ export const PomodoroTimerModal: React.FC = () => {
               onClick={() => {
                 setFocusTargetMinutes(targetMinutes);
               }}
+              disabled={pending}
               className="p-3 rounded-xl bg-[#06141B] hover:bg-[#11212D] border border-[#253745] hover:border-[#4A5C6A] text-[#9BA8AB] hover:text-[#CCD0CF] transition shadow cursor-pointer"
               title={`Đặt lại ${targetMinutes} phút`}
             >
@@ -339,31 +343,26 @@ export const PomodoroTimerModal: React.FC = () => {
 
             {/* Finished Early Button with Anti-Cheat 50% Rule */}
             <button
-              onClick={() => {
-                if (canFinishEarly && task) {
-                  completePomodoro(task.id, elapsedMinutes, targetMinutes);
-                  cancelFocus();
-                }
-              }}
-              disabled={!canFinishEarly}
+              onClick={() => void completeQuest(task.id, { completedViaFocus: true })}
+              disabled={!canSubmit}
               className={`px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 transition ${
-                canFinishEarly
+                canSubmit
                   ? 'bg-emerald-600/40 hover:bg-emerald-600 border border-emerald-400 text-emerald-200 shadow-md cursor-pointer hover:scale-105'
                   : 'bg-[#06141B]/60 border border-[#253745] text-[#9BA8AB]/30 cursor-not-allowed'
               }`}
               title={
-                canFinishEarly
+                pending ? 'Đồng bộ nhiệm vụ và phần thưởng' : canFinishEarly
                   ? `Nhận tổng gộp: +${earlyTotalExp} EXP (+${taskExp} Task + ${earlyFocusExp} Focus) & +${earlyTotalCoins} Xu`
                   : 'Cần tập trung ít nhất 50% thời gian để mở khóa Xong Sớm'
               }
             >
               <Check className="w-4 h-4" />
-              <span>Xong Sớm</span>
+              <span>{isFocusCompleting ? 'Đang nghiệm thu…' : pending ? 'Thử lại' : 'Xong Sớm'}</span>
             </button>
           </div>
 
           {/* Early finish qualification status hint */}
-          {!canFinishEarly && !isPristine && (
+          {!pending && !canFinishEarly && !isPristine && (
             <p className="text-[11px] text-[#9BA8AB]/70 italic">
               🔒 Cần tập trung ít nhất 50% thời gian (còn {Math.max(0, Math.ceil(totalSeconds * 0.5 - elapsedSeconds))}s) để mở khóa "Xong Sớm".
             </p>
