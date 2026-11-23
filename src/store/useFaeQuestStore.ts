@@ -2656,6 +2656,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           isAddShopItemOpen: false,
         }));
         get().addToast(`Đã thêm món quà "${newItem.title}" vào Cửa Hàng!`, 'success');
+        debouncedAutoSync(get());
+        get().syncToCloud(true);
       },
 
       deleteShopItem: (itemId: string) => {
@@ -2663,6 +2665,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           shopItems: prev.shopItems.filter((i) => i.id !== itemId),
         }));
         get().addToast('Đã xóa món quà khỏi Cửa Hàng', 'info');
+        debouncedAutoSync(get());
+        get().syncToCloud(true);
       },
 
       useInventoryTicket: (ticketId: string) => {
