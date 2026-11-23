@@ -345,6 +345,92 @@ export async function waitForImagesToLoad(container: HTMLElement): Promise<void>
 }
 
 /**
+ * Gộp sẵn ảnh bìa + lớp chuyển sắc bằng HTML5 Canvas trước khi xuất thẻ.
+ * Giúp iOS Safari / WebKit không phải composite nhiều layer gradient chồng lên img trong <foreignObject>,
+ * loại bỏ hoàn toàn hiện tượng đen kịt (#000000) hay lỗi pha trộn màu trên iPhone.
+ */
+export async function compositeCoverWithGradient(
+  coverSource: string,
+  width = 540,
+  height = 460
+): Promise<string> {
+  if (typeof document === 'undefined') return coverSource;
+
+  return new Promise<string>((resolve) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      resolve(coverSource);
+      return;
+    }
+
+    // 1. Phủ màu nền chuẩn #06141B trước
+    ctx.fillStyle = '#06141B';
+    ctx.fillRect(0, 0, width, height);
+
+    const applyGradientOverlay = () => {
+      // 2. Phủ trực tiếp gradient hòa sắc với đúng 4 mốc chuẩn của FaeQuest
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0.0, 'rgba(6, 20, 27, 0.35)');
+      grad.addColorStop(0.45, 'rgba(6, 20, 27, 0.05)');
+      grad.addColorStop(0.78, 'rgba(6, 20, 27, 0.78)');
+      grad.addColorStop(1.0, 'rgba(6, 20, 27, 1)'); // #06141B hòa tuyệt đối vào nền thẻ
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+      try {
+        const compositedDataUrl = canvas.toDataURL('image/png');
+        resolve(compositedDataUrl || coverSource);
+      } catch {
+        resolve(coverSource);
+      }
+    };
+
+    if (!coverSource || coverSource.trim() === '') {
+      applyGradientOverlay();
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    const timeout = setTimeout(() => {
+      img.onload = null;
+      img.onerror = null;
+      applyGradientOverlay();
+    }, 4000);
+
+    img.onload = () => {
+      clearTimeout(timeout);
+      try {
+        // Cắt và vẽ ảnh theo tỷ lệ object-fit: cover căn giữa
+        const imgW = img.naturalWidth || img.width || width;
+        const imgH = img.naturalHeight || img.height || height;
+        const scale = Math.max(width / imgW, height / imgH);
+        const renderW = imgW * scale;
+        const renderH = imgH * scale;
+        const offsetX = (width - renderW) / 2;
+        const offsetY = (height - renderH) / 2;
+
+        ctx.drawImage(img, offsetX, offsetY, renderW, renderH);
+      } catch (err) {
+        console.warn('Canvas drawImage error, using fallback:', err);
+      }
+      applyGradientOverlay();
+    };
+
+    img.onerror = () => {
+      clearTimeout(timeout);
+      applyGradientOverlay();
+    };
+
+    img.src = coverSource;
+  });
+}
+
+/**
  * Convert a base64 data URL to a File object for navigator.share
  */
 export function dataUrlToFile(dataUrl: string, filename: string): File {

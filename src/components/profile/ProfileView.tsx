@@ -7,7 +7,7 @@ import { resolveTitleObject } from '../../constants/systemQuests';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
 import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
-import { imageUrlToBase64, waitForImagesToLoad } from '../../utils/imageExportHelper';
+import { imageUrlToBase64, waitForImagesToLoad, compositeCoverWithGradient } from '../../utils/imageExportHelper';
 import { CoinIcon } from '../ui/CoinIcon';
 import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 import { ProductivityAnalytics } from '../analytics/ProductivityAnalytics';
@@ -224,9 +224,9 @@ export const ProfileView: React.FC = () => {
   const handleExportBattleCard = async () => {
     if (isExportingCard) return;
 
-    // Chuỗi định danh hồ sơ v7 để làm mới bộ nhớ đệm
+    // Chuỗi định danh hồ sơ v4_ để làm mới bộ nhớ đệm ngay lập tức
     const profileSignature = [
-      'v7',
+      'v4_',
       playerName || '',
       avatarUrl || '',
       coverUrl || '',
@@ -266,6 +266,10 @@ export const ProfileView: React.FC = () => {
         coverB64 = (await imageUrlToBase64(DEFAULT_COVER_URL, undefined, 1080)) || DEFAULT_COVER_URL;
       }
 
+      // Gộp sẵn ảnh bìa + lớp chuyển sắc bằng HTML5 Canvas 540x460 trước khi xuất thẻ
+      // Loại bỏ hoàn toàn lỗi composite và dải đen (#000000) trên iOS Safari / WebKit
+      const compositedCoverB64 = await compositeCoverWithGradient(coverB64, 540, 460);
+
       const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
         avatarUrl ? imageUrlToBase64(avatarUrl, undefined, 400) : Promise.resolve(''),
         imageUrlToBase64('/assets/logo.png', undefined, 200),
@@ -274,7 +278,7 @@ export const ProfileView: React.FC = () => {
       ]);
 
       setBase64Avatar(avatarB64 || avatarUrl || '');
-      setBase64Cover(coverB64);
+      setBase64Cover(compositedCoverB64 || coverB64);
       setBase64Logo(logoB64);
       setBase64RankIcon(rankB64);
       setBase64TitleIcon(titleB64);

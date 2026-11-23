@@ -70,10 +70,20 @@ export const RANK_GLOW_STYLES: Record<
   },
 };
 
+export const RANK_AMBIENT_COLORS: Record<string, string> = {
+  dong: 'rgba(140, 88, 58, 0.14)',
+  bac: 'rgba(203, 213, 225, 0.14)',
+  vang: 'rgba(245, 158, 11, 0.16)',
+  'luc-bao': 'rgba(16, 185, 129, 0.16)',
+  'cao-thu': 'rgba(139, 92, 246, 0.16)',
+  'dai-cao-thu': 'rgba(244, 63, 94, 0.16)',
+  'thach-dau': 'rgba(251, 191, 36, 0.18)',
+};
+
 /**
  * Thẻ Sưu Tầm Dark Fantasy Cao Cấp (Luxury Collector Card)
  * Kích thước chuẩn 540x960 (Tỷ lệ 9:16) dùng để xuất PNG siêu nét 1080x1920 Story & TikTok.
- * Đảm bảo 100% hình ảnh nhúng Base64, tuyệt đối không chứa thẻ <img> với URL nội bộ/mạng.
+ * Đảm bảo 100% hình ảnh nhúng Base64, hòa sắc mịn màng, không bị lỗi đen tuyền trên WebKit/Safari.
  */
 export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCardExportProps>(
   (
@@ -98,6 +108,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
     ref
   ) => {
     const glowConfig = RANK_GLOW_STYLES[currentTier.id] || RANK_GLOW_STYLES['dong'];
+    const rankAmbientColor = RANK_AMBIENT_COLORS[currentTier.id] || 'rgba(245, 158, 11, 0.15)';
 
     // Calculate rank progress percent
     let progressPercent = 100;
@@ -122,82 +133,38 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
         }}
         aria-hidden="true"
       >
-        {/* ================= KHUNG CHÍNH 540x960 (BO TRÒN 32PX) ================= */}
+        {/* ================= KHUNG CHÍNH 540x960 (BO TRÒN 32PX, NỀN CỐ ĐỊNH #06141B) ================= */}
         <div
           ref={ref}
-          style={{ width: '540px', height: '960px', minWidth: '540px', minHeight: '960px' }}
+          style={{
+            width: '540px',
+            height: '960px',
+            minWidth: '540px',
+            minHeight: '960px',
+            backgroundColor: '#06141B',
+          }}
           className="relative w-[540px] h-[960px] rounded-[32px] overflow-hidden border border-white/20 bg-[#06141B] opacity-100 text-[#CCD0CF] select-none box-border font-sans shadow-2xl"
         >
-          {/* 1. NỀN ẢNH BÌA TRÀN SÁT MÉP TRÊN (H=440PX) + CHUYỂN SẮC ĐA TẦNG */}
-          <div className="absolute top-0 inset-x-0 h-[440px] w-full overflow-hidden pointer-events-none z-0">
+          {/* 1. NỀN ẢNH BÌA GỘP TRÀN SÁT MÉP TRÊN (H=460PX) - ĐÃ HÒA SẮC SẴN BẰNG CANVAS */}
+          <div className="absolute top-0 inset-x-0 h-[460px] w-full overflow-hidden pointer-events-none z-0">
             {coverBase64 ? (
               <img
                 src={coverBase64}
-                alt="Hunter Cover"
+                alt="Hunter Cover Composited"
                 crossOrigin="anonymous"
-                className="w-full h-[440px] object-cover object-center"
+                className="w-full h-[460px] object-cover object-center"
               />
             ) : (
-              <svg
-                viewBox="0 0 540 440"
-                width="540"
-                height="440"
-                className="w-full h-[440px] object-cover"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#040D12" />
-                    <stop offset="35%" stopColor="#0B1E29" />
-                    <stop offset="70%" stopColor="#132B3A" />
-                    <stop offset="100%" stopColor="#06141B" />
-                  </linearGradient>
-                  <radialGradient id="moonGlow" cx="50%" cy="28%" r="48%">
-                    <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.45" />
-                    <stop offset="45%" stopColor="#F59E0B" stopOpacity="0.12" />
-                    <stop offset="100%" stopColor="#06141B" stopOpacity="0" />
-                  </radialGradient>
-                  <linearGradient id="mtnGrad1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#182E3C" stopOpacity="0.85" />
-                    <stop offset="100%" stopColor="#06141B" stopOpacity="0.95" />
-                  </linearGradient>
-                  <linearGradient id="mtnGrad2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0D1E28" />
-                    <stop offset="100%" stopColor="#06141B" />
-                  </linearGradient>
-                </defs>
-                <rect width="540" height="440" fill="url(#skyGrad)" />
-                <circle cx="270" cy="150" r="220" fill="url(#moonGlow)" />
-                <polygon points="0,320 85,210 170,290 270,165 370,285 455,215 540,310 540,440 0,440" fill="url(#mtnGrad1)" />
-                <polygon points="0,380 110,270 210,340 315,240 430,350 540,280 540,440 0,440" fill="url(#mtnGrad2)" />
-                <rect x="256" y="150" width="28" height="90" fill="#07131A" />
-                <polygon points="252,150 270,120 288,150" fill="#07131A" />
-                <rect x="242" y="180" width="16" height="60" fill="#08151D" />
-                <polygon points="239,180 250,160 261,180" fill="#08151D" />
-                <rect x="282" y="180" width="16" height="60" fill="#08151D" />
-                <polygon points="279,180 290,160 301,180" fill="#08151D" />
-                <circle cx="75" cy="80" r="1.5" fill="#FDE68A" opacity="0.6" />
-                <circle cx="140" cy="50" r="1.2" fill="#FDE68A" opacity="0.5" />
-                <circle cx="210" cy="95" r="1.5" fill="#FDE68A" opacity="0.7" />
-                <circle cx="340" cy="65" r="1.8" fill="#FDE68A" opacity="0.8" />
-                <circle cx="420" cy="90" r="1.2" fill="#FDE68A" opacity="0.5" />
-                <circle cx="485" cy="55" r="1.5" fill="#FDE68A" opacity="0.6" />
-              </svg>
+              <div className="w-full h-[460px] bg-[#06141B]" />
             )}
-            {/* Lớp chuyển sắc đa tầng: nửa trên hiện rõ nét ảnh bìa, nửa dưới tan êm vào #06141B */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(6,20,27,0.22) 0%, rgba(6,20,27,0.02) 28%, rgba(6,20,27,0.65) 72%, #06141B 100%)',
-              }}
-            />
           </div>
 
-          {/* 2. ÁNH SÁNG TỎA TÂM MỜ (RADIAL AMBIENT GLOW) MÀU BẬC RANK Ở NỬA DƯỚI */}
+          {/* 2. ÁNH SÁNG TỎA TÂM NHẸ THEO MÀU RANK (KHÔNG DÙNG CSS BLUR TRÁNH LỖI WEBKIT) */}
           <div
-            className="absolute -bottom-24 inset-x-0 h-[420px] rounded-full blur-[120px] pointer-events-none opacity-25 z-0"
-            style={{ backgroundColor: glowConfig.border }}
+            className="absolute inset-0 pointer-events-none z-0"
+            style={{
+              background: `radial-gradient(circle at 50% 42%, ${rankAmbientColor} 0%, rgba(6, 20, 27, 0) 70%)`,
+            }}
           />
 
           {/* 3. KHUNG VIỀN KÉP MẢNH ÁNH KIM CỔ ĐIỂN (INNER HAIRLINE VINTAGE FRAME) */}
@@ -223,11 +190,11 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
           {/* ================= NỘI DUNG 4 TẦNG CÂN ĐỐI (FLEX JUSTIFY-BETWEEN) ================= */}
           <div className="flex flex-col justify-between h-full px-8 py-7 relative z-10 box-border">
-            {/* ================= TẦNG 1: THANH ĐỊNH DANH TRONG SUỐT (NỔI TRỰC TIẾP TRÊN ẢNH BÌA) ================= */}
+            {/* ================= TẦNG 1: THANH ĐỊNH DANH (KHUNG NỀN TỐI NỔI BẬT TRÊN MỌI ẢNH BÌA) ================= */}
             <div className="flex items-center justify-between w-full pt-1">
-              {/* Bên trái: Logo + Thương hiệu FaeQuest */}
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#06141B]/85 border border-white/20 p-1 flex items-center justify-center shadow-lg shrink-0">
+              {/* Bên trái: Logo + Thương hiệu FaeQuest bọc trong khung nền tối bo góc đồng bộ */}
+              <div className="flex items-center gap-2.5 bg-[#06141B]/75 border border-white/15 rounded-2xl px-3.5 py-2 shadow-md">
+                <div className="w-8 h-8 rounded-xl bg-[#06141B] border border-white/20 p-1 flex items-center justify-center shadow shrink-0">
                   {logoBase64 && logoBase64.startsWith('data:') ? (
                     <img
                       src={logoBase64}
@@ -236,22 +203,22 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                       className="w-full h-full object-contain [image-rendering:pixelated]"
                     />
                   ) : (
-                    <Shield className="w-5 h-5 text-amber-400" />
+                    <Shield className="w-4 h-4 text-amber-400" />
                   )}
                 </div>
                 <div>
-                  <h1 className="font-rpg font-black text-lg tracking-wider text-white leading-tight drop-shadow-md whitespace-nowrap">
+                  <h1 className="font-rpg font-black text-base tracking-wider text-white leading-tight drop-shadow-sm whitespace-nowrap">
                     FAE<span className="text-amber-400">QUEST</span>
                   </h1>
-                  <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-white/75 drop-shadow-sm whitespace-nowrap">
+                  <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-[#CCD0CF] whitespace-nowrap">
                     THẺ CHIẾN TÍCH
                   </p>
                 </div>
               </div>
 
-              {/* Bên phải: Huy hiệu mùa giải gọn gàng */}
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#06141B]/75 border border-white/20 text-[10px] font-bold text-[#CCD0CF] shadow-md shrink-0 whitespace-nowrap">
-                <Sparkles className="w-3 h-3 text-amber-300" />
+              {/* Bên phải: Huy hiệu mùa giải gọn gàng đồng bộ */}
+              <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#06141B]/75 border border-white/15 text-[10px] font-bold text-[#CCD0CF] shadow-md shrink-0 whitespace-nowrap">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                 <span>MÙA 2 • HẮC ÁM</span>
               </div>
             </div>
@@ -304,7 +271,7 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
               {/* Danh hiệu hiện tại dạng dải ruy-băng ánh kim: 100% hiển thị đầy đủ, không rớt dòng */}
               <div className="mt-2.5 flex items-center justify-center max-w-[480px]">
                 <div
-                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#0F202B] via-[#142A38] to-[#0F202B] border text-xs font-black shadow-lg whitespace-nowrap ${
+                  className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0F202B] border text-xs font-black shadow-lg whitespace-nowrap ${
                     titleRarity === 'legendary'
                       ? 'border-amber-400/80 text-amber-300 shadow-amber-500/10'
                       : titleRarity === 'epic'
@@ -336,10 +303,11 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
             {/* ================= TẦNG 3: KHUNG HUY HIỆU BẬC HẠNG & BẢNG CHỈ SỐ THỐNG NHẤT ================= */}
             <div className="space-y-3.5 w-full">
-              {/* 1. Khung Bậc Hạng Gradient Tối Ánh Kim */}
+              {/* 1. Khung Bậc Hạng (Nền đặc bán trong suốt chuẩn, không dùng backdrop-blur) */}
               <div
-                className="p-4 rounded-2xl bg-gradient-to-br from-[#0F202B]/95 to-[#08131A]/95 border shadow-xl relative overflow-hidden"
+                className="p-4 rounded-2xl border shadow-xl relative overflow-hidden"
                 style={{
+                  backgroundColor: 'rgba(11, 27, 36, 0.92)',
                   borderColor: `${glowConfig.border}55`,
                   boxShadow: '0 8px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
                 }}
@@ -405,8 +373,11 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
                 </div>
               </div>
 
-              {/* 2. Dải 3 Chỉ Số Chiến Tích (Gộp thành 1 khối bảng ngang thống nhất) */}
-              <div className="grid grid-cols-3 divide-x divide-white/10 rounded-2xl bg-[#0B1922]/90 border border-white/10 py-4 shadow-xl">
+              {/* 2. Dải 3 Chỉ Số Chiến Tích (Nền đặc bán trong suốt chuẩn, không dùng backdrop-blur) */}
+              <div
+                className="grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 py-4 shadow-xl"
+                style={{ backgroundColor: 'rgba(11, 27, 36, 0.92)' }}
+              >
                 {/* Cột 1: Chuỗi Kỷ Luật */}
                 <div className="flex flex-col items-center justify-center text-center px-2">
                   <span className="font-mono font-black text-[26px] sm:text-[28px] text-amber-300 leading-tight">
@@ -441,8 +412,14 @@ export const HunterBattleCardExport = forwardRef<HTMLDivElement, HunterBattleCar
 
             {/* ================= TẦNG 4: CHÂN THẺ KHẾ ƯỚC (FOOTER) ================= */}
             <div className="w-full flex flex-col items-center text-center pt-2">
-              {/* Đường kẻ mảnh chuyển sắc mờ dần về 2 đầu */}
-              <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent mb-3" />
+              {/* Đường kẻ mảnh chuyển sắc hòa màu nền chuẩn #06141B, tuyệt đối không dùng transparent */}
+              <div
+                className="w-full h-[1px] mb-3"
+                style={{
+                  background:
+                    'linear-gradient(90deg, rgba(6, 20, 27, 0) 0%, rgba(255, 255, 255, 0.2) 50%, rgba(6, 20, 27, 0) 100%)',
+                }}
+              />
 
               {/* Khẩu hiệu kỷ luật */}
               <p className="text-[11px] font-medium text-white/70 italic tracking-wide">
