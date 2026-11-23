@@ -17,7 +17,9 @@ export const getTodayString = (): string => {
 };
 
 export const getYesterdayString = (): string => {
-  return getLocalDateStr(new Date(Date.now() - 86400000));
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return getLocalDateStr(d);
 };
 
 export const getTomorrowString = (): string => {

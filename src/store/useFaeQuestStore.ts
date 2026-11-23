@@ -2267,13 +2267,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }));
 
         try {
-          if (task.completed) {
-            // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành vĩnh viễn
+          const today = getTodayString();
+          const isCompletedToday =
+            task.completed &&
+            task.completedAt &&
+            getLocalDateStr(new Date(task.completedAt)) === today;
+
+          if (isCompletedToday) {
+            // Khóa thao tác hoàn thành 1 chiều: nhiệm vụ đã hoàn thành hôm nay
             return;
           }
 
           // Chống gian lận: Khóa hoàn thành đối với nhiệm vụ thuộc Ngày Mai / Tương lai
-          const today = getTodayString();
           if (task.target_date && task.target_date > today) {
             playSoundEffect('warning', state.soundEnabled);
             get().addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
@@ -3571,6 +3576,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const yesterday = getYesterdayString();
         const isNewDay = state.lastActiveDate !== today;
 
+        // Kiểm tra xem có nhiệm vụ nào hoàn thành từ những ngày trước không
+        const hasTasksFromPreviousDays = state.tasks.some(
+          (t) => t.completed && (!t.completedAt || getLocalDateStr(new Date(t.completedAt)) < today)
+        );
+
         // Tự động kiểm tra và reset toàn bộ bộ đếm ngày nếu hôm qua không bấm điểm danh
         const updatedQuests = state.systemQuests.map((q) => {
           if (q.type === 'streak_counter' && !q.isCompleted && (q.currentStreak || 0) > 0) {
@@ -3586,14 +3596,29 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return q;
         });
 
-        if (isNewDay) {
-          // Ngày mới! Reset nhiệm vụ hàng ngày, giới hạn nhận thưởng focus và cập nhật bộ đếm
-          const updatedTasks = state.tasks.map((task) => ({
-            ...task,
-            focusRewardClaimed: false,
-            completed: task.isDailyRecurring ? false : task.completed,
-            completedAt: task.isDailyRecurring ? undefined : task.completedAt,
-          }));
+        if (isNewDay || hasTasksFromPreviousDays) {
+          // Ngày mới hoặc có nhiệm vụ ngày trước chưa reset!
+          const updatedTasks = state.tasks.map((task) => {
+            const isCompletedBeforeToday =
+              task.completed &&
+              (!task.completedAt || getLocalDateStr(new Date(task.completedAt)) < today);
+
+            if (task.isDailyRecurring || isCompletedBeforeToday) {
+              return {
+                ...task,
+                completed: false,
+                rewardClaimed: false,
+                completedAt: undefined,
+                focusRewardClaimed: false,
+                target_date: today,
+              };
+            }
+            return {
+              ...task,
+              focusRewardClaimed: isNewDay ? false : task.focusRewardClaimed,
+            };
+          });
+
           set({
             tasks: updatedTasks,
             systemQuests: updatedQuests,
@@ -3601,6 +3626,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             dailyBossCompletedCount: 0,
             lastActiveDate: today,
           });
+
+          // Lưu snapshot sạch lên cloud
+          get().syncToCloud(true);
         } else {
           // Cùng ngày: nếu có bộ đếm nào bị đứt chuỗi cần cập nhật
           const hasStreakChanged = updatedQuests.some(
@@ -3618,12 +3646,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         try {
           const state = get();
-          const userId = targetUserId || state.currentUser?.id;
+          const userId = targetUserId || state.currentUser?.id || state.hunterId;
 
           // Chặn chạy logic chuỗi khi hồ sơ chưa tải xong hoặc đang đăng xuất
           if (!userId) {
             return null;
           }
+
+          const today = getLocalDateStr();
+          const yesterday = getYesterdayString();
 
           // 1. Mọi lần kiểm tra BẮT BUỘC phải truy vấn trực tiếp dữ liệu mới nhất từ Supabase trước
           const { data: freshProfile, error } = await supabase
@@ -3632,73 +3663,83 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .eq('id', String(userId))
             .maybeSingle();
 
-          // Nếu error hoặc không có freshProfile, dừng ngay — tuyệt đối không ghi đè streak = 1 lên database!
-          if (error || !freshProfile) {
-            if (error) {
-              console.error('Streak profile fetch failed:', error);
-            }
-            return null;
-          }
+          const profileStreak = typeof freshProfile?.streak === 'number' ? freshProfile.streak : 0;
+          const currentStreak = Math.max(profileStreak, state.streakDays || 0);
+          const savedDate = String(freshProfile?.last_streak_date || state.lastStreakDate || '').slice(0, 10);
 
-          // 2. Logic so sánh ngày theo giờ địa phương (YYYY-MM-DD, tuyệt đối không dùng toISOString)
-          const today = getLocalDateStr();
-          const yesterday = getYesterdayString();
-          const savedDate = String(freshProfile.last_streak_date || '').slice(0, 10);
-
-          // Nếu savedDate === today: Đã điểm danh hôm nay -> dừng ngay, không cập nhật database, không tăng chuỗi, không hiện toast
+          // 2. Nếu savedDate === today: Đã điểm danh hôm nay -> dừng ngay, đồng bộ hiển thị
           if (savedDate === today) {
-            if (state.streakDays !== freshProfile.streak || state.lastStreakDate !== today) {
-              set({ streakDays: freshProfile.streak, lastStreakDate: today });
+            if (state.streakDays !== currentStreak || state.lastStreakDate !== today) {
+              set({ streakDays: currentStreak, lastStreakDate: today });
             }
-            return freshProfile.streak;
+            return currentStreak;
           }
 
+          // 3. Tính toán chuỗi ngày mới
           let nextStreak = 1;
           if (savedDate === yesterday) {
-            // Nếu savedDate === yesterday: Duy trì liên tiếp -> nextStreak = (freshProfile.streak || 0) + 1
-            nextStreak = (freshProfile.streak || 0) + 1;
+            // Duy trì liên tiếp từ hôm qua
+            nextStreak = currentStreak + 1;
           } else if (!savedDate) {
-            // Nếu !savedDate (tài khoản cũ chưa có ngày điểm danh):
-            // Nếu freshProfile.streak > 0 thì giữ nguyên và ghi nhận ngày hôm nay; nếu streak === 0 thì nextStreak = 1
-            nextStreak = (freshProfile.streak || 0) > 0 ? freshProfile.streak : 1;
+            // Chưa có ngày điểm danh nhưng đã có chuỗi kỷ luật
+            nextStreak = currentStreak > 0 ? currentStreak + 1 : 1;
           } else {
-            // Nếu savedDate cũ hơn yesterday: Đứt chuỗi -> nextStreak = 1
-            nextStreak = 1;
-          }
-
-          // 3. Chốt chặn nguyên tử ngay tại câu lệnh UPDATE lên Supabase (Chống cộng đúp 100%)
-          const { data: updated, error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              streak: nextStreak,
-              last_streak_date: today,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', String(userId))
-            .or(`last_streak_date.is.null,last_streak_date.neq.${today}`)
-            .select('streak, last_streak_date')
-            .maybeSingle();
-
-          if (updateError) {
-            console.error('Streak update failed:', updateError);
-            return null;
-          }
-
-          // 4. Chỉ cập nhật state giao diện và hiện thông báo điểm danh khi updated có dữ liệu và nextStreak > (freshProfile.streak || 0)
-          if (updated) {
-            set({
-              streakDays: updated.streak,
-              lastStreakDate: updated.last_streak_date,
-            });
-
-            if (nextStreak > (freshProfile.streak || 0)) {
-              get().addToast(`🔥 Điểm danh ngày mới! Chuỗi kỷ luật đạt ${updated.streak}N`, 'success');
-              playSoundEffect('rankup', get().soundEnabled);
+            // savedDate cũ hơn hôm qua: Kiểm tra nếu state bộ nhớ có ghi nhận hôm qua
+            if (state.lastStreakDate === yesterday) {
+              nextStreak = currentStreak + 1;
+            } else {
+              nextStreak = 1;
             }
-            return updated.streak;
           }
 
-          return freshProfile.streak;
+          // 4. Cập nhật lên Supabase profiles
+          let updatedProfile: { streak: number; last_streak_date?: string | null } | null = null;
+          try {
+            const { data: updated, error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                streak: nextStreak,
+                last_streak_date: today,
+              })
+              .eq('id', String(userId))
+              .select('streak, last_streak_date')
+              .maybeSingle();
+
+            if (!updateError && updated) {
+              updatedProfile = updated;
+            } else if (updateError) {
+              console.warn('Streak update with last_streak_date failed, trying fallback:', updateError);
+              const { data: fallbackUpdated } = await supabase
+                .from('profiles')
+                .update({ streak: nextStreak })
+                .eq('id', String(userId))
+                .select('streak')
+                .maybeSingle();
+              if (fallbackUpdated) {
+                updatedProfile = { streak: fallbackUpdated.streak, last_streak_date: today };
+              }
+            }
+          } catch (dbErr) {
+            console.warn('Database streak update exception:', dbErr);
+          }
+
+          const finalStreak = updatedProfile?.streak ?? nextStreak;
+
+          // 5. Luôn cập nhật state giao diện và thông báo ăn mừng
+          set({
+            streakDays: finalStreak,
+            lastStreakDate: today,
+          });
+
+          if (finalStreak > currentStreak || currentStreak === 0) {
+            get().addToast(`🔥 Điểm danh ngày mới! Chuỗi kỷ luật đạt ${finalStreak}N`, 'success');
+            playSoundEffect('rankup', get().soundEnabled);
+          }
+
+          // Đồng bộ snapshot state lên user_states để lưu trữ bền vững
+          get().syncToCloud(true);
+
+          return finalStreak;
         } catch (err) {
           console.error('Streak sync error:', err);
           return null;
@@ -3729,6 +3770,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           coins: state.coins,
           completedTotal: state.completedTotal,
           streakDays: state.streakDays,
+          lastStreakDate: state.lastStreakDate || '',
+          lastActiveDate: state.lastActiveDate || getTodayString(),
           dailyCompletedCount: state.dailyCompletedCount,
           dailyBossCompletedCount: state.dailyBossCompletedCount,
           tasks: state.tasks,
@@ -3772,6 +3815,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const res = await restoreUserStateFromCloud(cleanId);
         if (res.success && res.state) {
           const s = res.state;
+          const today = getLocalDateStr();
+          const savedActiveDate = s.lastActiveDate || '';
+          const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
+
           setStoredHunterId(cleanId);
           set({
             hunterId: cleanId,
@@ -3782,8 +3829,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             coins: typeof s.coins === 'number' ? s.coins : get().coins,
             completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : get().completedTotal,
             streakDays: typeof s.streakDays === 'number' ? s.streakDays : get().streakDays,
-            dailyCompletedCount: s.dailyCompletedCount || 0,
-            dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
+            dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount || 0),
+            dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount || 0),
+            lastActiveDate: isCloudNewDay ? today : savedActiveDate,
+            lastStreakDate: s.lastStreakDate || '',
             tasks: Array.isArray(s.tasks) ? s.tasks : get().tasks,
             shopItems: Array.isArray(s.shopItems) ? s.shopItems : get().shopItems,
             inventory: Array.isArray(s.inventory) ? s.inventory : get().inventory,
@@ -3799,6 +3848,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               second: '2-digit',
             }),
           });
+          get().checkDailyReset();
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(
             `🎉 Đã khôi phục thành công dữ liệu của "${s.playerName || cleanId}"!`,
@@ -3922,6 +3972,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                       ? Boolean(s.hasSeenTutorial)
                       : isVeteranPlayer;
 
+              const today = getLocalDateStr();
+              const savedActiveDate = s.lastActiveDate || '';
+              const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
+
               set({
                 currentUser: { id: user.id, email: user.email || '', name: hunterName },
                 hunterId,
@@ -3949,8 +4003,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 streakDays: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
                   ? 0
                   : (profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0)),
-                dailyCompletedCount: s.dailyCompletedCount || 0,
-                dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
+                dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount || 0),
+                dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount || 0),
+                lastActiveDate: isCloudNewDay ? today : savedActiveDate,
+                lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
                 shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
                 inventory: Array.isArray(s.inventory) ? s.inventory : [],
@@ -3967,6 +4023,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 }),
                 authLoading: false,
               });
+
+              get().checkDailyReset();
             } else {
               // Brand new user profile in auth but no user_states: initialize clean
               const starterTasks: Task[] = [
@@ -4343,6 +4401,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                     ? Boolean(s.hasSeenTutorial)
                     : isVeteranPlayer;
 
+            const today = getLocalDateStr();
+            const savedActiveDate = s.lastActiveDate || '';
+            const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
+
             set({
               currentUser: { id: userId, email: cleanEmail, name: hunterName },
               hunterId: userId,
@@ -4370,8 +4432,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               streakDays: (s as any)?.resetAt && (!profile?.updated_at || new Date((s as any).resetAt).getTime() >= new Date(profile.updated_at).getTime() - 2000)
                 ? 0
                 : (profile?.streak !== undefined ? profile.streak : (typeof s.streakDays === 'number' ? s.streakDays : 0)),
-              dailyCompletedCount: s.dailyCompletedCount || 0,
-              dailyBossCompletedCount: s.dailyBossCompletedCount || 0,
+              dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount || 0),
+              dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount || 0),
+              lastActiveDate: isCloudNewDay ? today : savedActiveDate,
+              lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
               shopItems: Array.isArray(s.shopItems) ? s.shopItems : INITIAL_SHOP_ITEMS,
               inventory: Array.isArray(s.inventory) ? s.inventory : [],
@@ -4388,6 +4452,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 minute: '2-digit',
               }),
             });
+
+            get().checkDailyReset();
           } else {
             // First time login with no user_states:
             const starterTasks: Task[] = [

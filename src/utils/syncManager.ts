@@ -30,6 +30,7 @@ export interface UserStateCloud {
   completedTotal: number;
   streakDays: number;
   lastStreakDate?: string;
+  lastActiveDate?: string;
   dailyCompletedCount: number;
   hasSeenTutorial?: boolean;
   dailyBossCompletedCount: number;
