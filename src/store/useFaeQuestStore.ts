@@ -2327,8 +2327,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
 
           // KIỂM TRA 3: Ngưỡng Thể Lực Ngày (Daily Reward Cap: tối đa 20 nhiệm vụ nhận thưởng/ngày)
+          const actualCompletedToday = state.tasks.filter(
+            (t) => t.completed && t.completedAt && getLocalDateStr(new Date(t.completedAt)) === today
+          ).length;
           const isNewDay = state.lastActiveDate !== today;
-          const effectiveDailyCount = isNewDay ? 0 : (state.dailyCompletedCount || 0);
+          const effectiveDailyCount = isNewDay
+            ? 0
+            : Math.min(state.dailyCompletedCount || 0, actualCompletedToday);
           const isDailyCapReached = effectiveDailyCount >= 20;
 
           const diff = DIFFICULTIES[task.difficulty] || DIFFICULTIES.medium;
@@ -3576,10 +3581,23 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const yesterday = getYesterdayString();
         const isNewDay = state.lastActiveDate !== today;
 
+        // Số nhiệm vụ thực tế đã hoàn thành trong ngày hôm nay
+        const actualCompletedToday = state.tasks.filter(
+          (t) => t.completed && t.completedAt && getLocalDateStr(new Date(t.completedAt)) === today
+        ).length;
+
+        const actualBossCompletedToday = state.tasks.filter(
+          (t) => t.completed && t.difficulty === 'boss' && t.completedAt && getLocalDateStr(new Date(t.completedAt)) === today
+        ).length;
+
         // Kiểm tra xem có nhiệm vụ nào hoàn thành từ những ngày trước không
         const hasTasksFromPreviousDays = state.tasks.some(
           (t) => t.completed && (!t.completedAt || getLocalDateStr(new Date(t.completedAt)) < today)
         );
+
+        // Bộ đếm dailyCompletedCount bị sai lệch (ví dụ mang giá trị 20 từ hôm qua sang, trong khi hôm nay mới hoàn thành ít hơn)
+        const isDailyCountDesynced = (state.dailyCompletedCount || 0) > actualCompletedToday;
+        const isDailyBossDesynced = (state.dailyBossCompletedCount || 0) > actualBossCompletedToday;
 
         // Tự động kiểm tra và reset toàn bộ bộ đếm ngày nếu hôm qua không bấm điểm danh
         const updatedQuests = state.systemQuests.map((q) => {
@@ -3596,8 +3614,8 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           return q;
         });
 
-        if (isNewDay || hasTasksFromPreviousDays) {
-          // Ngày mới hoặc có nhiệm vụ ngày trước chưa reset!
+        if (isNewDay || hasTasksFromPreviousDays || isDailyCountDesynced || isDailyBossDesynced) {
+          // Ngày mới hoặc có nhiệm vụ ngày trước chưa reset, hoặc bộ đếm bị lệch!
           const updatedTasks = state.tasks.map((task) => {
             const isCompletedBeforeToday =
               task.completed &&
@@ -3619,11 +3637,19 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             };
           });
 
+          const recalculatedTodayCount = updatedTasks.filter(
+            (t) => t.completed && t.completedAt && getLocalDateStr(new Date(t.completedAt)) === today
+          ).length;
+
+          const recalculatedBossCount = updatedTasks.filter(
+            (t) => t.completed && t.difficulty === 'boss' && t.completedAt && getLocalDateStr(new Date(t.completedAt)) === today
+          ).length;
+
           set({
             tasks: updatedTasks,
             systemQuests: updatedQuests,
-            dailyCompletedCount: 0,
-            dailyBossCompletedCount: 0,
+            dailyCompletedCount: recalculatedTodayCount,
+            dailyBossCompletedCount: recalculatedBossCount,
             lastActiveDate: today,
           });
 
