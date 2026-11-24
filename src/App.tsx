@@ -33,6 +33,7 @@ import { SeasonAnnouncementsModal } from './components/modals/SeasonAnnouncement
 import { SeasonResetModal } from './components/modals/SeasonResetModal';
 import { AdminPortalHeader, AdminPortalView } from './components/admin/AdminPortalView';
 import { ChillyHealingView } from './components/chilly/ChillyHealingView';
+import { ChillyGlobalAudioHost } from './components/chilly/ChillyGlobalAudioHost';
 import { BannedScreen } from './components/auth/BannedScreen';
 import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
@@ -378,6 +379,7 @@ export const App: React.FC = () => {
       <RewardPopupOverlay />
       <RankUpModal />
       <RankRoadmapModal />
+      <ChillyGlobalAudioHost />
       <AddShopItemModal />
       <RenameModal />
       <ResetModal />

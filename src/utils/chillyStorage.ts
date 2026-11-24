@@ -178,6 +178,33 @@ export async function saveCustomUrlTrack(title: string, artist: string, url: str
 }
 
 /**
+ * Lưu một bài hát bất kỳ (Audius, YouTube, URL, Local) vào IndexedDB
+ */
+export async function saveTrackToStorage(track: ChillyTrack): Promise<void> {
+  const db = await openChillyDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_TRACKS, 'readwrite');
+    const store = tx.objectStore(STORE_TRACKS);
+    const record = {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      src: track.src || '',
+      url: track.src || '',
+      coverUrl: track.coverUrl,
+      sourceType: track.sourceType || 'url',
+      youtubeVideoId: track.youtubeVideoId,
+      audiusTrackId: track.audiusTrackId,
+      duration: track.duration,
+      addedAt: track.addedAt || Date.now(),
+    };
+    const req = store.put(record);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
  * Đọc tất cả bài hát lưu trữ trong IndexedDB
  */
 export async function getAllStoredTracks(): Promise<ChillyTrack[]> {
@@ -190,7 +217,7 @@ export async function getAllStoredTracks(): Promise<ChillyTrack[]> {
       req.onsuccess = () => {
         const records = req.result || [];
         const tracks: ChillyTrack[] = records.map((rec: any) => {
-          let src = rec.url;
+          let src = rec.src || rec.url;
           if (rec.blob) {
             src = URL.createObjectURL(rec.blob);
           }
@@ -201,6 +228,10 @@ export async function getAllStoredTracks(): Promise<ChillyTrack[]> {
             src,
             blobId: rec.blob ? rec.id : undefined,
             coverUrl: rec.coverUrl,
+            sourceType: rec.sourceType || (rec.blob ? 'local' : rec.youtubeVideoId ? 'youtube' : 'url'),
+            youtubeVideoId: rec.youtubeVideoId,
+            audiusTrackId: rec.audiusTrackId,
+            duration: rec.duration,
             addedAt: rec.addedAt || 0,
           };
         });

@@ -124,18 +124,26 @@ export interface PixelScene {
   icon: string;
 }
 
+export type ChillyTrackSource = 'audius' | 'youtube' | 'local' | 'url' | 'synth';
+
 export interface ChillyTrack {
   id: string;
   title: string;
   artist: string;
-  src?: string; // URL audio or object URL
+  src?: string; // URL audio or object URL or stream URL
   blobId?: string; // IndexedDB key if stored locally
   duration?: number;
   isBuiltInSynth?: boolean;
   synthType?: 'ambient_pad' | 'rain_lofi';
   coverUrl?: string;
+  sourceType?: ChillyTrackSource;
+  youtubeVideoId?: string;
+  audiusTrackId?: string;
   addedAt?: number;
 }
+
+export type ChillySharpness = 'none' | 'soft' | 'hd';
+export type ChillyFrameMode = 'cover' | 'contain' | 'pixel';
 
 export interface CategoryStatRecord {
   completed: number;
