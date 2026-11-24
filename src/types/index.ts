@@ -111,7 +111,31 @@ export type ActiveTab =
   | 'chronicles'
   | 'analytics'
   | 'profile'
-  | 'admin';
+  | 'admin'
+  | 'chilly-healing';
+
+export type PixelSceneId = 'default' | 'rain' | 'fireflies' | 'sunset';
+
+export interface PixelScene {
+  id: PixelSceneId;
+  name: string;
+  tagline: string;
+  type: 'custom_image' | 'canvas';
+  icon: string;
+}
+
+export interface ChillyTrack {
+  id: string;
+  title: string;
+  artist: string;
+  src?: string; // URL audio or object URL
+  blobId?: string; // IndexedDB key if stored locally
+  duration?: number;
+  isBuiltInSynth?: boolean;
+  synthType?: 'ambient_pad' | 'rain_lofi';
+  coverUrl?: string;
+  addedAt?: number;
+}
 
 export interface CategoryStatRecord {
   completed: number;

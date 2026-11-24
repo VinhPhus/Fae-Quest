@@ -32,6 +32,7 @@ import { RivalProfileModal } from './components/modals/RivalProfileModal';
 import { SeasonAnnouncementsModal } from './components/modals/SeasonAnnouncementsModal';
 import { SeasonResetModal } from './components/modals/SeasonResetModal';
 import { AdminPortalHeader, AdminPortalView } from './components/admin/AdminPortalView';
+import { ChillyHealingView } from './components/chilly/ChillyHealingView';
 import { BannedScreen } from './components/auth/BannedScreen';
 import { Toast } from './components/ui/Toast';
 import { FloatingReward } from './components/ui/FloatingReward';
@@ -348,6 +349,13 @@ export const App: React.FC = () => {
                 {activeTab === 'analytics' && (
                   <section>
                     <ProductivityAnalytics />
+                  </section>
+                )}
+
+                {/* Tab: Chilly Healing Module */}
+                {activeTab === 'chilly-healing' && (
+                  <section>
+                    <ChillyHealingView />
                   </section>
                 )}
 

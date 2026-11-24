@@ -1,0 +1,381 @@
+/* ==========================================================================
+   Lucian UX/UI Prompt #474 — Chilly Music Player (Dark Mode / FaeQuest Theme)
+   ========================================================================== */
+
+.u474-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  font-family: inherit;
+}
+
+/* 1. Vầng sáng hít thở phía sau (.u474-gl) */
+.u474-gl {
+  position: absolute;
+  inset: -12px;
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 18% 28%, #FF8A5B 0%, rgba(255, 138, 91, 0) 58%),
+    radial-gradient(circle at 82% 38%, #F2508C 0%, rgba(242, 80, 140, 0) 58%),
+    radial-gradient(circle at 50% 82%, #7B4DD8 0%, rgba(123, 77, 216, 0) 62%);
+  filter: blur(30px);
+  opacity: 0.25;
+  pointer-events: none;
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+
+.u474-wrap.is-play .u474-gl {
+  opacity: 0.72;
+  animation: u474-breathe 3.2s infinite ease-in-out;
+}
+
+@keyframes u474-breathe {
+  0% {
+    transform: scale(0.96) rotate(-2deg);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.08) rotate(3deg);
+    opacity: 0.82;
+  }
+  100% {
+    transform: scale(0.96) rotate(-2deg);
+    opacity: 0.65;
+  }
+}
+
+/* 2. Thẻ kính mờ (.u474-c) */
+.u474-c {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border-radius: 24px;
+  backdrop-filter: blur(22px) saturate(1.7);
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  background: rgba(11, 23, 32, 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 20px 40px -15px rgba(0, 0, 0, 0.75);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 3. Khối trên (.u474-top) */
+.u474-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* Ảnh bìa 64x64 (.u474-art) */
+.u474-art {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  background: #06141B;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 18px -4px rgba(0, 0, 0, 0.6);
+  transform: scale(0.9);
+  transition: transform 0.45s cubic-bezier(0.34, 1.7, 0.5, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.u474-wrap.is-play .u474-art {
+  transform: scale(1);
+}
+
+.u474-art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Thông tin bài hát */
+.u474-inf {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.u474-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.u474-tit {
+  font-size: 14px;
+  font-weight: 700;
+  color: #CCD0CF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+/* Thanh sóng nhạc 3 cột (.u474-eq) */
+.u474-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 12px;
+  width: 12px;
+  flex-shrink: 0;
+  opacity: 0.35;
+  transition: opacity 0.3s ease;
+}
+
+.u474-wrap.is-play .u474-eq {
+  opacity: 1;
+}
+
+.u474-eq span {
+  width: 2.5px;
+  border-radius: 2px;
+  background: #7EE8C0;
+  display: block;
+  height: 3px;
+  transition: height 0.2s ease;
+}
+
+.u474-wrap.is-play .u474-eq span:nth-child(1) {
+  animation: u474-eq-1 0.7s infinite alternate ease-in-out;
+}
+.u474-wrap.is-play .u474-eq span:nth-child(2) {
+  animation: u474-eq-2 0.5s infinite alternate ease-in-out 0.15s;
+}
+.u474-wrap.is-play .u474-eq span:nth-child(3) {
+  animation: u474-eq-3 0.8s infinite alternate ease-in-out 0.3s;
+}
+
+@keyframes u474-eq-1 {
+  0% { height: 3px; }
+  100% { height: 11px; }
+}
+@keyframes u474-eq-2 {
+  0% { height: 4px; }
+  100% { height: 12px; }
+}
+@keyframes u474-eq-3 {
+  0% { height: 2px; }
+  100% { height: 9px; }
+}
+
+.u474-art-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #9BA8AB;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 4. Nút Play/Pause biến hình (.u474-pl & .u474-ic) */
+.u474-pl {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.7, 0.5, 1), background-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.u474-pl:hover {
+  transform: scale(1.08);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%);
+  box-shadow: 0 6px 18px rgba(126, 232, 192, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.u474-pl:active {
+  transform: scale(0.95);
+}
+
+.u474-ic {
+  width: 18px;
+  height: 18px;
+  position: relative;
+}
+
+.u474-ic i {
+  position: absolute;
+  inset: 0;
+  background: #CCD0CF;
+  transition: clip-path 0.32s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s;
+}
+
+.u474-pl:hover .u474-ic i {
+  background: #7EE8C0;
+}
+
+/* Trạng thái PAUSE (khi KHÔNG phát): 2 mảnh ghép lại thành tam giác Play */
+.u474-ic i:first-child {
+  clip-path: polygon(25% 15%, 55% 32.5%, 55% 67.5%, 25% 85%);
+}
+.u474-ic i:last-child {
+  clip-path: polygon(55% 32.5%, 85% 50%, 85% 50%, 55% 67.5%);
+}
+
+/* Trạng thái PLAY (khi ĐANG phát): 2 mảnh tách ra thành 2 cột Pause */
+.u474-wrap.is-play .u474-ic i:first-child {
+  clip-path: polygon(20% 15%, 42% 15%, 42% 85%, 20% 85%);
+}
+.u474-wrap.is-play .u474-ic i:last-child {
+  clip-path: polygon(58% 15%, 80% 15%, 80% 85%, 58% 85%);
+}
+
+/* 5. Thanh tua lò xo (.u474-sk) */
+.u474-sk-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.u474-sk {
+  position: relative;
+  width: 100%;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.u474-tr {
+  width: 100%;
+  height: 4px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: visible;
+  position: relative;
+  transition: height 0.22s cubic-bezier(0.34, 1.5, 0.64, 1), background-color 0.2s;
+}
+
+.u474-sk:hover .u474-tr {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.u474-sk.is-dragging .u474-tr {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.u474-fl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #FF8A5B 0%, #F2508C 50%, #7EE8C0 100%);
+  width: 0%;
+  box-shadow: 0 0 10px rgba(126, 232, 192, 0.5);
+  pointer-events: none;
+}
+
+.u474-th {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid #06141B;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 8px rgba(126, 232, 192, 0.8);
+  margin-top: -7px;
+  margin-left: -7px;
+  transform: scale(0);
+  transition: transform 0.25s cubic-bezier(0.34, 1.7, 0.5, 1);
+  pointer-events: none;
+}
+
+.u474-sk:hover .u474-th,
+.u474-sk.is-dragging .u474-th {
+  transform: scale(1.25);
+}
+
+.u474-tm {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9BA8AB;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* 6. Hàng điều khiển phụ tinh tế */
+.u474-subcontrols {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.u474-btn-sub {
+  background: none;
+  border: none;
+  color: #9BA8AB;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background-color 0.2s, transform 0.15s;
+}
+
+.u474-btn-sub:hover {
+  color: #CCD0CF;
+  background-color: rgba(255, 255, 255, 0.08);
+  transform: scale(1.08);
+}
+
+.u474-btn-sub:active {
+  transform: scale(0.92);
+}
+
+.u474-btn-sub.is-active {
+  color: #7EE8C0;
+  background-color: rgba(126, 232, 192, 0.14);
+}
+
+/* 7. Ngăn kéo danh sách phát (Playlist Drawer) */
+.u474-drawer {
+  width: 100%;
+  margin-top: 10px;
+  border-radius: 20px;
+  background: rgba(11, 23, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  padding: 14px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}

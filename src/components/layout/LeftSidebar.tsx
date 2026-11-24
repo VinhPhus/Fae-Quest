@@ -20,6 +20,7 @@ import {
   Mail,
   User,
   Award,
+  HeartPulse,
 } from 'lucide-react';
 
 export const LeftSidebar: React.FC = () => {
@@ -94,6 +95,20 @@ export const LeftSidebar: React.FC = () => {
       mobileLabel: 'Cửa Hàng',
       icon: <ShoppingBag className="w-5 h-5 shrink-0" />,
       badge: validUnusedInventoryCount > 0 ? validUnusedInventoryCount : undefined,
+    },
+    {
+      id: 'chilly-healing',
+      label: 'Chilly Healing',
+      mobileLabel: 'Healing',
+      icon: (
+        <HeartPulse
+          className={`w-5 h-5 shrink-0 transition-all duration-300 ${
+            activeTab === 'chilly-healing'
+              ? 'text-[#7EE8C0] drop-shadow-[0_0_8px_rgba(126,232,192,0.85)] scale-110'
+              : 'hover:text-[#7EE8C0]'
+          }`}
+        />
+      ),
     },
     {
       id: 'chronicles',
