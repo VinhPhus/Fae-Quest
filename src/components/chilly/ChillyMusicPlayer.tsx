@@ -27,6 +27,7 @@ import {
   Sparkles,
   Play,
   Check,
+  ChevronDown,
 } from 'lucide-react';
 
 const YouTubeIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -44,7 +45,17 @@ const SUGGESTIONS = [
   'Fantasy Tavern',
 ];
 
-export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact = false }) => {
+interface ChillyMusicPlayerProps {
+  isCompact?: boolean;
+  isRotatedLandscape?: boolean;
+  onCollapseToPill?: () => void;
+}
+
+export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
+  isCompact = false,
+  isRotatedLandscape = false,
+  onCollapseToPill,
+}) => {
   const {
     playlist,
     currentTrackIndex,
@@ -113,6 +124,13 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
   const progressPercent = duration > 0 ? (displayTime / duration) * 100 : 0;
 
   // ================= XỬ LÝ THANH TUA LÒ XO (SEEK BAR) =================
+  const calcSeekRatio = (clientX: number, clientY: number, rect: DOMRect) => {
+    if (isRotatedLandscape) {
+      return rect.height > 0 ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)) : 0;
+    }
+    return rect.width > 0 ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0;
+  };
+
   const handleSeekPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = seekBarRef.current;
     if (!el) return;
@@ -121,23 +139,21 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
     setIsSeeking(true);
 
     const rect = el.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const newTime = pos * duration;
-    setDragTime(newTime);
+    const pos = calcSeekRatio(e.clientX, e.clientY, rect);
+    setDragTime(pos * duration);
   };
 
   const handleSeekPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingSeek || !seekBarRef.current) return;
     const rect = seekBarRef.current.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const newTime = pos * duration;
-    setDragTime(newTime);
+    const pos = calcSeekRatio(e.clientX, e.clientY, rect);
+    setDragTime(pos * duration);
   };
 
   const handleSeekPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingSeek || !seekBarRef.current) return;
     const rect = seekBarRef.current.getBoundingClientRect();
-    const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const pos = calcSeekRatio(e.clientX, e.clientY, rect);
     const newTime = pos * duration;
 
     seekTo(newTime);
@@ -145,7 +161,7 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
     setIsSeeking(false);
     try {
       seekBarRef.current.releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch { }
   };
 
   // ================= TAB 1: TÌM NHẠC AUDIUS API =================
@@ -297,7 +313,7 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
 
   return (
     <div
-      className={`u474-wrap ${isPlaying ? 'is-play' : ''} ${isCompact ? 'scale-90 sm:scale-100' : ''}`}
+      className={`u474-wrap ${isPlaying ? 'is-play' : ''} ${isCompact ? 'u474-compact' : ''}`}
       data-theme="dark"
     >
       {/* Ẩn file input upload nhạc */}
@@ -431,19 +447,18 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
               type="button"
               className={`u474-btn-sub ${repeatMode !== 'off' ? 'is-active' : ''}`}
               onClick={cycleRepeatMode}
-              title={`Chế độ lặp: ${
-                repeatMode === 'all'
-                  ? 'Tất cả danh sách'
-                  : repeatMode === 'one'
+              title={`Chế độ lặp: ${repeatMode === 'all'
+                ? 'Tất cả danh sách'
+                : repeatMode === 'one'
                   ? 'Lặp lại 1 bài'
                   : 'Không lặp'
-              }`}
+                }`}
             >
               {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {/* Âm lượng */}
             <button
               type="button"
@@ -464,6 +479,18 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
               <ListMusic className="w-3.5 h-3.5" />
               <span className="text-[11px] font-bold">Playlist ({playlist.length})</span>
             </button>
+
+            {/* Nút thu gọn thành viên thuốc (khi ở màn ngang nhỏ) */}
+            {onCollapseToPill && (
+              <button
+                type="button"
+                className="u474-btn-sub"
+                onClick={onCollapseToPill}
+                title="Thu gọn thành nút nhạc mini"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -476,11 +503,10 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
             <button
               type="button"
               onClick={() => setActiveDrawerTab('search')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeDrawerTab === 'search'
-                  ? 'bg-[#253745] text-[#7EE8C0] shadow-sm'
-                  : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
-              }`}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeDrawerTab === 'search'
+                ? 'bg-[#253745] text-[#7EE8C0] shadow-sm'
+                : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
             >
               <Search className="w-3.5 h-3.5" />
               <span>Tìm Nhạc</span>
@@ -489,11 +515,10 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
             <button
               type="button"
               onClick={() => setActiveDrawerTab('youtube')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeDrawerTab === 'youtube'
-                  ? 'bg-[#253745] text-[#7EE8C0] shadow-sm'
-                  : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
-              }`}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeDrawerTab === 'youtube'
+                ? 'bg-[#253745] text-[#7EE8C0] shadow-sm'
+                : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
             >
               <YouTubeIcon className="w-3.5 h-3.5 text-rose-400" />
               <span>YouTube / File</span>
@@ -502,11 +527,10 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
             <button
               type="button"
               onClick={() => setActiveDrawerTab('playlist')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                activeDrawerTab === 'playlist'
-                  ? 'bg-[#253745] text-[#7EE8C0] shadow-sm'
-                  : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
-              }`}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${activeDrawerTab === 'playlist'
+                ? 'bg-[#253745] text-[#7EE8C0] shadow-sm'
+                : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
+                }`}
             >
               <Heart className="w-3.5 h-3.5 text-pink-400" />
               <span>Yêu Thích ({playlist.length})</span>
@@ -714,11 +738,10 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
                   <div
                     key={t.id}
                     onClick={() => playTrack(idx)}
-                    className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition cursor-pointer group ${
-                      isSelected
-                        ? 'bg-[#253745] text-[#CCD0CF] font-bold border border-[#7EE8C0]/40 shadow-sm'
-                        : 'text-[#9BA8AB] hover:bg-[#11212D] hover:text-[#CCD0CF]'
-                    }`}
+                    className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition cursor-pointer group ${isSelected
+                      ? 'bg-[#253745] text-[#CCD0CF] font-bold border border-[#7EE8C0]/40 shadow-sm'
+                      : 'text-[#9BA8AB] hover:bg-[#11212D] hover:text-[#CCD0CF]'
+                      }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       {t.coverUrl ? (
@@ -734,9 +757,8 @@ export const ChillyMusicPlayer: React.FC<{ isCompact?: boolean }> = ({ isCompact
                       )}
                       <div className="min-w-0 truncate">
                         <div
-                          className={`truncate text-xs font-semibold ${
-                            isSelected ? 'text-[#7EE8C0]' : 'text-[#CCD0CF]'
-                          }`}
+                          className={`truncate text-xs font-semibold ${isSelected ? 'text-[#7EE8C0]' : 'text-[#CCD0CF]'
+                            }`}
                         >
                           {t.title}
                         </div>

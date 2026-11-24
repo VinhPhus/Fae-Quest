@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RainySanctuaryCanvas } from './RainySanctuaryCanvas';
 import { ChillySharpness, ChillyFrameMode } from '../../../types';
+import { useChillyAudioStore } from '../../../store/useChillyAudioStore';
 
 interface DefaultPixelArtViewProps {
   customArtUrl?: string | null;
@@ -9,12 +10,49 @@ interface DefaultPixelArtViewProps {
   frameMode?: ChillyFrameMode;
 }
 
+interface FloatingMoteSpec {
+  id: number;
+  left: string;
+  top: string;
+  size: number;
+  isWarm: boolean;
+  duration: string;
+  delay: string;
+  dx: string;
+  dy: string;
+}
+
+// 20 hạt sáng đom đóm cố định (GPU-accelerated translate3d + opacity)
+const FLOATING_MOTES: FloatingMoteSpec[] = Array.from({ length: 20 }, (_, i) => {
+  const isWarm = i % 2 === 0;
+  const size = 2 + (i % 4); // 2px -> 5px
+  const leftPct = ((i * 37 + 11) % 92) + 4;
+  const topPct = ((i * 53 + 17) % 82) + 12;
+  const duration = 11 + (i % 7) * 1.6;
+  const delay = -(i * 1.45);
+  const dx = ((i % 5) - 2) * 18 + 14; // bay chéo nhẹ
+  const dy = -(70 + (i % 4) * 28); // trôi lên trên
+
+  return {
+    id: i,
+    left: `${leftPct}%`,
+    top: `${topPct}%`,
+    size,
+    isWarm,
+    duration: `${duration.toFixed(1)}s`,
+    delay: `${delay.toFixed(2)}s`,
+    dx: `${dx}px`,
+    dy: `${dy}px`,
+  };
+});
+
 export const DefaultPixelArtView: React.FC<DefaultPixelArtViewProps> = ({
   customArtUrl,
   isFullscreen = false,
   sharpness = 'none',
   frameMode = 'cover',
 }) => {
+  const isPlaying = useChillyAudioStore((s) => s.isPlaying);
   const [imgSrc, setImgSrc] = useState<string>('/pixel-art/default-healing.png');
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -93,27 +131,77 @@ export const DefaultPixelArtView: React.FC<DefaultPixelArtViewProps> = ({
       {/* Hiển thị Khung hình: 'contain' (Nét gốc) vs 'cover'/'pixel' (Tràn viền) */}
       {frameMode === 'contain' ? (
         <>
-          {/* Lớp nền mờ 50% cùng ảnh đó để tạo chiều sâu ambient, chống vỡ hạt 100% */}
+          {/* Lớp 1: Nền Ambilight Breathing chuyển động GPU êm ái (KHÔNG animate blur) */}
           <img
             src={imgSrc}
             alt=""
             aria-hidden="true"
-            className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-50 scale-105 pointer-events-none select-none"
+            className="absolute inset-0 w-full h-full object-cover blur-3xl opacity-55 brightness-75 pointer-events-none select-none chilly-ambient-bg z-0"
           />
-          {/* Ảnh gốc hiển thị ở tâm với tỷ lệ nguyên bản, áp dụng bộ lọc làm nét */}
-          <img
-            src={imgSrc}
-            alt="Healing Scene"
-            onLoad={() => setIsLoaded(true)}
-            onError={handleImageError}
-            className={`relative z-10 max-w-full max-h-full object-contain drop-shadow-[0_15px_40px_rgba(0,0,0,0.85)] transition-all duration-500 ease-in-out ${
-              isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+
+          {/* Lớp 2: 20 hạt sáng / đom đóm lơ lửng giữa nền mờ và bức ảnh chính */}
+          <div
+            aria-hidden="true"
+            className={`absolute inset-0 overflow-hidden pointer-events-none z-[5] transition-opacity duration-700 ${
+              isPlaying ? 'opacity-100' : 'opacity-65'
             }`}
-            style={{
-              filter: filterStyle,
-              imageRendering: imageRenderingStyle,
-            }}
-          />
+          >
+            {FLOATING_MOTES.map((mote) => {
+              const bgColor = mote.isWarm
+                ? isPlaying
+                  ? 'rgba(253, 211, 77, 0.92)'
+                  : 'rgba(253, 186, 116, 0.72)'
+                : isPlaying
+                ? 'rgba(126, 232, 192, 0.88)'
+                : 'rgba(94, 234, 212, 0.65)';
+              const glow = mote.isWarm
+                ? isPlaying
+                  ? '0 0 10px 2px rgba(251, 191, 36, 0.65)'
+                  : '0 0 6px 1px rgba(251, 191, 36, 0.35)'
+                : isPlaying
+                ? '0 0 10px 2px rgba(126, 232, 192, 0.6)'
+                : '0 0 6px 1px rgba(126, 232, 192, 0.32)';
+
+              return (
+                <span
+                  key={mote.id}
+                  className="chilly-mote"
+                  style={
+                    {
+                      left: mote.left,
+                      top: mote.top,
+                      width: `${mote.size}px`,
+                      height: `${mote.size}px`,
+                      backgroundColor: bgColor,
+                      boxShadow: glow,
+                      '--mote-duration': mote.duration,
+                      '--mote-delay': mote.delay,
+                      '--mote-dx': mote.dx,
+                      '--mote-dy': mote.dy,
+                      '--mote-peak-opacity': isPlaying ? '0.88' : '0.58',
+                    } as React.CSSProperties
+                  }
+                />
+              );
+            })}
+          </div>
+
+          {/* Lớp 3: Ảnh gốc nổi khối ở giữa với góc bo tinh tế, viền sáng mảnh & đổ bóng sâu */}
+          <div className="relative z-10 w-full h-full p-2 sm:p-4 flex items-center justify-center pointer-events-none">
+            <img
+              src={imgSrc}
+              alt="Healing Scene"
+              onLoad={() => setIsLoaded(true)}
+              onError={handleImageError}
+              className={`max-w-full max-h-full object-contain rounded-xl ring-1 ring-white/15 shadow-[0_24px_80px_rgba(0,0,0,0.65)] transition-all duration-500 ease-in-out ${
+                isLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}
+              style={{
+                filter: filterStyle,
+                imageRendering: imageRenderingStyle,
+              }}
+            />
+          </div>
         </>
       ) : (
         /* Tràn viền (object-cover) mượt mà hoặc pixel */
@@ -132,12 +220,9 @@ export const DefaultPixelArtView: React.FC<DefaultPixelArtViewProps> = ({
         />
       )}
 
-      {/* Lớp hạt ambient dust / ánh sáng tàn lửa bồng bềnh */}
+      {/* Lớp vignette nhẹ tạo chiều sâu tối */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_60%,transparent_50%,rgba(6,20,27,0.35)_100%)]" />
-        <div className="absolute bottom-10 left-1/3 w-1.5 h-1.5 rounded-full bg-amber-400/60 blur-[0.5px] animate-pulse" />
-        <div className="absolute bottom-20 left-1/2 w-1 h-1 rounded-full bg-orange-400/50 animate-ping" />
-        <div className="absolute bottom-14 left-2/5 w-1 h-1 rounded-full bg-amber-300/70" />
       </div>
     </div>
   );

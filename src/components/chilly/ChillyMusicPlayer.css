@@ -258,11 +258,20 @@
 .u474-sk {
   position: relative;
   width: 100%;
-  height: 20px;
+  height: 28px;
   display: flex;
   align-items: center;
   cursor: pointer;
   touch-action: none;
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .u474-sk {
+    height: 36px;
+  }
+  .u474-c {
+    padding: 14px 16px;
+  }
 }
 
 .u474-tr {
@@ -344,8 +353,10 @@
   border: none;
   color: #9BA8AB;
   cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -378,4 +389,46 @@
   padding: 14px;
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
   z-index: 2;
+}
+
+/* ==========================================================================
+   8. Ambilight Breathing Background & Floating Motes (GPU-Accelerated 60fps)
+   ========================================================================== */
+@keyframes chilly-ambient-drift {
+  0%, 100% {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.14);
+  }
+  50% {
+    transform: translate3d(1.5%, 1.5%, 0) scale(1.24);
+  }
+}
+
+.chilly-ambient-bg {
+  will-change: transform;
+  animation: chilly-ambient-drift 20s ease-in-out infinite;
+}
+
+@keyframes chilly-mote-float {
+  0% {
+    transform: translate3d(0, 12px, 0) scale(0.7);
+    opacity: 0;
+  }
+  20% {
+    opacity: var(--mote-peak-opacity, 0.75);
+  }
+  75% {
+    opacity: var(--mote-peak-opacity, 0.65);
+  }
+  100% {
+    transform: translate3d(var(--mote-dx, 32px), var(--mote-dy, -110px), 0) scale(1.15);
+    opacity: 0;
+  }
+}
+
+.chilly-mote {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: chilly-mote-float var(--mote-duration, 14s) ease-in-out var(--mote-delay, 0s) infinite;
 }
