@@ -29,7 +29,7 @@ export const TopBentoHeader: React.FC = () => {
   };
 
   return (
-    <header className="w-full flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3.5 pb-2">
+    <header className="w-full flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 md:gap-3.5 pb-1 md:pb-2">
       {/* Left: Personalized Greeting + Equipped Title Badge */}
       <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
         <div>
@@ -123,11 +123,11 @@ export const TopBentoHeader: React.FC = () => {
           id="tour-add-task"
           type="button"
           onClick={() => setCreateQuestOpen(true)}
-          className="px-3.5 sm:px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_20px_rgba(204,208,207,0.2)] active:scale-95 transition cursor-pointer shrink-0"
+          className="min-h-[40px] px-3.5 sm:px-4 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs flex items-center gap-1.5 shadow-[0_4px_20px_rgba(204,208,207,0.2)] active:scale-95 transition cursor-pointer shrink-0"
           title="Tạo Nhiệm Vụ Mới"
         >
           <Plus className="w-4 h-4 text-[#06141B] stroke-[3]" />
-          <span className="sm:hidden">Lệnh</span>
+          <span className="sm:hidden">Khắc Lệnh</span>
           <span className="hidden sm:inline">Khắc Lệnh Mới</span>
         </button>
       </div>

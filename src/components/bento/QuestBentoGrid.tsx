@@ -27,6 +27,7 @@ import {
 interface ColumnDef {
   id: TaskStatus;
   title: string;
+  mobileTitle: string;
   dotColor: string;
   emptyText: string;
 }
@@ -35,18 +36,21 @@ const KANBAN_COLUMNS: ColumnDef[] = [
   {
     id: 'todo',
     title: 'Chờ Thực Hiện',
+    mobileTitle: 'Chờ làm',
     dotColor: '#94A3B8',
     emptyText: 'Chưa có lệnh nào chờ thực hiện',
   },
   {
     id: 'in_progress',
     title: 'Đang Rèn Luyện',
+    mobileTitle: 'Đang làm',
     dotColor: '#F5B942',
     emptyText: 'Kéo thẻ hoặc bấm Bắt đầu / Focus',
   },
   {
     id: 'done',
     title: 'Đã Nghiệm Thu',
+    mobileTitle: 'Đã xong',
     dotColor: '#10B981',
     emptyText: 'Kéo thẻ vào đây để nhận EXP & Xu',
   },
@@ -435,18 +439,18 @@ export const QuestBentoGrid: React.FC = () => {
             </h4>
           </div>
 
-          {/* Nút Sửa & Xóa gọn khi hover trên Desktop, luôn rõ trên Mobile */}
-          <div className="flex items-center gap-1 shrink-0 opacity-90 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          {/* Nút Sửa & Xóa gọn khi hover trên Desktop, vùng chạm thoải mái trên Mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-1 shrink-0 opacity-95 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingTask(task);
               }}
-              className="w-7 h-7 rounded-lg bg-[#06141B]/80 hover:bg-white/10 border border-white/10 text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer"
+              className="w-9 h-9 lg:w-7 lg:h-7 rounded-xl lg:rounded-lg bg-[#06141B]/80 hover:bg-white/10 border border-white/10 text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer"
               title="Chỉnh sửa lệnh"
             >
-              <Pencil className="w-3 h-3" />
+              <Pencil className="w-3.5 h-3.5 lg:w-3 lg:h-3" />
             </button>
             <button
               type="button"
@@ -454,10 +458,10 @@ export const QuestBentoGrid: React.FC = () => {
                 e.stopPropagation();
                 deleteTask(task.id);
               }}
-              className="w-7 h-7 rounded-lg bg-[#06141B]/80 hover:bg-rose-950/70 border border-white/10 hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 flex items-center justify-center transition cursor-pointer"
+              className="w-9 h-9 lg:w-7 lg:h-7 rounded-xl lg:rounded-lg bg-[#06141B]/80 hover:bg-rose-950/70 border border-white/10 hover:border-rose-500/50 text-[#9BA8AB] hover:text-rose-300 flex items-center justify-center transition cursor-pointer"
               title="Xóa nhiệm vụ"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-3.5 h-3.5 lg:w-3 lg:h-3" />
             </button>
           </div>
         </div>
@@ -519,7 +523,7 @@ export const QuestBentoGrid: React.FC = () => {
                   e.stopPropagation();
                   void moveTaskStatus(task.id, 'in_progress');
                 }}
-                className="min-h-[34px] px-3 py-1 rounded-full bg-white/5 hover:bg-amber-500/15 border border-white/12 hover:border-amber-400/50 text-xs font-bold text-[#CCD0CF] hover:text-amber-300 inline-flex items-center gap-1 transition cursor-pointer active:scale-95"
+                className="min-h-[40px] lg:min-h-[34px] px-3.5 lg:px-3 py-1.5 lg:py-1 rounded-full bg-white/5 hover:bg-amber-500/15 border border-white/12 hover:border-amber-400/50 text-xs font-bold text-[#CCD0CF] hover:text-amber-300 inline-flex items-center gap-1 transition cursor-pointer active:scale-95"
               >
                 <span>Bắt đầu</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -531,7 +535,7 @@ export const QuestBentoGrid: React.FC = () => {
                   e.stopPropagation();
                   setActivePomodoroTaskId(task.id);
                 }}
-                className="min-h-[34px] px-3 py-1 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs inline-flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95"
+                className="min-h-[40px] lg:min-h-[34px] px-3.5 lg:px-3 py-1.5 lg:py-1 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs inline-flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95"
                 title={`Bắt đầu Focus (${task.focusDuration || 25} phút)`}
               >
                 <Play className="w-3 h-3 fill-[#06141B]" />
@@ -549,7 +553,7 @@ export const QuestBentoGrid: React.FC = () => {
                   const r = e.currentTarget.getBoundingClientRect();
                   void moveTaskStatus(task.id, 'done', { x: r.right + 8, y: r.top });
                 }}
-                className={`min-h-[34px] px-3 py-1 rounded-full border font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95 ${
+                className={`min-h-[40px] lg:min-h-[34px] px-3.5 lg:px-3 py-1.5 lg:py-1 rounded-full border font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer active:scale-95 ${
                   isProcessing || isLocked
                     ? 'opacity-50 bg-[#06141B] border-white/10 text-[#9BA8AB] cursor-not-allowed'
                     : 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-400/45 text-emerald-300 shadow-sm'
@@ -569,7 +573,7 @@ export const QuestBentoGrid: React.FC = () => {
                   e.stopPropagation();
                   setActivePomodoroTaskId(task.id);
                 }}
-                className={`min-h-[34px] px-3 py-1 rounded-full font-extrabold text-xs inline-flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95 ${
+                className={`min-h-[40px] lg:min-h-[34px] px-3.5 lg:px-3 py-1.5 lg:py-1 rounded-full font-extrabold text-xs inline-flex items-center gap-1.5 shadow transition cursor-pointer active:scale-95 ${
                   isFocusingThis
                     ? 'bg-amber-400 text-[#06141B]'
                     : 'bg-[#CCD0CF] hover:bg-white text-[#06141B]'
@@ -661,21 +665,21 @@ export const QuestBentoGrid: React.FC = () => {
   return (
     <div id="tour-task-grid" className="space-y-4">
       {/* ================= 1. THANH CÔNG CỤ PHÍA TRÊN ================= */}
-      <div className="flex flex-col gap-3">
-        {/* Hàng trên: Tiêu đề + Chuyển ngày (Hôm nay / Ngày mai) + Thêm Lệnh Mới */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-2.5 sm:gap-3">
+        {/* Hàng trên: Tiêu đề + Chuyển ngày (Hôm nay / Ngày mai) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#10222E] border border-white/10 flex items-center justify-center text-[#CCD0CF] shadow-md">
+            <div className="w-8 h-8 rounded-xl bg-[#10222E] border border-white/10 flex items-center justify-center text-[#CCD0CF] shadow-md shrink-0">
               {activeDayTab === 'today' ? (
                 <Swords className="w-4 h-4 text-cyan-400" />
               ) : (
                 <Sunrise className="w-4 h-4 text-amber-400" />
               )}
             </div>
-            <div>
-              <h3 className="font-rpg font-extrabold text-lg sm:text-xl text-[#F4F0E8] tracking-wide flex items-center gap-2">
-                <span>{activeDayTab === 'today' ? 'Bảng Lệnh Rèn Luyện' : 'Kế Hoạch Ngày Mai'}</span>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#10222E] border border-white/10 text-[#CCD0CF]">
+            <div className="min-w-0">
+              <h3 className="font-rpg font-extrabold text-base sm:text-xl text-[#F4F0E8] tracking-wide flex items-center gap-2">
+                <span className="truncate">{activeDayTab === 'today' ? 'Bảng Lệnh Rèn Luyện' : 'Kế Hoạch Ngày Mai'}</span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#10222E] border border-white/10 text-[#CCD0CF] shrink-0">
                   {activeDayTab === 'today'
                     ? `${todayCompletedCount}/${todayTasks.length}`
                     : `${tomorrowTasks.length} lệnh`}
@@ -684,77 +688,65 @@ export const QuestBentoGrid: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Chuyển Ngày: Hôm nay vs Ngày mai */}
-            <div className="flex items-center p-1 rounded-full bg-[#06141B] border border-white/10 text-xs relative shadow-inner">
-              <button
-                type="button"
-                onClick={() => setActiveDayTab('today')}
-                className={`px-3 py-1.5 rounded-full font-bold transition-colors cursor-pointer relative z-10 flex items-center gap-1.5 ${
-                  activeDayTab === 'today' ? 'text-[#F4F0E8]' : 'text-[#9BA8AB] hover:text-[#F4F0E8]'
-                }`}
-              >
-                {activeDayTab === 'today' && (
-                  <motion.div
-                    layoutId="activeDayTabIndicator"
-                    className="absolute inset-0 rounded-full bg-[#162633] border border-white/15 shadow-sm z-[-1]"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span>Hôm nay</span>
-                {todayPendingCount > 0 && (
-                  <span className="text-[10px] font-extrabold px-1.5 rounded-full bg-[#06141B] text-[#CCD0CF] border border-white/10">
-                    {todayPendingCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveDayTab('tomorrow')}
-                className={`px-3 py-1.5 rounded-full font-bold transition-colors cursor-pointer relative z-10 flex items-center gap-1.5 ${
-                  activeDayTab === 'tomorrow'
-                    ? 'text-[#F4F0E8]'
-                    : 'text-[#9BA8AB] hover:text-[#F4F0E8]'
-                }`}
-              >
-                {activeDayTab === 'tomorrow' && (
-                  <motion.div
-                    layoutId="activeDayTabIndicator"
-                    className="absolute inset-0 rounded-full bg-[#162633] border border-white/15 shadow-sm z-[-1]"
-                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span>Ngày mai</span>
-                {tomorrowPendingCount > 0 && (
-                  <span className="text-[10px] font-extrabold px-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    {tomorrowPendingCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Nút + Thêm Lệnh Mới */}
+          {/* Chuyển Ngày: Hôm nay vs Ngày mai (trải đều dễ chạm trên Mobile) */}
+          <div className="grid grid-cols-2 sm:flex items-center p-1 rounded-full bg-[#06141B] border border-white/10 text-xs relative shadow-inner w-full sm:w-auto">
             <button
               type="button"
-              onClick={() => setCreateQuestOpen(true)}
-              className="px-3.5 py-2 rounded-full bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs inline-flex items-center gap-1.5 shadow-md active:scale-95 transition cursor-pointer"
+              onClick={() => setActiveDayTab('today')}
+              className={`min-h-[36px] sm:min-h-0 px-3 py-1.5 rounded-full font-bold transition-colors cursor-pointer relative z-10 flex items-center justify-center gap-1.5 ${
+                activeDayTab === 'today' ? 'text-[#F4F0E8]' : 'text-[#9BA8AB] hover:text-[#F4F0E8]'
+              }`}
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Thêm Lệnh Mới</span>
+              {activeDayTab === 'today' && (
+                <motion.div
+                  layoutId="activeDayTabIndicator"
+                  className="absolute inset-0 rounded-full bg-[#162633] border border-white/15 shadow-sm z-[-1]"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span>Hôm nay</span>
+              {todayPendingCount > 0 && (
+                <span className="text-[10px] font-extrabold px-1.5 rounded-full bg-[#06141B] text-[#CCD0CF] border border-white/10">
+                  {todayPendingCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveDayTab('tomorrow')}
+              className={`min-h-[36px] sm:min-h-0 px-3 py-1.5 rounded-full font-bold transition-colors cursor-pointer relative z-10 flex items-center justify-center gap-1.5 ${
+                activeDayTab === 'tomorrow'
+                  ? 'text-[#F4F0E8]'
+                  : 'text-[#9BA8AB] hover:text-[#F4F0E8]'
+              }`}
+            >
+              {activeDayTab === 'tomorrow' && (
+                <motion.div
+                  layoutId="activeDayTabIndicator"
+                  className="absolute inset-0 rounded-full bg-[#162633] border border-white/15 shadow-sm z-[-1]"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span>Ngày mai</span>
+              {tomorrowPendingCount > 0 && (
+                <span className="text-[10px] font-extrabold px-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {tomorrowPendingCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
         {/* Hàng lọc theo Danh mục & Độ khó hoạt động đồng thời trên cả 3 cột */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-2xl bg-[#0B1922]/85 border border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 sm:p-2.5 rounded-2xl bg-[#0B1922]/85 border border-white/10">
           {/* Lọc theo Danh mục */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 sm:pb-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <Filter className="w-3.5 h-3.5 text-[#9BA8AB] shrink-0 ml-1" />
             <button
               type="button"
               onClick={() => setCategoryFilter('all')}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer border ${
+              className={`min-h-[32px] sm:min-h-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer border ${
                 activeCategoryFilter === 'all'
                   ? 'bg-[#162633] text-[#F4F0E8] border-white/20'
                   : 'bg-transparent text-[#9BA8AB] hover:text-[#F4F0E8] border-transparent'
@@ -769,7 +761,7 @@ export const QuestBentoGrid: React.FC = () => {
                   key={cat.id}
                   type="button"
                   onClick={() => setCategoryFilter(selected ? 'all' : cat.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer border ${
+                  className={`min-h-[32px] sm:min-h-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer border ${
                     selected
                       ? cat.badgeBg
                       : 'bg-transparent text-[#9BA8AB] hover:text-[#F4F0E8] border-white/5'
@@ -782,7 +774,7 @@ export const QuestBentoGrid: React.FC = () => {
           </div>
 
           {/* Lọc theo Độ khó */}
-          <div className="flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar border-t border-white/5 pt-1.5 sm:border-t-0 sm:pt-0">
             {[
               { id: 'all', label: 'Mọi độ khó' },
               { id: 'easy', label: 'Dễ' },
@@ -796,7 +788,7 @@ export const QuestBentoGrid: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => setDifficultyFilter(item.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer border ${
+                  className={`min-h-[32px] sm:min-h-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition shrink-0 cursor-pointer border ${
                     active
                       ? 'bg-[#162633] text-amber-300 border-amber-400/35'
                       : 'bg-transparent text-[#9BA8AB] hover:text-[#F4F0E8] border-transparent'
@@ -843,8 +835,8 @@ export const QuestBentoGrid: React.FC = () => {
         <>
           {/* ================= 3A. GIAO DIỆN MOBILE / TABLET (< 1024px): TAB 3 CỘT ================= */}
           <div className="lg:hidden space-y-3">
-            {/* Thanh Tab 3 Cột Gọn Gàng */}
-            <div className="grid grid-cols-3 gap-1.5 p-1.5 rounded-2xl bg-[#0B1922]/90 border border-white/10">
+            {/* Thanh Tab 3 Cột Gọn Gàng (Không cắt chữ trên màn hình hẹp) */}
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#0B1922]/90 border border-white/10">
               {KANBAN_COLUMNS.map((col) => {
                 const count = columnsMap[col.id].length;
                 const isSelected = mobileColumnTab === col.id;
@@ -853,18 +845,30 @@ export const QuestBentoGrid: React.FC = () => {
                     key={col.id}
                     type="button"
                     onClick={() => setMobileColumnTab(col.id)}
-                    className={`min-h-[44px] px-2 py-1.5 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer ${
+                    className={`min-h-[44px] px-1.5 sm:px-2.5 py-1.5 rounded-xl flex items-center justify-center gap-1 sm:gap-1.5 text-xs font-bold transition relative cursor-pointer ${
                       isSelected
-                        ? 'bg-[#162633] text-[#F4F0E8] border border-white/15 shadow-sm'
-                        : 'text-[#9BA8AB] hover:text-[#F4F0E8] border border-transparent'
+                        ? 'text-[#F4F0E8]'
+                        : 'text-[#9BA8AB] hover:text-[#F4F0E8]'
                     }`}
                   >
+                    {isSelected && (
+                      <motion.div
+                        layoutId="mobileKanbanColumnPill"
+                        className="absolute inset-0 rounded-xl bg-[#162633] border border-white/15 shadow-sm z-0"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-2 h-2 rounded-full shrink-0 relative z-10"
                       style={{ backgroundColor: col.dotColor }}
                     />
-                    <span className="truncate text-[11px]">{col.title}</span>
-                    <span className="u255-ch">
+                    <span className="sm:hidden text-[11px] whitespace-nowrap relative z-10">
+                      {col.mobileTitle}
+                    </span>
+                    <span className="hidden sm:inline text-[11px] truncate relative z-10">
+                      {col.title}
+                    </span>
+                    <span className="u255-ch relative z-10">
                       <b className={poppingCols[col.id] ? 'is-pop' : ''}>{count}</b>
                     </span>
                   </button>
@@ -873,7 +877,7 @@ export const QuestBentoGrid: React.FC = () => {
             </div>
 
             {/* Danh sách thẻ thuộc cột đang chọn trên Mobile (cuộn dọc mượt 100%) */}
-            <div className="u255-col p-3" data-status={mobileColumnTab}>
+            <div className="u255-col p-2.5 sm:p-3.5" data-status={mobileColumnTab}>
               {renderColumnList(
                 KANBAN_COLUMNS.find((c) => c.id === mobileColumnTab) || KANBAN_COLUMNS[0],
                 false

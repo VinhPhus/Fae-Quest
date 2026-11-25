@@ -529,7 +529,7 @@ export const LeftSidebar: React.FC = () => {
                   )}
                 </div>
                 <span
-                  className={`text-[10px] truncate max-w-[54px] leading-tight transition-colors ${
+                  className={`text-[9.5px] sm:text-[10px] truncate max-w-[58px] px-0.5 leading-tight transition-colors ${
                     isActive
                       ? isHealing
                         ? 'text-[#7EE8C0] font-bold'
