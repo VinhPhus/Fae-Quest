@@ -430,10 +430,8 @@ export const SettingsModal: React.FC = () => {
                 </div>
               )}
 
-              {/* Mục: Ứng Dụng & Thiết Bị (Cài Đặt App) - Obsidian & Steel */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#11212D] via-[#06141B] to-[#253745]/50 border border-[#253745] shadow-lg">
-                <InstallAppButton variant="settings" />
-              </div>
+              {/* Mục: Ứng Dụng & Thiết Bị (Cài Đặt App) */}
+              <InstallAppButton variant="settings" />
 
               {/* Profile Rename Section */}
               <div className="space-y-3">
