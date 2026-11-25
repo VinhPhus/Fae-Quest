@@ -1,0 +1,155 @@
+/* ============== FaeQuest Shop Fly-To-Bag FX (Lucian Prompt #442 Physics) ============== */
+
+/* Nút Đổi Phần Thưởng: phản hồi lò xo khi đủ Xu & túi chưa đầy */
+.u442-buy-btn {
+  transition:
+    transform 0.45s cubic-bezier(0.34, 1.7, 0.5, 1),
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  will-change: transform;
+}
+
+.u442-buy-btn:not(:disabled):active {
+  transform: scale(0.92);
+  transition-duration: 0.1s;
+}
+
+/* Nút Túi Đồ tròn nổi khi cuộn khuất header */
+.u442-cart {
+  width: 54px;
+  height: 54px;
+  border-radius: 9999px;
+  background: rgba(13, 24, 33, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 18px 36px -10px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f4f0e8;
+  cursor: pointer;
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.u442-cart:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px) scale(1.04);
+}
+
+.u442-cart:active {
+  transform: scale(0.93);
+}
+
+/* Phần tử clone bay vòng cung Parabol */
+.u442-fly {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(11, 25, 34, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 6px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.72);
+}
+
+.u442-fly.is-system {
+  border: 1.5px solid rgba(245, 185, 66, 0.78);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.75),
+    0 0 18px rgba(245, 185, 66, 0.42);
+}
+
+.u442-fly.is-custom {
+  border: 1.5px solid rgba(126, 232, 192, 0.72);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.75),
+    0 0 18px rgba(96, 165, 250, 0.36);
+}
+
+/* Hiệu ứng rung túi đồ & nảy badge khi chạm đích */
+.u442-target.is-hit .u442-bag-ic {
+  animation: u442-wig 0.6s cubic-bezier(0.3, 1.4, 0.5, 1);
+  transform-origin: center bottom;
+}
+
+.u442-target.is-hit .u442-bag-badge {
+  animation: u442-bump 0.55s cubic-bezier(0.3, 1.8, 0.5, 1) 0.05s;
+}
+
+@keyframes u442-wig {
+  0% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+  18% {
+    transform: translateY(3px) scale(1.08, 0.9) rotate(0deg);
+  }
+  42% {
+    transform: translateY(-2px) scale(1.03, 1.03) rotate(-12deg);
+  }
+  65% {
+    transform: translateY(-1px) scale(1.02, 1.02) rotate(9deg);
+  }
+  84% {
+    transform: translateY(0) scale(1, 1) rotate(-4deg);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1) rotate(0deg);
+  }
+}
+
+@keyframes u442-bump {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  42% {
+    transform: scale(1.5) translateY(-3px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Ánh nháy nhẹ trên Số dư ví khi trừ Xu */
+.u442-coin-flash {
+  animation: u442-wallet-flash 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes u442-wallet-flash {
+  0% {
+    color: #fde68a;
+    text-shadow: 0 0 14px rgba(245, 185, 66, 0.75);
+    transform: scale(1.07);
+  }
+  100% {
+    color: #fcd34d;
+    text-shadow: none;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u442-buy-btn,
+  .u442-cart {
+    transition: none;
+  }
+  .u442-target.is-hit .u442-bag-ic,
+  .u442-target.is-hit .u442-bag-badge,
+  .u442-coin-flash {
+    animation: none;
+  }
+}

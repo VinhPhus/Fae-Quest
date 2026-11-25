@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
-import { Sparkles, ShoppingBag, Plus, Trash2, Backpack, Ticket } from 'lucide-react';
+import { Sparkles, ShoppingBag, Plus, Trash2, Backpack, Ticket, Loader2 } from 'lucide-react';
 import { EASING_SPRING } from '../../constants/motion';
 import { InventoryTicket } from '../../types';
+import { FlyToBagOverlay } from './FlyToBagOverlay';
+import {
+  registerFloatingBagTarget,
+  registerHeaderBagTarget,
+  setHeaderBagVisibility,
+  subscribeBagHits,
+  triggerShopFlyToBag,
+} from './shopFlyBridge';
+import './ShopFlyFX.css';
 
 /**
  * Header for Unified Shop & Inventory Page
@@ -28,6 +38,86 @@ export const RewardShopHeader: React.FC = () => {
   const validUnusedInventoryCount = inventory.filter(
     (i) => !i.used && (!i.expiresAt || i.expiresAt > now)
   ).length;
+
+  const headerBagBtnRef = useRef<HTMLButtonElement | null>(null);
+  const floatingBagBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [isHeaderBagVisible, setIsHeaderBagVisible] = useState<boolean>(true);
+  const [isBagHit, setIsBagHit] = useState<boolean>(false);
+  const [walletFlash, setWalletFlash] = useState<boolean>(false);
+  const prevCoinsRef = useRef<number>(coins);
+  const hitTimerRef = useRef<number | null>(null);
+
+  // Theo dõi khi nút Túi Đồ trên Header cuộn khuất màn hình -> bật Floating Mini Bag
+  useEffect(() => {
+    const btn = headerBagBtnRef.current;
+    registerHeaderBagTarget(btn);
+
+    if (!btn || typeof IntersectionObserver === 'undefined') {
+      setHeaderBagVisibility(true);
+      setIsHeaderBagVisible(true);
+      return () => registerHeaderBagTarget(null);
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        const visible = Boolean(entry?.isIntersecting);
+        setIsHeaderBagVisible(visible);
+        setHeaderBagVisibility(visible);
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(btn);
+
+    return () => {
+      observer.disconnect();
+      registerHeaderBagTarget(null);
+    };
+  }, []);
+
+  // Đăng ký nút Túi Đồ tròn nổi cho hệ thống FlyToBag
+  const showFloatingMiniBag = !isHeaderBagVisible && shopSubTab === 'shop';
+  useEffect(() => {
+    registerFloatingBagTarget(showFloatingMiniBag ? floatingBagBtnRef.current : null);
+    return () => registerFloatingBagTarget(null);
+  }, [showFloatingMiniBag]);
+
+  // Kích hoạt rung lắc túi & nảy badge đúng khoảnh khắc vật phẩm chạm đích
+  useEffect(() => {
+    const unsub = subscribeBagHits(() => {
+      if (hitTimerRef.current) {
+        window.clearTimeout(hitTimerRef.current);
+      }
+      setIsBagHit(false);
+      requestAnimationFrame(() => {
+        setIsBagHit(true);
+        hitTimerRef.current = window.setTimeout(() => {
+          setIsBagHit(false);
+        }, 620);
+      });
+    });
+
+    return () => {
+      unsub();
+      if (hitTimerRef.current) {
+        window.clearTimeout(hitTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Ánh nháy nhẹ trên dòng Số dư ví khi Xu Vàng giảm xuống
+  useEffect(() => {
+    if (coins < prevCoinsRef.current) {
+      setWalletFlash(false);
+      requestAnimationFrame(() => {
+        setWalletFlash(true);
+      });
+      const timer = window.setTimeout(() => setWalletFlash(false), 580);
+      prevCoinsRef.current = coins;
+      return () => window.clearTimeout(timer);
+    }
+    prevCoinsRef.current = coins;
+  }, [coins]);
 
   return (
     <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] flex flex-col gap-4 shadow-xl">
@@ -81,10 +171,11 @@ export const RewardShopHeader: React.FC = () => {
 
           {/* Tab 2: Túi Đồ */}
           <button
+            ref={headerBagBtnRef}
             id="tour-inventory"
             type="button"
             onClick={() => setShopSubTab('inventory')}
-            className={`px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 transition-all relative cursor-pointer ${
+            className={`u442-target ${isBagHit ? 'is-hit' : ''} px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-extrabold flex items-center gap-2 transition-all relative cursor-pointer ${
               shopSubTab === 'inventory'
                 ? 'text-[#CCD0CF]'
                 : 'text-[#9BA8AB] hover:text-[#CCD0CF]'
@@ -98,10 +189,10 @@ export const RewardShopHeader: React.FC = () => {
               />
             )}
             <span className="relative z-10 flex items-center gap-1.5">
-              <Backpack className="w-4 h-4 text-[#CCD0CF] shrink-0" />
+              <Backpack className="u442-bag-ic w-4 h-4 text-[#CCD0CF] shrink-0" />
               <span>Túi Đồ ({inventory.length}/50)</span>
               {validUnusedInventoryCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-rose-500 text-white shadow-sm border border-[#06141B] animate-pulse">
+                <span className="u442-bag-badge px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-rose-500 text-white shadow-sm border border-[#06141B] animate-pulse">
                   {validUnusedInventoryCount}
                 </span>
               )}
@@ -118,7 +209,11 @@ export const RewardShopHeader: React.FC = () => {
               <CoinIcon size="md" />
               <div className="flex items-baseline gap-1.5">
                 <span className="text-xs text-[#9BA8AB]">Số dư ví:</span>
-                <span className="text-lg font-black text-amber-300 font-rpg">
+                <span
+                  className={`text-lg font-black text-amber-300 font-rpg inline-block tabular-nums ${
+                    walletFlash ? 'u442-coin-flash' : ''
+                  }`}
+                >
                   {coins.toLocaleString()}
                 </span>
                 <span className="text-xs font-bold text-[#CCD0CF]">Xu Vàng</span>
@@ -167,6 +262,37 @@ export const RewardShopHeader: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Floating Mini Bag (#442) — tự trượt hiện khi cuộn khuất nút Túi Đồ gốc */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {showFloatingMiniBag && (
+              <motion.button
+                ref={floatingBagBtnRef}
+                type="button"
+                initial={{ opacity: 0, scale: 0.72, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.76, y: 10 }}
+                transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+                onClick={() => setShopSubTab('inventory')}
+                aria-label={`Mở Túi Đồ (${inventory.length}/50)`}
+                title={`Mở Túi Đồ (${inventory.length}/50)`}
+                className={`u442-cart u442-target ${
+                  isBagHit ? 'is-hit' : ''
+                } fixed z-[65] bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] right-4 md:bottom-auto md:top-6 md:right-7`}
+              >
+                <Backpack className="u442-bag-ic w-5 h-5 text-amber-300" />
+                {validUnusedInventoryCount > 0 && (
+                  <span className="u442-bag-badge absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#06141B] shadow-md">
+                    {validUnusedInventoryCount}
+                  </span>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </div>
   );
 };
@@ -180,6 +306,7 @@ export const RewardShopGrid: React.FC = () => {
     systemShopItems,
     coins,
     inventory,
+    purchasingShopItemIds,
     buyShopItem,
     deleteShopItem,
     useInventoryTicket,
@@ -188,6 +315,7 @@ export const RewardShopGrid: React.FC = () => {
   } = useFaeQuestStore();
 
   const [usingTicketId, setUsingTicketId] = useState<string | null>(null);
+  const itemIconRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const isInventoryFull = inventory.length >= 50;
 
   // Ghép nối vật phẩm hệ thống do Admin thiết lập và các vật phẩm tự thưởng cá nhân
@@ -276,6 +404,7 @@ export const RewardShopGrid: React.FC = () => {
           >
             {allShopItems.map((item) => {
               const canAfford = coins >= item.cost;
+              const isPurchasing = purchasingShopItemIds.includes(item.id);
               const isItemIconUrl =
                 item.emoji.startsWith('http') || item.emoji.startsWith('/') || item.emoji.startsWith('data:');
 
@@ -290,7 +419,12 @@ export const RewardShopGrid: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] group-hover:border-[#4A5C6A] flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition overflow-hidden p-1">
+                    <div
+                      ref={(el) => {
+                        itemIconRefs.current[item.id] = el;
+                      }}
+                      className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] group-hover:border-[#4A5C6A] flex items-center justify-center text-3xl shadow-inner group-hover:scale-105 transition overflow-hidden p-1"
+                    >
                       {isItemIconUrl ? (
                         <img src={item.emoji} alt={item.title} className="w-full h-full object-cover" />
                       ) : (
@@ -318,31 +452,46 @@ export const RewardShopGrid: React.FC = () => {
                   </div>
 
                   <div className="pt-2 border-t border-[#253745] flex items-center gap-2">
-                    <motion.button
-                      whileTap={canAfford ? { scale: 0.95 } : undefined}
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        buyShopItem(item.id, { x: rect.left + 20, y: rect.top });
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!canAfford || isInventoryFull || isPurchasing) return;
+                        const sourceEl = itemIconRefs.current[item.id];
+                        const ok = await buyShopItem(item.id);
+                        if (ok) {
+                          triggerShopFlyToBag({
+                            sourceEl,
+                            emoji: item.emoji,
+                            title: item.title,
+                            isSystem: Boolean(item.isSystem),
+                          });
+                        }
                       }}
-                      disabled={!canAfford}
-                      className={`flex-1 py-2.5 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                        canAfford
-                          ? isInventoryFull
-                            ? 'bg-[#253745] border border-amber-400/40 text-amber-300'
-                            : 'bg-[#CCD0CF] hover:bg-white text-[#06141B] shadow-[0_4px_16px_rgba(204,208,207,0.2)]'
+                      disabled={!canAfford || isInventoryFull || isPurchasing}
+                      className={`u442-buy-btn flex-1 py-2.5 px-4 rounded-full font-extrabold text-xs flex items-center justify-center gap-1.5 ${
+                        canAfford && !isInventoryFull
+                          ? 'bg-[#CCD0CF] hover:bg-white text-[#06141B] shadow-[0_4px_16px_rgba(204,208,207,0.2)] cursor-pointer'
+                          : isInventoryFull && canAfford
+                          ? 'bg-[#253745] border border-amber-400/40 text-amber-300/70 cursor-not-allowed'
                           : 'bg-[#06141B] border border-[#253745] text-[#9BA8AB]/40 cursor-not-allowed'
                       }`}
                       title={isInventoryFull ? 'Túi Đồ đã đầy (50/50)' : undefined}
                     >
-                      <ShoppingBag className="w-4 h-4" />
+                      {isPurchasing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <ShoppingBag className="w-4 h-4" />
+                      )}
                       <span>
                         {!canAfford
                           ? `Thiếu ${item.cost - coins} Xu`
                           : isInventoryFull
                           ? 'Túi Đồ Đầy (50/50)'
+                          : isPurchasing
+                          ? 'Đang đổi...'
                           : 'Đổi Phần Thưởng'}
                       </span>
-                    </motion.button>
+                    </button>
 
                     {!item.isSystem && (
                       <motion.button
@@ -453,6 +602,7 @@ export const RewardShopGrid: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <FlyToBagOverlay />
     </div>
   );
 };

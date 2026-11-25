@@ -402,6 +402,7 @@ interface FaeQuestState {
 
   // Anti-Cheat & Concurrency Lock
   processingTaskIds: string[];
+  purchasingShopItemIds: string[];
   taskLocks: Record<string, number>;
   taskToggleHistory: Record<string, number[]>;
 
@@ -563,7 +564,7 @@ interface FaeQuestState {
   deleteTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   setEditingTask: (task: Task | null) => void;
-  buyShopItem: (itemId: string, coords?: { x: number; y: number }) => Promise<void> | void;
+  buyShopItem: (itemId: string, coords?: { x: number; y: number }) => Promise<boolean>;
   addShopItem: (title: string, desc: string, cost: number, emoji: string) => void;
   deleteShopItem: (itemId: string) => void;
   useInventoryTicket: (ticketId: string) => void;
@@ -797,6 +798,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       // Anti-Cheat & Concurrency Lock
       processingTaskIds: [],
+      purchasingShopItemIds: [],
       taskLocks: {},
       taskToggleHistory: {},
 
@@ -2728,8 +2730,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         debouncedAutoSync(get());
       },
 
-      buyShopItem: async (itemId: string, coords) => {
+      buyShopItem: async (itemId: string, coords): Promise<boolean> => {
         const state = get();
+        if (state.purchasingShopItemIds.includes(itemId)) {
+          return false;
+        }
+
         // Tìm trong custom shopItems hoặc systemShopItems
         let item = state.shopItems.find((i) => i.id === itemId);
         let isSystemItem = false;
@@ -2748,90 +2754,120 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             isSystemItem = true;
           }
         }
-        if (!item) return;
+        if (!item) return false;
 
         // Giới hạn sức chứa tối đa 50 vật phẩm
         if (state.inventory.length >= MAX_INVENTORY_SLOTS) {
           playSound('error_block', state.soundEnabled);
-          get().addToast('🎒 Túi Đồ đã đầy (50/50)! Hãy sử dụng bớt vật phẩm trước khi đổi thêm.', 'error');
-          return;
+          toast.err('Túi Đồ đã đầy (50/50)', 'Hãy sử dụng bớt vật phẩm trước khi đổi thêm');
+          return false;
         }
 
         if (state.coins < item.cost) {
           playSound('error_block', state.soundEnabled);
-          get().addToast(`Bạn cần thêm ${item.cost - state.coins} Xu nữa để mua "${item.title}"!`, 'error');
-          return;
-        }
-
-        let finalCoins = state.coins - item.cost;
-
-        // BẢO MẬT MÁY CHỦ: Trừ Xu nguyên tử qua Server-Side RPC
-        if (state.currentUser) {
-          try {
-            const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_purchase_item', {
-              p_item_cost: item.cost,
-              p_current_inventory_count: state.inventory.length,
-            });
-
-            if (rpcErr) {
-              playSound('error_block', state.soundEnabled);
-              get().addToast(`⚠️ Giao dịch thất bại: ${localizeError(rpcErr.message, 'Số dư không đủ hoặc có sự cố kết nối!')}`, 'error');
-              return;
-            }
-
-            if (rpcRes?.new_coins !== undefined) {
-              finalCoins = rpcRes.new_coins;
-            }
-
-            // Ghi nhật ký mua sắm vào activity_logs
-            await supabase.rpc('rpc_log_activity', {
-              p_action_type: 'SHOP_PURCHASE',
-              p_category: isSystemItem ? 'Vật Phẩm Hệ Thống' : 'Vật Phẩm Tự Thưởng',
-              p_difficulty: 'Normal',
-              p_exp_delta: 0,
-              p_coins_delta: -item.cost,
-            });
-          } catch (e: any) {
-            console.warn('RPC purchase_item error:', e);
-          }
-        }
-
-        const now = Date.now();
-        const newTicket: InventoryTicket = {
-          id: 'inv_' + now,
-          title: item.title,
-          emoji: item.emoji,
-          cost: item.cost,
-          redeemedAt: new Date(now).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' hôm nay',
-          purchasedAt: now,
-          expiresAt: now + 7 * 24 * 60 * 60 * 1000,
-          used: false,
-          usedAt: null,
-        };
-
-        if (coords) {
-          const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
-          set((prev) => ({
-            floatingRewards: [
-              ...prev.floatingRewards,
-              { id: rewardId, x: coords.x, y: coords.y, text: `Đã đổi ${item.emoji} -${item.cost} Xu` },
-            ],
-          }));
-          setTimeout(() => {
-            set((prev) => ({
-              floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
-            }));
-          }, 1400);
+          toast.err(
+            'Không đủ Xu Vàng',
+            `Bạn cần thêm ${item.cost - state.coins} Xu nữa để mua "${item.title}"`
+          );
+          return false;
         }
 
         set((prev) => ({
-          coins: prev.coins - item.cost,
-          inventory: [newTicket, ...prev.inventory],
+          purchasingShopItemIds: [...prev.purchasingShopItemIds, itemId],
         }));
 
-        playSound('coin_purchase', state.soundEnabled);
-        toast.ok('Đổi thưởng thành công', `Đã thêm «${item.title}» vào Túi Đồ`);
-        debouncedAutoSync(get());
+        try {
+          let finalCoins = state.coins - item.cost;
+
+          // BẢO MẬT MÁY CHỦ: Trừ Xu nguyên tử qua Server-Side RPC
+          if (state.currentUser) {
+            try {
+              const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_purchase_item', {
+                p_item_cost: item.cost,
+                p_current_inventory_count: state.inventory.length,
+              });
+
+              if (rpcErr) {
+                playSound('error_block', state.soundEnabled);
+                toast.err(
+                  'Giao dịch thất bại',
+                  localizeError(rpcErr.message, 'Số dư không đủ hoặc có sự cố kết nối!')
+                );
+                return false;
+              }
+
+              if (rpcRes?.new_coins !== undefined) {
+                finalCoins = rpcRes.new_coins;
+              }
+
+              // Ghi nhật ký mua sắm vào activity_logs (không làm hỏng giao dịch chính nếu log lỗi)
+              supabase
+                .rpc('rpc_log_activity', {
+                  p_action_type: 'SHOP_PURCHASE',
+                  p_category: isSystemItem ? 'Vật Phẩm Hệ Thống' : 'Vật Phẩm Tự Thưởng',
+                  p_difficulty: 'Normal',
+                  p_exp_delta: 0,
+                  p_coins_delta: -item.cost,
+                })
+                .then(() => {}, () => {});
+            } catch (e: any) {
+              console.warn('RPC purchase_item error:', e);
+              playSound('error_block', state.soundEnabled);
+              toast.err(
+                'Lỗi kết nối máy chủ',
+                'Không thể xác nhận giao dịch đổi thưởng, vui lòng thử lại!'
+              );
+              return false;
+            }
+          }
+
+          const now = Date.now();
+          const newTicket: InventoryTicket = {
+            id: 'inv_' + now + '_' + Math.random().toString(36).slice(2, 6),
+            title: item.title,
+            emoji: item.emoji,
+            cost: item.cost,
+            redeemedAt:
+              new Date(now).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) +
+              ' hôm nay',
+            purchasedAt: now,
+            expiresAt: now + 7 * 24 * 60 * 60 * 1000,
+            used: false,
+            usedAt: null,
+          };
+
+          if (coords) {
+            const rewardId = 'fl_' + Math.random().toString(36).substring(2, 9);
+            set((prev) => ({
+              floatingRewards: [
+                ...prev.floatingRewards,
+                { id: rewardId, x: coords.x, y: coords.y, text: `Đã đổi ${item.emoji} -${item.cost} Xu` },
+              ],
+            }));
+            setTimeout(() => {
+              set((prev) => ({
+                floatingRewards: prev.floatingRewards.filter((r) => r.id !== rewardId),
+              }));
+            }, 1400);
+          }
+
+          set((prev) => ({
+            coins: finalCoins,
+            inventory: [newTicket, ...prev.inventory],
+          }));
+
+          playSound('coin_purchase', state.soundEnabled);
+          toast.ok('Đã thêm vào Túi Đồ', `«${item.title}» • -${item.cost} Xu Vàng`, {
+            label: 'Mở Túi Đồ',
+            onClick: () => get().setShopSubTab('inventory'),
+          });
+          debouncedAutoSync(get());
+          return true;
+        } finally {
+          set((prev) => ({
+            purchasingShopItemIds: prev.purchasingShopItemIds.filter((id) => id !== itemId),
+          }));
+        }
       },
 
       addShopItem: (title, desc, cost, emoji) => {
