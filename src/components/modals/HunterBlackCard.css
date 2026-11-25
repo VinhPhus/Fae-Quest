@@ -1,0 +1,265 @@
+/* ============== FaeQuest Hắc Thẻ Thợ Săn 3D (Lucian Prompt #052 Physics) ============== */
+
+.u052-wrap {
+  perspective: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 0;
+  --tilt: 0deg;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .u052-wrap:hover {
+    --tilt: 8deg;
+  }
+}
+
+.u052-card {
+  position: relative;
+  width: min(90vw, 340px);
+  aspect-ratio: 320 / 202;
+  border-radius: 20px;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.75s cubic-bezier(0.34, 1.45, 0.64, 1);
+  will-change: transform;
+}
+
+@media (min-width: 640px) {
+  .u052-card {
+    width: 380px;
+    height: 240px;
+    aspect-ratio: auto;
+  }
+}
+
+.u052-card.drag {
+  cursor: grabbing;
+  transition: none;
+}
+
+.u052-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    0 24px 48px -18px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 0 1px rgba(255, 255, 255, 0.12);
+  color: #f4f0e8;
+}
+
+.u052-back {
+  transform: rotateY(180deg);
+}
+
+/* Vòng cung mảnh góc phải dưới đặc trưng của #052 */
+.u052-front::after {
+  content: '';
+  position: absolute;
+  right: -46px;
+  bottom: -48px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 0 0 16px rgba(255, 255, 255, 0.02),
+    0 0 0 18px rgba(255, 255, 255, 0.045);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Lớp phản quang Holographic chạy theo góc xoay */
+.u052-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 22%,
+    rgba(255, 255, 255, 0.14) 44%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.1) 56%,
+    rgba(255, 255, 255, 0) 78%
+  );
+  background-size: 220% 220%;
+  background-position: var(--sh, 50%) 50%;
+}
+
+.u052-card:not(.drag) .u052-shine {
+  transition: background-position 0.65s ease-out;
+}
+
+/* Chip kim loại ánh vàng khắc đường mảnh */
+.u052-chip {
+  position: relative;
+  width: 42px;
+  height: 31px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #f6d57f 0%, #c78d29 52%, #f9e3a3 100%);
+  border: 1px solid rgba(255, 243, 191, 0.55);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    0 4px 10px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.u052-chip::before {
+  content: '';
+  position: absolute;
+  inset: 6px 5px;
+  border: 1px solid rgba(92, 58, 12, 0.45);
+  border-radius: 3px;
+}
+
+.u052-chip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(92, 58, 12, 0.42);
+  transform: translateY(-50%);
+}
+
+/* Hàng số thẻ tabular-nums */
+.u052-num-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 2px 4px;
+  margin-left: -4px;
+  transition: filter 0.28s ease;
+}
+
+.u052-num {
+  font-size: clamp(12.5px, 3.8vw, 15.5px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(244, 240, 232, 0.94);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+/* Lớp khóa ẩn danh mượt mà đặc trưng của #052 */
+.u052-lock {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(6, 20, 27, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fde68a;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 3px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  animation: u052-lock-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes u052-lock-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.76);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Dải từ mặt sau */
+.u052-strip {
+  width: 100%;
+  height: 34px;
+  background: #061017;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: rgba(204, 208, 207, 0.7);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Thanh nút điều khiển gọn phía dưới thẻ 3D */
+.u052-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.u052-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(17, 33, 45, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ccd0cf;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.u052-btn:hover {
+  background: #1b2f3e;
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+.u052-btn:active {
+  transform: scale(0.96);
+}
+
+.u052-btn[aria-pressed='true'] {
+  background: rgba(245, 185, 66, 0.16);
+  border-color: rgba(245, 185, 66, 0.52);
+  color: #fde68a;
+  box-shadow: 0 0 16px -4px rgba(245, 185, 66, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u052-card,
+  .u052-card:not(.drag) .u052-shine,
+  .u052-lock {
+    transition: none;
+    animation: none;
+  }
+}

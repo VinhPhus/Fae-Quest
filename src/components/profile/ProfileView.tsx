@@ -1,19 +1,15 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { toPng } from 'html-to-image';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { toast } from '../../store/useToastStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { resolveTitleObject } from '../../constants/systemQuests';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
 import { deleteCloudinaryImages } from '../../utils/cloudinaryDelete';
 import { compressImageToDataUrl } from '../../utils/imageCompressor';
-import { imageUrlToBase64, waitForImagesToLoad, compositeCoverWithGradient } from '../../utils/imageExportHelper';
 import { CoinIcon } from '../ui/CoinIcon';
 import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 import { ProductivityAnalytics } from '../analytics/ProductivityAnalytics';
-import { HunterBattleCardExport } from './HunterBattleCardExport';
-import { BattleCardPreviewModal } from '../modals/BattleCardPreviewModal';
+import { HunterBlackCardModal } from '../modals/HunterBlackCardModal';
 import {
   User,
   Camera,
@@ -89,11 +85,6 @@ export const ProfileHeader: React.FC = () => {
 };
 
 /**
- * Bộ nhớ đệm (Cache) Thẻ Chiến Tích theo Profile Signature để mở lại tức thì (0ms)
- */
-let battleCardCache: { signature: string; imageDataUrl: string } | null = null;
-
-/**
  * Main Profile View Component
  * Contains Thẻ Căn Cước Thợ Săn and Thống Kê Thợ Săn side-by-side (grid-cols-1 lg:grid-cols-2),
  * followed by Hunter Account History & Productivity Analytics below.
@@ -126,17 +117,7 @@ export const ProfileView: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [showAnalyticsSection, setShowAnalyticsSection] = useState(true);
-
-  // Thẻ Chiến Tích Export State
-  const [isExportingCard, setIsExportingCard] = useState(false);
-  const [exportedCardUrl, setExportedCardUrl] = useState('');
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const [base64Avatar, setBase64Avatar] = useState('');
-  const [base64Cover, setBase64Cover] = useState('');
-  const [base64Logo, setBase64Logo] = useState('');
-  const [base64RankIcon, setBase64RankIcon] = useState('');
-  const [base64TitleIcon, setBase64TitleIcon] = useState('');
-  const exportCardRef = useRef<HTMLDivElement>(null);
+  const [isBlackCardOpen, setIsBlackCardOpen] = useState(false);
 
   const currentIdx = getRankIndexByExp(exp);
   const currentTier = RANK_TIERS[currentIdx];
@@ -216,169 +197,6 @@ export const ProfileView: React.FC = () => {
       }
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  /**
-   * Tạo và xuất ảnh Thẻ Chiến Tích Thợ Săn chuẩn 9:16 (1080x1920)
-   */
-  const handleExportBattleCard = async () => {
-    if (isExportingCard) return;
-
-    // Chuỗi định danh hồ sơ v4_ để làm mới bộ nhớ đệm ngay lập tức
-    const profileSignature = [
-      'v4_',
-      playerName || '',
-      avatarUrl || '',
-      coverUrl || '',
-      currentTier.id,
-      currentIdx + 1,
-      exp,
-      nextTier ? nextTier.minExp : 'MAX',
-      equippedTitleId || '',
-      streakDays,
-      completedTotal,
-    ].join('|');
-
-    // Kiểm tra cache: nếu các thông số không đổi, mở modal ngay tức thì (0ms)
-    if (battleCardCache && battleCardCache.signature === profileSignature && battleCardCache.imageDataUrl) {
-      setExportedCardUrl(battleCardCache.imageDataUrl);
-      setIsPreviewModalOpen(true);
-      return;
-    }
-
-    setIsExportingCard(true);
-    const exportToastId = toast.wait(
-      'Đang kết xuất Thẻ Chiến Tích...',
-      'Đang hoàn thiện ảnh độ nét cao 9:16'
-    );
-
-    try {
-      // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 tối ưu kích thước
-      let coverB64 = '';
-      const userCover = coverUrl && coverUrl.trim() ? coverUrl.trim() : '';
-
-      if (userCover) {
-        // Người dùng đã cài ảnh bìa tùy chỉnh: ưu tiên chuyển sang Base64
-        coverB64 = await imageUrlToBase64(userCover, undefined, 1080);
-        // Nếu không convert được Base64 do CORS, dùng trực tiếp userCover thay vì ghi đè bằng ảnh mặc định!
-        if (!coverB64) {
-          coverB64 = userCover;
-        }
-      } else if (DEFAULT_COVER_URL) {
-        // Chỉ khi người dùng CHƯA TỪNG cài ảnh bìa mới dùng DEFAULT_COVER_URL
-        coverB64 = (await imageUrlToBase64(DEFAULT_COVER_URL, undefined, 1080)) || DEFAULT_COVER_URL;
-      }
-
-      // Gộp sẵn ảnh bìa + lớp chuyển sắc bằng HTML5 Canvas 540x460 trước khi xuất thẻ
-      // Loại bỏ hoàn toàn lỗi composite và dải đen (#000000) trên iOS Safari / WebKit
-      const compositedCoverB64 = await compositeCoverWithGradient(coverB64, 540, 460);
-
-      const [avatarB64, logoB64, rankB64, titleB64] = await Promise.all([
-        avatarUrl ? imageUrlToBase64(avatarUrl, undefined, 400) : Promise.resolve(''),
-        imageUrlToBase64('/assets/logo.png', undefined, 200),
-        imageUrlToBase64(currentTier.iconUrl, undefined, 200),
-        titleObj.iconUrl ? imageUrlToBase64(titleObj.iconUrl, undefined, 100) : Promise.resolve(''),
-      ]);
-
-      setBase64Avatar(avatarB64 || avatarUrl || '');
-      setBase64Cover(compositedCoverB64 || coverB64);
-      setBase64Logo(logoB64);
-      setBase64RankIcon(rankB64);
-      setBase64TitleIcon(titleB64);
-
-      // Debug: Log trạng thái ảnh đã nạp
-      console.log('[BattleCard] Cover source:', coverB64 ? (coverB64.startsWith('data:') ? `base64 (${(coverB64.length / 1024).toFixed(0)}KB)` : 'direct URL') : 'EMPTY');
-      console.log('[BattleCard] Avatar source:', avatarB64 ? `base64 (${(avatarB64.length / 1024).toFixed(0)}KB)` : (avatarUrl ? 'direct URL' : 'EMPTY'));
-      console.log('[BattleCard] coverUrl in store:', coverUrl ? coverUrl.substring(0, 80) + '...' : '(empty)');
-
-      // Chờ React cập nhật DOM với các state ảnh base64 mới (tối thiểu 150ms trên điện thoại di động)
-      await new Promise((resolve) => setTimeout(resolve, 150));
-
-      // 2. Chờ font hệ thống / webfont sẵn sàng
-      if (document.fonts?.ready) {
-        try {
-          await document.fonts.ready;
-        } catch (e) {
-          console.warn('fonts.ready error:', e);
-        }
-      }
-
-      // 3. Đảm bảo tất cả ảnh <img> bên trong node xuất ảnh đã tải xong và decode texture vào GPU
-      if (!exportCardRef.current) {
-        throw new Error('Khung xuất ảnh chưa sẵn sàng');
-      }
-      await waitForImagesToLoad(exportCardRef.current);
-
-      // 4. Chờ 2 nhịp requestAnimationFrame để trình duyệt hoàn tất vẽ đồ họa
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 40)))
-      );
-
-      // 5. Xuất thẻ chuẩn 1080x1920 (540x960, pixelRatio: 2) với nền trong suốt để giữ nguyên 4 góc bo tròn
-      const transparent1x1 =
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAAElFTkSuQmCC';
-      const toPngOptions = {
-        width: 540,
-        height: 960,
-        canvasWidth: 540,
-        canvasHeight: 960,
-        pixelRatio: 2,
-        backgroundColor: 'transparent',
-        skipFonts: true,
-        fontEmbedCSS: '',
-        cacheBust: false,
-        imagePlaceholder: transparent1x1,
-        onImageErrorHandler: () => transparent1x1,
-      };
-
-      // iOS Safari / WebKit Fix:
-      // WebKit yêu cầu 1 lượt render khởi động (warm-up pass) để giải mã và nạp textures cho các ảnh con trong <foreignObject>
-      // Lượt 1: Warm-up pass
-      try {
-        await toPng(exportCardRef.current, toPngOptions);
-      } catch (warmupErr) {
-        console.warn('Warmup pass error:', warmupErr);
-      }
-
-      // Nghỉ 100ms để GPU / WebKit compositor nạp đầy đủ texture vào bộ nhớ đệm
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Lượt 2: Capture thực tế (lúc này các ảnh raster đã sẵn sàng trong cache đồ họa)
-      let dataUrl: string;
-      try {
-        dataUrl = await toPng(exportCardRef.current, toPngOptions);
-      } catch (firstErr) {
-        console.warn('Transparent export failed, retrying with solid background:', firstErr);
-        dataUrl = await toPng(exportCardRef.current, {
-          ...toPngOptions,
-          backgroundColor: '#06141B',
-        });
-      }
-
-      // Lưu đệm để lần sau mở tức thì
-      battleCardCache = { signature: profileSignature, imageDataUrl: dataUrl };
-
-      setExportedCardUrl(dataUrl);
-      setIsPreviewModalOpen(true);
-      toast.update(exportToastId, {
-        kind: 'ok',
-        title: 'Đã sẵn sàng Thẻ Chiến Tích',
-        description: 'Chạm để tải về hoặc chia sẻ ngay',
-      });
-    } catch (err) {
-      console.error('Lỗi khi xuất Thẻ Chiến Tích:', err);
-      toast.update(exportToastId, {
-        kind: 'err',
-        title: 'Kết xuất thẻ thất bại',
-        description: 'Vui lòng thử lại sau giây lát',
-        action: {
-          label: 'Thử lại',
-          onClick: () => handleExportBattleCard(),
-        },
-      });
-    } finally {
-      setIsExportingCard(false);
     }
   };
 
@@ -570,22 +388,12 @@ export const ProfileView: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleExportBattleCard}
-                  disabled={isExportingCard}
-                  className="px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs flex items-center gap-1 shadow-md transition active:scale-95 cursor-pointer disabled:opacity-60"
-                  title="Xuất Thẻ Chiến Tích Thợ Săn chuẩn 9:16 chia sẻ Story & TikTok"
+                  onClick={() => setIsBlackCardOpen(true)}
+                  className="px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs flex items-center gap-1 shadow-md transition active:scale-95 cursor-pointer"
+                  title="Mở Hắc Thẻ Thợ Săn 3D & Xuất Ảnh"
                 >
-                  {isExportingCard ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang rèn...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Xuất Thẻ Chiến Tích</span>
-                    </>
-                  )}
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Xuất Thẻ Chiến Tích</span>
                 </button>
 
                 <button
@@ -825,35 +633,10 @@ export const ProfileView: React.FC = () => {
         )}
       </div>
 
-      {/* ================= KHUNG XUẤT ẢNH THẺ CHIẾN TÍCH 9:16 (OFF-SCREEN) ================= */}
-      <HunterBattleCardExport
-        ref={exportCardRef}
-        playerName={playerName}
-        avatarBase64={base64Avatar}
-        coverBase64={base64Cover}
-        currentTier={currentTier}
-        nextTier={nextTier}
-        exp={exp}
-        stars={stars}
-        streakDays={streakDays}
-        completedTotal={completedTotal}
-        titleName={titleObj.name}
-        titleIconUrl={base64TitleIcon}
-        titleRarity={titleObj.rarity}
-        hunterId={hunterId}
-        playerRankPos={playerRankPos}
-        level={currentIdx + 1}
-        logoBase64={base64Logo}
-        rankIconBase64={base64RankIcon}
-      />
-
-      {/* ================= MODAL XEM TRƯỚC & CHIA SẺ THẺ CHIẾN TÍCH ================= */}
-      <BattleCardPreviewModal
-        isOpen={isPreviewModalOpen}
-        onClose={() => setIsPreviewModalOpen(false)}
-        imageUrl={exportedCardUrl}
-        playerName={playerName}
-        onShowToast={addToast}
+      {/* ================= MODAL HẮC THẺ THỢ SĂN 3D & XUẤT PNG ================= */}
+      <HunterBlackCardModal
+        isOpen={isBlackCardOpen}
+        onClose={() => setIsBlackCardOpen(false)}
       />
     </div>
   );
