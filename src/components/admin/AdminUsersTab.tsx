@@ -28,11 +28,18 @@ import {
 } from 'lucide-react';
 
 export const AdminUsersTab: React.FC = () => {
-  const { adminSetUserRole, addToast } = useFaeQuestStore();
+  const { adminSetUserRole, addToast, adminRadarSearch, setAdminRadarSearch } = useFaeQuestStore();
   const [users, setUsers] = useState<AdminUserOverview[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>(() => adminRadarSearch || '');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+
+  useEffect(() => {
+    if (adminRadarSearch) {
+      setSearchQuery(adminRadarSearch);
+      setAdminRadarSearch('');
+    }
+  }, [adminRadarSearch, setAdminRadarSearch]);
 
   // Selected User for Modals
   const [selectedUserForLogs, setSelectedUserForLogs] = useState<AdminUserOverview | null>(null);

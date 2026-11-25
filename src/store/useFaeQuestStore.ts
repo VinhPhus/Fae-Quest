@@ -418,6 +418,7 @@ interface FaeQuestState {
   bannedUntil: string | null;
   banReason: string | null;
   adminPortalTab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets';
+  adminRadarSearch: string;
   adminAssets: AdminAsset[];
   seasonAnnouncements: SeasonAnnouncement[];
   isSeasonAnnouncementsModalOpen: boolean;
@@ -490,6 +491,7 @@ interface FaeQuestState {
   syncJournalRealtime: (payload: any) => void;
   setUserRole: (role: UserRole) => void;
   setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets') => void;
+  setAdminRadarSearch: (query: string) => void;
   fetchAdminAssets: () => Promise<void>;
   addAdminAsset: (item: { name: string; url: string; category?: AdminAssetCategory }) => Promise<boolean>;
   deleteAdminAsset: (id: string) => Promise<boolean>;
@@ -822,6 +824,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       bannedUntil: null,
       banReason: null,
       adminPortalTab: 'users',
+      adminRadarSearch: '',
       adminAssets: DEFAULT_ADMIN_ASSETS,
       seasonAnnouncements: [],
       isSeasonAnnouncementsModalOpen: false,
@@ -867,6 +870,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       setLanguage: (lang: string) => set({ language: lang }),
       setUserRole: (role: UserRole) => set({ userRole: role }),
       setAdminPortalTab: (tab: 'users' | 'shop' | 'achievements' | 'analytics' | 'announcements' | 'assets') => set({ adminPortalTab: tab }),
+      setAdminRadarSearch: (query: string) => set({ adminRadarSearch: query }),
       setSeasonAnnouncementsModalOpen: (open: boolean) => set({ isSeasonAnnouncementsModalOpen: open }),
       setSeasonResetModalOpen: (open: boolean) => set({ isSeasonResetModalOpen: open }),
       setUserInboxOpen: (open: boolean) => set({ isUserInboxOpen: open }),
