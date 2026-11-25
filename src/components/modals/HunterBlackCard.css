@@ -58,8 +58,20 @@
   color: #f4f0e8;
 }
 
+.u052-front {
+  transform: rotateY(0deg) translateZ(1px);
+  -webkit-transform: rotateY(0deg) translateZ(1px);
+}
+
 .u052-back {
-  transform: rotateY(180deg);
+  transform: rotateY(180deg) translateZ(1px);
+  -webkit-transform: rotateY(180deg) translateZ(1px);
+}
+
+.u052-face.is-face-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Vòng cung mảnh góc phải dưới đặc trưng của #052 */
@@ -79,7 +91,7 @@
   z-index: 2;
 }
 
-/* Lớp phản quang Holographic chạy theo góc xoay */
+/* Lớp phản quang Holographic dịu (KHÔNG mix-blend-mode để không vỡ 3D WebKit/iOS) */
 .u052-shine {
   position: absolute;
   inset: 0;
@@ -87,11 +99,11 @@
   z-index: 6;
   background: linear-gradient(
     115deg,
-    rgba(255, 255, 255, 0) 22%,
-    rgba(255, 255, 255, 0.14) 44%,
-    rgba(255, 255, 255, 0.28) 50%,
-    rgba(255, 255, 255, 0.1) 56%,
-    rgba(255, 255, 255, 0) 78%
+    rgba(255, 255, 255, 0) 24%,
+    rgba(255, 255, 255, 0.06) 44%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.05) 56%,
+    rgba(255, 255, 255, 0) 76%
   );
   background-size: 220% 220%;
   background-position: var(--sh, 50%) 50%;
@@ -144,7 +156,10 @@
   border-radius: 8px;
   padding: 2px 4px;
   margin-left: -4px;
-  transition: filter 0.28s ease;
+}
+
+.u052-num-wrap.is-locked {
+  filter: grayscale(1) brightness(0.85);
 }
 
 .u052-num {
@@ -157,7 +172,7 @@
   white-space: nowrap;
 }
 
-/* Lớp khóa ẩn danh mượt mà đặc trưng của #052 */
+/* Lớp khóa ẩn danh an toàn cho WebKit 3D (không dùng backdrop-filter bên trong thẻ 3D) */
 .u052-lock {
   position: relative;
   display: inline-flex;
@@ -165,13 +180,12 @@
   justify-content: center;
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(6, 20, 27, 0.78);
+  background: rgba(6, 20, 27, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fde68a;
   font-size: 10px;
   font-weight: 700;
   gap: 3px;
-  backdrop-filter: blur(6px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
   animation: u052-lock-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
@@ -190,22 +204,30 @@
 /* Dải từ mặt sau */
 .u052-strip {
   width: 100%;
-  height: 34px;
+  height: 32px;
   background: #061017;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 14px;
-  font-size: 8.5px;
+  padding: 0 12px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  color: rgba(204, 208, 207, 0.7);
+  letter-spacing: 0.12em;
+  color: rgba(204, 208, 207, 0.72);
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+  .u052-strip {
+    height: 34px;
+    font-size: 9.5px;
+  }
 }
 
 /* Thanh nút điều khiển gọn phía dưới thẻ 3D */

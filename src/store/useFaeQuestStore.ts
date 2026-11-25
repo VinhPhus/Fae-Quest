@@ -2515,6 +2515,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             if (focusOwner(state) !== owner || state.authLoading || !currentTask) return false;
 
             const completedAt = Date.now();
+            const completedAtIso = new Date(completedAt).toISOString();
             const completedDate = getTodayString();
             const sameDay = state.lastActiveDate === completedDate;
             const currentDailyCount = sameDay ? state.dailyCompletedCount : 0;
@@ -2534,6 +2535,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 completed: true,
                 is_completed: true,
                 completedAt,
+                completed_at: completedAtIso,
                 completionDate: completedDate,
                 rewardClaimed: !localCap,
                 focusRewardClaimed: session ? !localCap : currentTask.focusRewardClaimed,
@@ -2626,6 +2628,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                       completed: savedTask.completed,
                       is_completed: Boolean(savedTask.completed),
                       completedAt: savedTask.completedAt,
+                      completed_at: savedTask.completed
+                        ? (savedTask as any).completed_at ||
+                          new Date(savedTask.completedAt || completedAt).toISOString()
+                        : undefined,
                       completionDate: savedTask.completionDate,
                       lastFocusSessionId: savedTask.lastFocusSessionId ?? t.lastFocusSessionId,
                       rewardClaimed: savedTask.rewardClaimed,
@@ -3776,6 +3782,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 is_completed: false,
                 rewardClaimed: false,
                 completedAt: undefined,
+                completed_at: undefined,
                 focusRewardClaimed: false,
                 target_date: today,
               };
@@ -3987,7 +3994,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .maybeSingle();
           const cloudList = (data?.state_json as any)?.chillyTracks;
           if (Array.isArray(cloudList)) {
-            set({ chillyTracks: cloudList });
+            const currentList = get().chillyTracks;
+            const isSame =
+              Array.isArray(currentList) &&
+              currentList.length === cloudList.length &&
+              JSON.stringify(currentList) === JSON.stringify(cloudList);
+            if (!isSame) {
+              set({ chillyTracks: cloudList });
+            }
             return cloudList as ChillyTrack[];
           }
         } catch (err) {

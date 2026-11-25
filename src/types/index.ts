@@ -19,9 +19,13 @@ export interface Task {
   focusRewardClaimed?: boolean; // Tối đa 1 lần nhận thưởng Focus/ngày
   createdAt: number;
   completedAt?: number;
+  completed_at?: string;
   completionDate?: string;
   lastFocusSessionId?: string;
   lastAwardedExp?: number;
+  exp_reward?: number;
+  exp?: number;
+  earned_exp?: number;
   lastAwardedCoins?: number;
   lastRankUpBonus?: number;
   target_date?: string; // Mốc ngày thực hiện YYYY-MM-DD theo múi giờ địa phương

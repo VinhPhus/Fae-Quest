@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
 import { TaskCategory, TaskDifficulty, Task } from '../../types';
-import { getLocalDateStr, getTodayString } from '../../utils/dateUtils';
+import { getLocalDateStr, getLocalStartOfDay, toLocalDateKey } from '../../utils/dateUtils';
+import { supabase, isSupabaseConfigured } from '../../utils/supabaseClient';
 import { StreakFlameCard } from '../streak/StreakFlameCard';
 import {
   Flame,
@@ -74,13 +75,79 @@ export const calcExpMilestoneScore = (expGained: number, completedCount: number 
   return Math.min(5.0, Math.max(1.0, parseFloat(score.toFixed(1))));
 };
 
+const normalizeCategoryKey = (raw?: string): TaskCategory => {
+  const val = String(raw || '').trim().toLowerCase();
+  if (val === 'hoc-tap' || val.includes('học')) return 'hoc-tap';
+  if (val === 'cong-viec' || val.includes('công việc')) return 'cong-viec';
+  if (val === 'the-luc' || val.includes('thể lực') || val.includes('thể chất')) return 'the-luc';
+  if (val === 'sang-tao' || val.includes('sáng tạo')) return 'sang-tao';
+  return 'ca-nhan';
+};
+
+const normalizeDifficultyKey = (raw?: string): TaskDifficulty => {
+  const val = String(raw || '').trim().toLowerCase();
+  if (val === 'easy' || val.includes('dễ')) return 'easy';
+  if (val === 'hard' || val.includes('khó')) return 'hard';
+  if (val === 'boss' || val.includes('trùm')) return 'boss';
+  return 'medium';
+};
+
+const resolveRecordExp = (record: {
+  lastAwardedExp?: number;
+  exp_delta?: number;
+  exp_earned?: number;
+  exp_reward?: number;
+  exp?: number;
+  earned_exp?: number;
+  difficulty?: string;
+}): number => {
+  const raw =
+    record.lastAwardedExp ??
+    record.exp_delta ??
+    record.exp_earned ??
+    record.exp_reward ??
+    record.exp ??
+    record.earned_exp;
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  const diffKey = normalizeDifficultyKey(record.difficulty);
+  return DIFFICULTIES[diffKey]?.exp || 60;
+};
+
+const isCompletionLogAction = (actionType?: string): boolean => {
+  const act = String(actionType || '').trim().toUpperCase();
+  return (
+    act === 'TASK_COMPLETE' ||
+    act === 'FOCUS_COMPLETE' ||
+    act === 'QUEST_COMPLETE' ||
+    act === 'QUEST' ||
+    act === 'TASK' ||
+    act === 'FOCUS'
+  );
+};
+
+interface RawCompletionLog {
+  id?: string;
+  quest_id?: string;
+  action_type?: string;
+  category?: string;
+  difficulty?: string;
+  exp_delta?: number;
+  exp_earned?: number;
+  exp_reward?: number;
+  exp?: number;
+  earned_exp?: number;
+  created_at?: string;
+  metadata?: { quest_id?: string };
+}
+
 /**
- * Helper tính toán dữ liệu phong độ 7 ngày gần nhất
+ * Helper tính toán dữ liệu phong độ 7 ngày gần nhất (chuẩn giờ địa phương, khử trùng log & task)
  */
 const getLast7DaysData = (
   tasks: Task[],
-  dailyActivityHistory?: Record<string, { completedCount: number; expGained: number }>,
-  todayCompletedCount?: number
+  activityLogs: RawCompletionLog[],
+  dailyActivityHistory?: Record<string, { completedCount: number; expGained: number }>
 ) => {
   const result: Array<{
     dateStr: string;
@@ -93,52 +160,125 @@ const getLast7DaysData = (
 
   const now = new Date();
   const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-  // Map từ tasks hiện hữu trong store
-  const taskMap: Record<string, { count: number; exp: number }> = {};
-  tasks.forEach((t) => {
-    if (t.completed) {
-      let dStr = t.completionDate;
-      if (!dStr && t.completedAt) {
-        dStr = getLocalDateStr(new Date(t.completedAt));
-      }
-      if (dStr) {
-        if (!taskMap[dStr]) taskMap[dStr] = { count: 0, exp: 0 };
-        taskMap[dStr].count += 1;
-        taskMap[dStr].exp += t.lastAwardedExp || DIFFICULTIES[t.difficulty]?.exp || 40;
-      }
-    }
-  });
+  const validDates = new Set<string>();
+  const dayMetaList: Array<{ dateStr: string; dayLabel: string; subLabel: string; isToday: boolean }> = [];
 
   for (let i = 6; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
     const dateStr = getLocalDateStr(d);
     const isToday = i === 0;
-
-    const fromHistory = dailyActivityHistory?.[dateStr];
-    const fromTasks = taskMap[dateStr];
-
-    let count = Math.max(fromHistory?.completedCount || 0, fromTasks?.count || 0);
-    let expVal = Math.max(fromHistory?.expGained || 0, fromTasks?.exp || 0);
-
-    if (isToday && todayCompletedCount && count < todayCompletedCount) {
-      count = todayCompletedCount;
-      if (expVal === 0) expVal = count * 50;
-    }
-
     const dayOfWeek = dayNames[d.getDay()];
-    const dayOfMonth = `${d.getDate()}/${d.getMonth() + 1}`;
-
-    result.push({
+    const dayOfMonth = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+    validDates.add(dateStr);
+    dayMetaList.push({
       dateStr,
       dayLabel: isToday ? 'Hôm nay' : dayOfWeek,
       subLabel: dayOfMonth,
       isToday,
-      completedCount: count,
-      expGained: expVal,
     });
   }
+
+  // 1. Gom bản ghi từ activity_logs trong 7 ngày gần nhất theo YYYY-MM-DD địa phương
+  const logsByDate: Record<
+    string,
+    Array<{ questId?: string; cat: TaskCategory; diff: TaskDifficulty; exp: number; ts: number; matched: boolean }>
+  > = {};
+
+  activityLogs.forEach((log) => {
+    if (!isCompletionLogAction(log.action_type)) return;
+    if (!log.created_at) return;
+    const dateKey = toLocalDateKey(log.created_at);
+    if (!dateKey || !validDates.has(dateKey)) return;
+
+    const ts = Date.parse(log.created_at);
+    if (!logsByDate[dateKey]) logsByDate[dateKey] = [];
+    logsByDate[dateKey].push({
+      questId: log.quest_id || log.metadata?.quest_id,
+      cat: normalizeCategoryKey(log.category),
+      diff: normalizeDifficultyKey(log.difficulty),
+      exp: resolveRecordExp(log),
+      ts: Number.isFinite(ts) ? ts : 0,
+      matched: false,
+    });
+  });
+
+  // 2. Gộp khử trùng với các task đã hoàn thành hiện hữu (is_completed / completed / status === 'done')
+  const extraTaskCountByDate: Record<string, number> = {};
+  const extraTaskExpByDate: Record<string, number> = {};
+  const seenQuestDateKeys = new Set<string>();
+
+  tasks.forEach((t) => {
+    const isDone = Boolean(t.completed || t.is_completed || t.status === 'done');
+    if (!isDone) return;
+
+    const dateKey =
+      (t.completed_at ? toLocalDateKey(t.completed_at) : '') ||
+      (t.completedAt ? toLocalDateKey(t.completedAt) : '') ||
+      (t.completionDate ? toLocalDateKey(t.completionDate) : '');
+    if (!dateKey || !validDates.has(dateKey)) return;
+
+    const dedupKey = `${t.id}@${dateKey}`;
+    if (seenQuestDateKeys.has(dedupKey)) return;
+    seenQuestDateKeys.add(dedupKey);
+
+    const taskTs =
+      typeof t.completedAt === 'number'
+        ? t.completedAt
+        : t.completed_at
+          ? Date.parse(t.completed_at)
+          : 0;
+    const taskCat = normalizeCategoryKey(t.category);
+    const taskDiff = normalizeDifficultyKey(t.difficulty);
+    const dayLogs = logsByDate[dateKey] || [];
+
+    // Khớp khử trùng: ưu tiên quest_id trùng, sau đó khớp timestamp gần nhau (<= 2 phút) hoặc cùng danh mục & độ khó
+    let matchedLog = dayLogs.find((l) => !l.matched && l.questId && l.questId === t.id);
+    if (!matchedLog && taskTs > 0) {
+      matchedLog = dayLogs.find(
+        (l) => !l.matched && l.ts > 0 && Math.abs(l.ts - taskTs) <= 120_000
+      );
+    }
+    if (!matchedLog) {
+      matchedLog = dayLogs.find(
+        (l) => !l.matched && l.cat === taskCat && l.diff === taskDiff
+      );
+    }
+
+    if (matchedLog) {
+      matchedLog.matched = true;
+    } else {
+      extraTaskCountByDate[dateKey] = (extraTaskCountByDate[dateKey] || 0) + 1;
+      extraTaskExpByDate[dateKey] = (extraTaskExpByDate[dateKey] || 0) + resolveRecordExp(t);
+    }
+  });
+
+  // 3. Kết hợp cùng dailyActivityHistory (bảo toàn dữ liệu offline trước đây nếu log chưa đồng bộ)
+  dayMetaList.forEach((meta) => {
+    const dayLogs = logsByDate[meta.dateStr] || [];
+    const logCount = dayLogs.length;
+    const logExp = dayLogs.reduce((sum, l) => sum + l.exp, 0);
+
+    const mergedCount = logCount + (extraTaskCountByDate[meta.dateStr] || 0);
+    const mergedExp = logExp + (extraTaskExpByDate[meta.dateStr] || 0);
+
+    const fromHistory = dailyActivityHistory?.[meta.dateStr];
+    const completedCount = Math.max(mergedCount, fromHistory?.completedCount || 0);
+    let expGained = Math.max(mergedExp, fromHistory?.expGained || 0);
+
+    if (completedCount > 0 && expGained <= 0) {
+      expGained = completedCount * (DIFFICULTIES.medium?.exp || 60);
+    }
+
+    result.push({
+      dateStr: meta.dateStr,
+      dayLabel: meta.dayLabel,
+      subLabel: meta.subLabel,
+      isToday: meta.isToday,
+      completedCount,
+      expGained,
+    });
+  });
 
   return result;
 };
@@ -243,13 +383,51 @@ export const ProductivityAnalytics: React.FC = () => {
     streakDays,
     exp,
     focusSessionsCompleted,
-    dailyCompletedCount,
     cumulativeCategoryStats,
     cumulativeDifficultyStats,
     dailyActivityHistory,
+    currentUser,
+    hunterId,
   } = useFaeQuestStore();
 
   const [activeStatIndex, setActiveStatIndex] = useState<number | null>(null);
+  const [selectedChartDayKey, setSelectedChartDayKey] = useState<string | null>(null);
+  const [recentActivityLogs, setRecentActivityLogs] = useState<RawCompletionLog[]>([]);
+
+  const ownerId = currentUser?.id || hunterId;
+
+  // Tải nhật ký hoạt động 7 ngày gần nhất từ activity_logs theo mốc 00:00:00 địa phương
+  useEffect(() => {
+    if (!isSupabaseConfigured || !ownerId || !currentUser?.id) {
+      setRecentActivityLogs([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetch7DayLogs = async () => {
+      try {
+        const startOf7DaysLocal = getLocalStartOfDay(6);
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .select('*')
+          .eq('user_id', ownerId)
+          .gte('created_at', startOf7DaysLocal.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(500);
+
+        if (!cancelled && !error && Array.isArray(data)) {
+          setRecentActivityLogs(data as RawCompletionLog[]);
+        }
+      } catch (err) {
+        console.warn('Không thể tải nhật ký hoạt động 7 ngày:', err);
+      }
+    };
+
+    void fetch7DayLogs();
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, currentUser?.id, completedTotal, focusSessionsCompleted]);
 
   // 1. TỔNG HỢP & BẢO TOÀN DỮ LIỆU LỊCH SỬ KHÔNG BỊ RESET VỀ 0 KHI DỌN TASK
   const { effectiveCategoryData, effectiveDifficultyCounts, totalRecordedCompleted } = useMemo(() => {
@@ -270,14 +448,14 @@ export const ProductivityAnalytics: React.FC = () => {
 
     // Quét task hiện có trong store
     tasks.forEach((t) => {
-      const cat = catData[t.category] ? t.category : 'ca-nhan';
+      const cat = normalizeCategoryKey(t.category);
+      const isDone = Boolean(t.completed || t.is_completed || t.status === 'done');
       catData[cat].total += 1;
-      if (t.completed) {
+      if (isDone) {
         catData[cat].completed += 1;
-        const awarded = t.lastAwardedExp || DIFFICULTIES[t.difficulty]?.exp || 40;
-        catData[cat].expGained += awarded;
+        catData[cat].expGained += resolveRecordExp(t);
 
-        const diffKey = diffCounts[t.difficulty] !== undefined ? t.difficulty : 'medium';
+        const diffKey = normalizeDifficultyKey(t.difficulty);
         diffCounts[diffKey] += 1;
       }
     });
@@ -311,11 +489,20 @@ export const ProductivityAnalytics: React.FC = () => {
       const missingTasks = targetCompleted - currentCompletedSum;
       const perCat = Math.floor(missingTasks / 5);
       const remainder = missingTasks % 5;
+      const currentExpSumBeforeBonus = allCategories.reduce((acc, c) => acc + catData[c].expGained, 0);
+      const remainingExpPool = Math.max(0, (exp || 0) - currentExpSumBeforeBonus);
 
       allCategories.forEach((cat, index) => {
         const bonus = perCat + (index < remainder ? 1 : 0);
         catData[cat].completed += bonus;
         catData[cat].total = Math.max(catData[cat].total, catData[cat].completed);
+        if (bonus > 0) {
+          const shareExp =
+            remainingExpPool > 0
+              ? Math.round((bonus / missingTasks) * remainingExpPool)
+              : bonus * (DIFFICULTIES.medium?.exp || 60);
+          catData[cat].expGained += shareExp;
+        }
       });
 
       // Phân bổ phần thiếu vào độ khó theo tỉ lệ thực tế: Dễ 30%, Vừa 40%, Khó 20%, Trùm 10%
@@ -325,15 +512,12 @@ export const ProductivityAnalytics: React.FC = () => {
       diffCounts.boss += Math.max(0, missingTasks - Math.round(missingTasks * 0.3) - Math.round(missingTasks * 0.4) - Math.round(missingTasks * 0.2));
     }
 
-    // Bảo tồn tổng EXP: nếu exp lớn hơn tổng expGained của 5 nhóm, phân bổ phần chênh lệch
-    const currentExpSum = allCategories.reduce((acc, c) => acc + catData[c].expGained, 0);
-    if (exp > currentExpSum && (currentExpSum === 0 || currentCompletedSum === 0)) {
-      const missingExp = exp - currentExpSum;
-      const perCatExp = Math.floor(missingExp / 5);
-      allCategories.forEach((cat) => {
-        catData[cat].expGained += perCatExp;
-      });
-    }
+    // Chốt chặn cuối cùng: bảo đảm mọi danh mục đã có việc hoàn thành không bao giờ hiển thị +0 EXP
+    allCategories.forEach((cat) => {
+      if (catData[cat].completed > 0 && catData[cat].expGained <= 0) {
+        catData[cat].expGained = catData[cat].completed * (DIFFICULTIES.medium?.exp || 60);
+      }
+    });
 
     return {
       effectiveCategoryData: catData,
@@ -585,12 +769,13 @@ export const ProductivityAnalytics: React.FC = () => {
   const powerRank = getPowerRank(avgScore);
   const activeStat = activeStatIndex !== null ? radarStats[activeStatIndex] : null;
 
-  // Dữ liệu phong độ 7 ngày qua
+  // Dữ liệu phong độ 7 ngày qua (gộp từ activity_logs + tasks + dailyActivityHistory)
   const last7Days = useMemo(
-    () => getLast7DaysData(tasks, dailyActivityHistory, dailyCompletedCount),
-    [tasks, dailyActivityHistory, dailyCompletedCount]
+    () => getLast7DaysData(tasks, recentActivityLogs, dailyActivityHistory),
+    [tasks, recentActivityLogs, dailyActivityHistory]
   );
-  const maxDayExp = Math.max(...last7Days.map((d) => d.expGained), 100);
+  const maxDayCount = Math.max(...last7Days.map((d) => d.completedCount), 1);
+  const total7DaysCompleted = last7Days.reduce((sum, d) => sum + d.completedCount, 0);
 
   // Tổng số nhiệm vụ theo độ khó để tính % Stacked Bar
   const totalDiffTasks =
@@ -1125,52 +1310,80 @@ export const ProductivityAnalytics: React.FC = () => {
                 <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Phong Độ Rèn Luyện 7 Ngày Qua</span>
               </span>
-              <span className="text-[10px] text-amber-300 font-mono font-bold">
-                {last7Days.reduce((sum, d) => sum + d.completedCount, 0)} việc đã xong
+              <span className="text-[10px] text-amber-300 font-mono font-bold tabular-nums">
+                {total7DaysCompleted} việc đã xong
               </span>
             </div>
 
-            {/* 7 Cột Phong Độ Mini */}
-            <div className="p-2.5 rounded-2xl bg-[#06141B] border border-[#253745] flex items-end justify-between gap-1.5 h-24">
-              {last7Days.map((day) => {
-                const heightPct = Math.max(14, Math.round((day.expGained / maxDayExp) * 100));
+            {/* 7 Cột Phong Độ (Vùng vẽ h-[150px], vùng cột h-[120px]) */}
+            <div className="px-2.5 sm:px-3.5 pt-6 pb-2.5 rounded-2xl bg-[#06141B] border border-[#253745]">
+              <div className="flex items-end justify-between gap-1.5 sm:gap-2.5 h-[150px]">
+                {last7Days.map((day) => {
+                  const barHeightPx =
+                    day.completedCount === 0
+                      ? 6
+                      : Math.max(16, Math.round((day.completedCount / maxDayCount) * 120));
+                  const isTooltipOpen = selectedChartDayKey === day.dateStr;
 
-                let barStyle = 'bg-[#253745]/50 border border-[#253745]';
-                if (day.isToday) {
-                  barStyle = 'bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 border border-amber-300/80 shadow-[0_0_12px_rgba(245,158,11,0.5)]';
-                } else if (day.completedCount > 0) {
-                  barStyle = 'bg-gradient-to-t from-emerald-600 to-cyan-400 border border-cyan-400/50';
-                }
+                  let barStyle = 'bg-[#253745]/55 border border-[#253745]';
+                  if (day.isToday && day.completedCount > 0) {
+                    barStyle =
+                      'bg-gradient-to-t from-amber-500 via-amber-400 to-yellow-300 border border-amber-300/80 shadow-[0_0_14px_rgba(245,158,11,0.5)]';
+                  } else if (day.isToday) {
+                    barStyle = 'bg-amber-500/25 border border-amber-400/50';
+                  } else if (day.completedCount > 0) {
+                    barStyle =
+                      'bg-gradient-to-t from-emerald-600 to-cyan-400 border border-cyan-400/55 shadow-[0_0_10px_rgba(34,211,238,0.22)]';
+                  }
 
-                return (
-                  <div
-                    key={day.dateStr}
-                    className="flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer"
-                  >
-                    {/* Tooltip Hover cho mỗi ngày */}
-                    <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-[#11212D] border border-[#4A5C6A] px-2 py-1 rounded-lg text-[10px] font-mono text-white whitespace-nowrap shadow-xl z-20">
-                      <span className="font-bold text-amber-300">{day.dateStr}:</span> {day.completedCount} việc (+{day.expGained} EXP)
-                    </div>
-
-                    {/* Cột Chiều Cao */}
-                    <div className="w-full flex items-end justify-center h-14">
-                      <div
-                        className={`w-full max-w-[28px] rounded-t-md transition-all duration-500 ${barStyle}`}
-                        style={{ height: `${heightPct}%` }}
-                      />
-                    </div>
-
-                    {/* Nhãn Thứ / Ngày */}
-                    <span
-                      className={`text-[9px] mt-1 font-mono font-bold block truncate max-w-full ${
-                        day.isToday ? 'text-amber-300 font-extrabold' : 'text-[#9BA8AB]'
-                      }`}
+                  return (
+                    <div
+                      key={day.dateStr}
+                      onClick={() =>
+                        setSelectedChartDayKey((prev) => (prev === day.dateStr ? null : day.dateStr))
+                      }
+                      className="flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer select-none"
                     >
-                      {day.dayLabel}
-                    </span>
-                  </div>
-                );
-              })}
+                      {/* Tooltip Hover / Touch Dark Fantasy */}
+                      <div
+                        className={`absolute -top-9 left-1/2 -translate-x-1/2 transition-opacity pointer-events-none bg-[#11212D] border border-[#4A5C6A] px-2.5 py-1 rounded-lg text-[10px] font-mono text-white whitespace-nowrap shadow-xl z-20 ${isTooltipOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}
+                      >
+                        <span className="font-bold text-amber-300">Ngày {day.subLabel}</span>
+                        {' • '}
+                        <span>{day.completedCount} việc đã xong</span>
+                        {' '}
+                        <span className="text-cyan-300">(+{day.expGained} EXP)</span>
+                      </div>
+
+                      {/* Vùng vẽ cột h-[120px] + Số lượng trên đỉnh cột */}
+                      <div className="w-full h-[120px] flex items-end justify-center relative">
+                        <div
+                          className={`w-full max-w-[32px] rounded-t-md transition-[height] duration-500 ease-out relative ${barStyle}`}
+                          style={{ height: `${barHeightPx}px` }}
+                        >
+                          {day.completedCount > 0 && (
+                            <span
+                              className={`absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] leading-none font-mono font-extrabold tabular-nums whitespace-nowrap ${day.isToday ? 'text-amber-300' : 'text-cyan-300'
+                                }`}
+                            >
+                              {day.completedCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Nhãn Thứ / Ngày */}
+                      <span
+                        className={`text-[9.5px] mt-1.5 font-mono font-bold block truncate max-w-full ${day.isToday ? 'text-amber-300 font-extrabold' : 'text-[#9BA8AB]'
+                          }`}
+                      >
+                        {day.dayLabel}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

@@ -210,11 +210,31 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
       const preservedIdx = activeTrackId
         ? newPlaylist.findIndex((t) => t.id === activeTrackId)
         : -1;
+      const nextIndex = preservedIdx !== -1 ? preservedIdx : 0;
 
-      set({
-        playlist: newPlaylist,
-        currentTrackIndex: preservedIdx !== -1 ? preservedIdx : 0,
-      });
+      // Tránh cập nhật state dư thừa nếu danh sách và chỉ mục hiện tại không thay đổi
+      const isPlaylistUnchanged =
+        prevState.playlist.length === newPlaylist.length &&
+        prevState.currentTrackIndex === nextIndex &&
+        prevState.playlist.every((prevT, idx) => {
+          const nextT = newPlaylist[idx];
+          return (
+            prevT.id === nextT.id &&
+            prevT.src === nextT.src &&
+            prevT.cloudUrl === nextT.cloudUrl &&
+            prevT.youtubeVideoId === nextT.youtubeVideoId &&
+            prevT.synthType === nextT.synthType &&
+            prevT.title === nextT.title &&
+            prevT.artist === nextT.artist
+          );
+        });
+
+      if (!isPlaylistUnchanged) {
+        set({
+          playlist: newPlaylist,
+          currentTrackIndex: nextIndex,
+        });
+      }
     } catch (err) {
       console.warn('Lỗi đồng bộ nhạc từ đám mây:', err);
     } finally {
@@ -233,19 +253,22 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
   },
 
   playTrack: (index: number) => {
-    const { playlist } = get();
+    const { playlist, currentTrackIndex } = get();
     if (index >= 0 && index < playlist.length) {
       set({
         currentTrackIndex: index,
         isPlaying: true,
         currentTime: 0,
         duration: playlist[index].duration || 240,
+        ...(index === currentTrackIndex
+          ? { seekRequestTime: 0, seekRequestNonce: Date.now() }
+          : {}),
       });
     }
   },
 
   playSpecificTrack: async (track: ChillyTrack) => {
-    const { playlist, addTrackToFavorites } = get();
+    const { playlist, currentTrackIndex, addTrackToFavorites } = get();
     const existingIndex = playlist.findIndex((t) => t.id === track.id);
     if (existingIndex !== -1) {
       set({
@@ -253,6 +276,9 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
         isPlaying: true,
         currentTime: 0,
         duration: track.duration || 240,
+        ...(existingIndex === currentTrackIndex
+          ? { seekRequestTime: 0, seekRequestNonce: Date.now() }
+          : {}),
       });
     } else {
       await addTrackToFavorites(track, true);
@@ -400,7 +426,12 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
           duration: playlist[nextIdx].duration || 240,
         });
       } else {
-        set({ isPlaying: false, currentTime: 0 });
+        set({
+          isPlaying: false,
+          currentTime: 0,
+          seekRequestTime: 0,
+          seekRequestNonce: Date.now(),
+        });
       }
     }
   },

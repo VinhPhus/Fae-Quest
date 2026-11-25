@@ -9,6 +9,24 @@ const STORE_SETTINGS = 'settings';
 
 const CUSTOM_ART_KEY = 'custom_default_art';
 
+// Cache URL.createObjectURL theo track ID để tránh tạo blob URL mới mỗi lần đồng bộ lại danh sách
+const blobObjectUrlCache = new Map<string, { size: number; type: string; url: string }>();
+
+function getOrCreateCachedBlobUrl(trackId: string, blob: Blob): string {
+  const cached = blobObjectUrlCache.get(trackId);
+  if (cached && cached.size === blob.size && cached.type === blob.type) {
+    return cached.url;
+  }
+  if (cached) {
+    try {
+      URL.revokeObjectURL(cached.url);
+    } catch {}
+  }
+  const url = URL.createObjectURL(blob);
+  blobObjectUrlCache.set(trackId, { size: blob.size, type: blob.type, url });
+  return url;
+}
+
 function openChillyDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined' || !window.indexedDB) {
@@ -361,7 +379,7 @@ export async function getAllStoredTracks(): Promise<ChillyTrack[]> {
           const remoteUrl = rec.cloudUrl || (typeof rec.url === 'string' && rec.url.startsWith('http') ? rec.url : '') || (typeof rec.src === 'string' && rec.src.startsWith('http') ? rec.src : '');
           let src = remoteUrl || rec.src || rec.url;
           if (rec.blob) {
-            src = URL.createObjectURL(rec.blob);
+            src = getOrCreateCachedBlobUrl(rec.id, rec.blob);
           }
           return {
             id: rec.id,
@@ -392,6 +410,13 @@ export async function getAllStoredTracks(): Promise<ChillyTrack[]> {
  * Xóa một bài hát theo ID
  */
 export async function deleteStoredTrack(id: string): Promise<void> {
+  const cached = blobObjectUrlCache.get(id);
+  if (cached) {
+    try {
+      URL.revokeObjectURL(cached.url);
+    } catch {}
+    blobObjectUrlCache.delete(id);
+  }
   try {
     const db = await openChillyDB();
     return new Promise((resolve, reject) => {

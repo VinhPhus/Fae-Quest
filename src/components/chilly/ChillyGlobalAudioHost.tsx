@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useChillyAudioStore } from '../../store/useChillyAudioStore';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { chillySynth } from '../../utils/chillySynth';
@@ -35,16 +35,25 @@ export const ChillyGlobalAudioHost: React.FC = () => {
   const cloudChillyTracks = useFaeQuestStore((s) => s.chillyTracks);
   const pullChillyTracksFromCloud = useFaeQuestStore((s) => s.pullChillyTracksFromCloud);
 
+  const [ytReady, setYtReady] = useState(false);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
   const ytPlayerReadyRef = useRef<boolean>(false);
   const synthTimerRef = useRef<any>(null);
   const ytTickerRef = useRef<any>(null);
   const lastNonceRef = useRef<number>(0);
+  const loadedSourceKeyRef = useRef<string | null>(null);
   const currentTrackRef = useRef<any>(null);
+  const volumeRef = useRef<number>(volume);
+  const isMutedRef = useRef<boolean>(isMuted);
+  const isPlayingRef = useRef<boolean>(isPlaying);
 
   const currentTrack = playlist[currentTrackIndex] || playlist[0];
   currentTrackRef.current = currentTrack;
+  volumeRef.current = volume;
+  isMutedRef.current = isMuted;
+  isPlayingRef.current = isPlaying;
 
   // 1. Tải danh sách bài hát từ Storage khi ứng dụng khởi chạy
   useEffect(() => {
@@ -105,7 +114,8 @@ export const ChillyGlobalAudioHost: React.FC = () => {
           events: {
             onReady: (e: any) => {
               ytPlayerReadyRef.current = true;
-              const effectiveVol = isMuted ? 0 : Math.round(volume * 100);
+              setYtReady(true);
+              const effectiveVol = isMutedRef.current ? 0 : Math.round(volumeRef.current * 100);
               e.target.setVolume(effectiveVol);
             },
             onStateChange: (event: any) => {
@@ -154,7 +164,7 @@ export const ChillyGlobalAudioHost: React.FC = () => {
       if (ytTickerRef.current) clearInterval(ytTickerRef.current);
       if (synthTimerRef.current) clearInterval(synthTimerRef.current);
     };
-  }, [handleTrackEnded, isMuted, setIsLoading, setIsPlaying, volume]);
+  }, [handleTrackEnded, setIsLoading, setIsPlaying]);
 
   // 3. Đồng bộ âm lượng sang tất cả các nguồn âm thanh
   useEffect(() => {
@@ -183,63 +193,54 @@ export const ChillyGlobalAudioHost: React.FC = () => {
     }
   }, [volume, isMuted]);
 
-  // 4. Xử lý chuyển bài hát và kiểm soát nguồn phát âm thanh (Audio / YouTube / Synth)
+  // 4. Nạp nguồn phát âm thanh CHỈ KHI thực sự đổi bài / đổi nguồn phát
   const isYoutube = currentTrack?.sourceType === 'youtube' && Boolean(currentTrack?.youtubeVideoId);
   const isSynth = Boolean(currentTrack?.isBuiltInSynth);
-  const isStandardAudio = !isYoutube && !isSynth;
+  const isStandardAudio = Boolean(currentTrack) && !isYoutube && !isSynth;
+
+  const trackSourceKey = !currentTrack
+    ? null
+    : isYoutube
+      ? `yt:${currentTrack.id}:${currentTrack.youtubeVideoId}`
+      : isSynth
+        ? `synth:${currentTrack.id}:${currentTrack.synthType || 'ambient_pad'}`
+        : `audio:${currentTrack.id}:${currentTrack.src || currentTrack.cloudUrl || ''}`;
 
   useEffect(() => {
-    if (!currentTrack) return;
+    if (!currentTrack || !trackSourceKey) return;
 
-    // Dừng Web Audio Synth timer nếu đang chạy
-    if (synthTimerRef.current) {
-      clearInterval(synthTimerRef.current);
-      synthTimerRef.current = null;
-    }
-    // Dừng YouTube ticker nếu đang chạy
-    if (ytTickerRef.current) {
-      clearInterval(ytTickerRef.current);
-      ytTickerRef.current = null;
+    // Nếu nguồn phát của bài hiện tại không đổi (ví dụ đồng bộ danh sách hoặc chuyển tab) thì không nạp lại từ đầu
+    if (loadedSourceKeyRef.current === trackSourceKey) {
+      return;
     }
 
     // TH 1: Nguồn phát là YouTube Video
     if (isYoutube) {
-      // Dừng Audio thường & Synth
       if (audioRef.current) audioRef.current.pause();
       chillySynth.stop();
 
-      const videoId = currentTrack.youtubeVideoId!;
-      if (ytPlayerRef.current && ytPlayerReadyRef.current) {
-        try {
-          if (isPlaying) {
-            ytPlayerRef.current.loadVideoById(videoId, 0);
-          } else {
-            ytPlayerRef.current.cueVideoById(videoId, 0);
-          }
-        } catch (e) {
-          console.warn('YT loadVideoById error:', e);
-        }
+      if (!ytReady || !ytPlayerRef.current || !ytPlayerReadyRef.current) {
+        return;
       }
 
-      // Khởi động Ticker đồng bộ thời gian từ YouTube
-      if (isPlaying) {
-        ytTickerRef.current = setInterval(() => {
-          if (ytPlayerRef.current && ytPlayerReadyRef.current && !useChillyAudioStore.getState().isSeeking) {
-            try {
-              const cur = ytPlayerRef.current.getCurrentTime() || 0;
-              const dur = ytPlayerRef.current.getDuration() || currentTrack.duration || 240;
-              setCurrentTime(cur);
-              if (dur > 0) setDuration(dur);
-            } catch {}
-          }
-        }, 350);
+      loadedSourceKeyRef.current = trackSourceKey;
+      const videoId = currentTrack.youtubeVideoId!;
+      try {
+        if (isPlayingRef.current) {
+          ytPlayerRef.current.loadVideoById(videoId, 0);
+        } else {
+          ytPlayerRef.current.cueVideoById(videoId, 0);
+        }
+      } catch (e) {
+        console.warn('YT loadVideoById error:', e);
       }
       return;
     }
 
+    loadedSourceKeyRef.current = trackSourceKey;
+
     // TH 2: Nguồn phát là Web Audio Synth
     if (isSynth) {
-      // Dừng Audio thường & YouTube
       if (audioRef.current) audioRef.current.pause();
       if (ytPlayerRef.current && ytPlayerReadyRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
         try {
@@ -247,25 +248,10 @@ export const ChillyGlobalAudioHost: React.FC = () => {
         } catch {}
       }
 
-      if (isPlaying) {
-        chillySynth.setVolume(isMuted ? 0 : volume);
+      setDuration(currentTrack.duration || 300);
+      if (isPlayingRef.current) {
+        chillySynth.setVolume(isMutedRef.current ? 0 : volumeRef.current);
         chillySynth.play(currentTrack.synthType || 'ambient_pad');
-
-        const totalDur = currentTrack.duration || 300;
-        setDuration(totalDur);
-
-        // Timer đếm thời gian cho synth
-        synthTimerRef.current = setInterval(() => {
-          const state = useChillyAudioStore.getState();
-          if (!state.isSeeking) {
-            const nextTime = state.currentTime + 0.5;
-            if (nextTime >= totalDur) {
-              handleTrackEnded();
-            } else {
-              setCurrentTime(nextTime);
-            }
-          }
-        }, 500);
       } else {
         chillySynth.stop();
       }
@@ -283,13 +269,11 @@ export const ChillyGlobalAudioHost: React.FC = () => {
 
       const audio = audioRef.current;
       if (audio) {
-        const targetSrc = currentTrack.src || '';
-        if (audio.src !== targetSrc) {
-          audio.src = targetSrc;
-          audio.currentTime = 0;
-        }
+        const targetSrc = currentTrack.src || currentTrack.cloudUrl || '';
+        audio.src = targetSrc;
+        audio.currentTime = 0;
 
-        if (isPlaying) {
+        if (isPlayingRef.current) {
           setIsLoading(true);
           audio
             .play()
@@ -304,49 +288,107 @@ export const ChillyGlobalAudioHost: React.FC = () => {
       }
     }
   }, [
-    currentTrackIndex,
-    isPlaying,
+    trackSourceKey,
+    ytReady,
     isYoutube,
     isSynth,
     isStandardAudio,
     currentTrack,
-    handleTrackEnded,
-    isMuted,
-    setCurrentTime,
     setDuration,
     setIsLoading,
-    volume,
   ]);
 
-  // 5. Xử lý Play / Pause toggle
+  // 5. Xử lý Play / Pause toggle & Ticker đồng bộ tiến độ phát
   useEffect(() => {
-    if (!currentTrack) return;
+    if (synthTimerRef.current) {
+      clearInterval(synthTimerRef.current);
+      synthTimerRef.current = null;
+    }
+    if (ytTickerRef.current) {
+      clearInterval(ytTickerRef.current);
+      ytTickerRef.current = null;
+    }
 
-    if (isYoutube && ytPlayerRef.current && ytPlayerReadyRef.current) {
-      try {
-        if (isPlaying) {
-          ytPlayerRef.current.playVideo();
-        } else {
-          ytPlayerRef.current.pauseVideo();
+    const track = currentTrackRef.current;
+    if (!track || !trackSourceKey) return;
+
+    if (isYoutube) {
+      if (ytReady && ytPlayerRef.current && ytPlayerReadyRef.current) {
+        try {
+          if (isPlaying) {
+            ytPlayerRef.current.playVideo();
+          } else {
+            ytPlayerRef.current.pauseVideo();
+          }
+        } catch (e) {
+          console.warn('YT toggle play error:', e);
         }
-      } catch (e) {
-        console.warn('YT toggle play error:', e);
       }
-    } else if (isSynth) {
+
       if (isPlaying) {
-        chillySynth.setVolume(isMuted ? 0 : volume);
-        chillySynth.play(currentTrack.synthType || 'ambient_pad');
+        ytTickerRef.current = setInterval(() => {
+          const activeTrack = currentTrackRef.current;
+          if (ytPlayerRef.current && ytPlayerReadyRef.current && !useChillyAudioStore.getState().isSeeking) {
+            try {
+              const cur = ytPlayerRef.current.getCurrentTime() || 0;
+              const dur = ytPlayerRef.current.getDuration() || activeTrack?.duration || 240;
+              setCurrentTime(cur);
+              if (dur > 0) setDuration(dur);
+            } catch {}
+          }
+        }, 350);
+      }
+      return;
+    }
+
+    if (isSynth) {
+      const expectedType = track.synthType || 'ambient_pad';
+      if (isPlaying) {
+        chillySynth.setVolume(isMutedRef.current ? 0 : volumeRef.current);
+        if (!chillySynth.getIsPlaying() || chillySynth.getCurrentType() !== expectedType) {
+          chillySynth.play(expectedType);
+        }
+
+        const totalDur = track.duration || 300;
+        setDuration(totalDur);
+
+        synthTimerRef.current = setInterval(() => {
+          const state = useChillyAudioStore.getState();
+          if (!state.isSeeking) {
+            const nextTime = state.currentTime + 0.5;
+            if (nextTime >= totalDur) {
+              handleTrackEnded();
+            } else {
+              setCurrentTime(nextTime);
+            }
+          }
+        }, 500);
       } else {
         chillySynth.stop();
       }
-    } else if (isStandardAudio && audioRef.current) {
+      return;
+    }
+
+    if (isStandardAudio && audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play().catch((e) => console.warn('Audio resume error:', e));
+        if (audioRef.current.paused) {
+          audioRef.current.play().catch((e) => console.warn('Audio resume error:', e));
+        }
       } else {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, isYoutube, isSynth, isStandardAudio, currentTrack, isMuted, volume]);
+  }, [
+    isPlaying,
+    trackSourceKey,
+    ytReady,
+    isYoutube,
+    isSynth,
+    isStandardAudio,
+    handleTrackEnded,
+    setCurrentTime,
+    setDuration,
+  ]);
 
   // 6. Xử lý Lệnh Tua (Seek Request)
   useEffect(() => {
@@ -356,9 +398,15 @@ export const ChillyGlobalAudioHost: React.FC = () => {
       if (isYoutube && ytPlayerRef.current && ytPlayerReadyRef.current) {
         try {
           ytPlayerRef.current.seekTo(seekRequestTime, true);
+          if (isPlayingRef.current) {
+            ytPlayerRef.current.playVideo();
+          }
         } catch {}
       } else if (isStandardAudio && audioRef.current) {
         audioRef.current.currentTime = seekRequestTime;
+        if (isPlayingRef.current && audioRef.current.paused) {
+          audioRef.current.play().catch((e) => console.warn('Audio seek play error:', e));
+        }
       }
     }
   }, [seekRequestNonce, seekRequestTime, isYoutube, isStandardAudio]);

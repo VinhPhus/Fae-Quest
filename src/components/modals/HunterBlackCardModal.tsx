@@ -258,7 +258,7 @@ const BlackCardFrontContent: React.FC<{ data: CardRenderData; flat?: boolean }> 
 
       {/* Hàng 3: Số Hắc Thẻ định dạng 4 ký tự + Lớp khóa ẩn danh */}
       <div style={{ position: 'relative', zIndex: 3 }}>
-        <div className="u052-num-wrap">
+        <div className={`u052-num-wrap ${isMasked ? 'is-locked' : ''}`}>
           <div className="u052-num" style={flat ? { fontSize: '15px' } : undefined}>
             <span>{cardNumber.prefix}</span>
             <span style={{ opacity: 0.45, margin: '0 6px' }}>•</span>
@@ -401,62 +401,45 @@ const BlackCardBackContent: React.FC<{ data: CardRenderData; flat?: boolean }> =
       }}
     >
       {/* Dải từ tối màu trên cùng */}
-      <div className="u052-strip">
-        KỶ LUẬT THÉP TÔI LUYỆN Ý CHÍ THỢ SĂN • FAEQUEST.VERCEL.APP
+      <div className="u052-strip px-3 flex items-center justify-center text-[8px] sm:text-[9.5px] tracking-[0.12em] whitespace-nowrap overflow-hidden text-ellipsis">
+        KỶ LUẬT THÉP • FAEQUEST.VERCEL.APP
       </div>
 
       {/* Khu vực Tiến Trình Rank & Hệ Thợ Săn + Ô Rank/Sao nổi bật */}
       <div
+        className="flex items-center justify-between gap-2.5 sm:gap-3"
         style={{
-          padding: flat ? '0 20px' : '0 clamp(14px, 4.4vw, 20px)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
+          padding: flat ? '0 20px' : '0 clamp(12px, 4vw, 20px)',
         }}
       >
         {/* Khung Tiến Trình Rank & Hệ Thợ Săn */}
         <div
+          className="min-w-0 flex-1"
           style={{
-            flex: 1,
-            minWidth: 0,
-            padding: '9px 11px',
+            padding: '8px 10px',
             borderRadius: '11px',
-            background: 'rgba(6, 20, 27, 0.72)',
+            background: 'rgba(6, 20, 27, 0.76)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '6px',
-              marginBottom: '6px',
-            }}
-          >
+          <div className="flex items-center justify-between gap-2 mb-1.5 min-w-0">
             <span
+              className="truncate min-w-0"
               style={{
-                fontSize: '10.5px',
+                fontSize: '10px',
                 fontWeight: 800,
                 color: '#F4F0E8',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
               {archetypeTitle}
             </span>
             <span
+              className="tabular-nums text-[10px] sm:text-[11px] whitespace-nowrap shrink-0 font-bold"
               style={{
-                fontSize: '9.5px',
-                fontWeight: 700,
                 color: theme.badgeText,
-                fontVariantNumeric: 'tabular-nums',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
               }}
             >
-              {exp.toLocaleString('vi-VN')} /{' '}
+              {exp.toLocaleString('vi-VN')}/
               {nextTierMinExp !== null ? nextTierMinExp.toLocaleString('vi-VN') : 'MAX'} EXP
             </span>
           </div>
@@ -484,10 +467,10 @@ const BlackCardBackContent: React.FC<{ data: CardRenderData; flat?: boolean }> =
 
         {/* Ô nổi bật Hạng BXH & Sao vinh dự (tương đương ô CVC) */}
         <div
-          className="u052-cvc"
+          className="u052-cvc flex-none shrink-0"
           style={{
-            minWidth: '64px',
-            padding: '7px 10px',
+            minWidth: '58px',
+            padding: '7px 9px',
             borderRadius: '11px',
             background: 'linear-gradient(145deg, #F6EEDB 0%, #DFCFA8 100%)',
             color: '#17120A',
@@ -496,7 +479,6 @@ const BlackCardBackContent: React.FC<{ data: CardRenderData; flat?: boolean }> =
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px rgba(0, 0, 0, 0.4)',
-            flexShrink: 0,
           }}
         >
           <span
@@ -526,87 +508,64 @@ const BlackCardBackContent: React.FC<{ data: CardRenderData; flat?: boolean }> =
 
       {/* Dải 3 ô đặc quyền dưới đáy (.u052-perk) */}
       <div
+        className="grid grid-cols-3 gap-1.5 sm:gap-2"
         style={{
-          padding: flat ? '0 20px' : '0 clamp(14px, 4.4vw, 20px)',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: '8px',
+          padding: flat ? '0 20px' : '0 clamp(12px, 4vw, 20px)',
         }}
       >
         <div
-          className="u052-perk"
+          className="u052-perk min-w-0"
           style={{
-            padding: '7px 6px',
+            padding: '7px 4px',
             borderRadius: '10px',
-            background: 'rgba(6, 20, 27, 0.68)',
+            background: 'rgba(6, 20, 27, 0.72)',
             border: '1px solid rgba(255, 255, 255, 0.09)',
             textAlign: 'center',
           }}
         >
           <div
-            style={{
-              fontSize: flat ? '13.5px' : 'clamp(12px, 3.4vw, 13.5px)',
-              fontWeight: 900,
-              color: theme.badgeText,
-              fontVariantNumeric: 'tabular-nums',
-              lineHeight: 1.2,
-            }}
+            className="text-[13px] sm:text-[14px] font-black tabular-nums leading-tight truncate"
+            style={{ color: theme.badgeText }}
           >
             {streakDays}N
           </div>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#9BA8AB', marginTop: '2px' }}>
+          <div className="text-[9.5px] sm:text-[10.5px] font-bold text-[#9BA8AB] mt-0.5 whitespace-nowrap truncate">
             Chuỗi Kỷ Luật
           </div>
         </div>
 
         <div
-          className="u052-perk"
+          className="u052-perk min-w-0"
           style={{
-            padding: '7px 6px',
+            padding: '7px 4px',
             borderRadius: '10px',
-            background: 'rgba(6, 20, 27, 0.68)',
+            background: 'rgba(6, 20, 27, 0.72)',
             border: '1px solid rgba(255, 255, 255, 0.09)',
             textAlign: 'center',
           }}
         >
-          <div
-            style={{
-              fontSize: flat ? '13.5px' : 'clamp(12px, 3.4vw, 13.5px)',
-              fontWeight: 900,
-              color: '#6EE7B7',
-              fontVariantNumeric: 'tabular-nums',
-              lineHeight: 1.2,
-            }}
-          >
+          <div className="text-[13px] sm:text-[14px] font-black tabular-nums leading-tight text-[#6EE7B7] truncate">
             {completedTotal.toLocaleString('vi-VN')}
           </div>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#9BA8AB', marginTop: '2px' }}>
+          <div className="text-[9.5px] sm:text-[10.5px] font-bold text-[#9BA8AB] mt-0.5 whitespace-nowrap truncate">
             Lệnh Đã Xong
           </div>
         </div>
 
         <div
-          className="u052-perk"
+          className="u052-perk min-w-0"
           style={{
-            padding: '7px 6px',
+            padding: '7px 4px',
             borderRadius: '10px',
-            background: 'rgba(6, 20, 27, 0.68)',
+            background: 'rgba(6, 20, 27, 0.72)',
             border: '1px solid rgba(255, 255, 255, 0.09)',
             textAlign: 'center',
           }}
         >
-          <div
-            style={{
-              fontSize: flat ? '13.5px' : 'clamp(12px, 3.4vw, 13.5px)',
-              fontWeight: 900,
-              color: '#FFFFFF',
-              fontVariantNumeric: 'tabular-nums',
-              lineHeight: 1.2,
-            }}
-          >
+          <div className="text-[13px] sm:text-[14px] font-black tabular-nums leading-tight text-white truncate">
             {exp.toLocaleString('vi-VN')}
           </div>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#9BA8AB', marginTop: '2px' }}>
+          <div className="text-[9.5px] sm:text-[10.5px] font-bold text-[#9BA8AB] mt-0.5 whitespace-nowrap truncate">
             Tổng EXP
           </div>
         </div>
@@ -641,6 +600,7 @@ export const HunterBlackCardModal: React.FC<HunterBlackCardModalProps> = ({
   // Trạng thái 3D vật lý (#052)
   const [angle, setAngle] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [settledBackVisible, setSettledBackVisible] = useState<boolean>(false);
   const [useCover, setUseCover] = useState<boolean>(false);
   const [isMasked, setIsMasked] = useState<boolean>(false);
   const [exportMode, setExportMode] = useState<ExportMode>('both');
@@ -685,6 +645,7 @@ export const HunterBlackCardModal: React.FC<HunterBlackCardModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setAngle(0);
+      setSettledBackVisible(false);
       dragRef.current.currentAngle = 0;
       setDownloadSuccess(false);
     }
@@ -799,7 +760,24 @@ export const HunterBlackCardModal: React.FC<HunterBlackCardModalProps> = ({
     [liveData, exportAssets]
   );
 
-  const isBackShown = Math.abs(Math.round(angle / 180)) % 2 === 1;
+  const normAngle = ((angle % 360) + 360) % 360;
+  const isBackVisible = normAngle > 90 && normAngle < 270;
+
+  // Chốt chặn ẩn tuyệt đối mặt quay ra sau (tránh 100% lỗi xuyên thấu trên iPhone/WebKit)
+  useEffect(() => {
+    if (isDragging) {
+      setSettledBackVisible(isBackVisible);
+      return;
+    }
+    if (settledBackVisible === isBackVisible) return;
+    const timer = window.setTimeout(() => {
+      setSettledBackVisible(isBackVisible);
+    }, 160);
+    return () => window.clearTimeout(timer);
+  }, [isDragging, isBackVisible, settledBackVisible]);
+
+  const showBackFace = isDragging ? isBackVisible : settledBackVisible;
+  const isBackShown = isBackVisible;
   const shimmerPos = 50 + Math.sin((angle * Math.PI) / 180) * 60;
 
   // Pointer Physics (#052)
@@ -1118,13 +1096,19 @@ export const HunterBlackCardModal: React.FC<HunterBlackCardModalProps> = ({
                   }
                 >
                   {/* Mặt Trước */}
-                  <div className="u052-face u052-front">
+                  <div
+                    className={`u052-face u052-front ${showBackFace ? 'is-face-hidden' : ''}`}
+                    aria-hidden={showBackFace}
+                  >
                     <BlackCardFrontContent data={liveData} />
                     <div className="u052-shine" />
                   </div>
 
                   {/* Mặt Sau */}
-                  <div className="u052-face u052-back">
+                  <div
+                    className={`u052-face u052-back ${!showBackFace ? 'is-face-hidden' : ''}`}
+                    aria-hidden={!showBackFace}
+                  >
                     <BlackCardBackContent data={liveData} />
                     <div className="u052-shine" />
                   </div>

@@ -122,7 +122,10 @@ BEGIN
     WHERE id = v_user_id RETURNING * INTO v_profile;
 
     v_task := v_task || jsonb_build_object(
-      'completed', true, 'completedAt', v_now_ms, 'completionDate', v_today::text,
+      'status', 'done', 'is_completed', true,
+      'completed', true, 'completedAt', v_now_ms,
+      'completed_at', to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+      'completionDate', v_today::text,
       'rewardClaimed', NOT v_reward_cap, 'lastAwardedExp', v_exp,
       'lastAwardedCoins', v_coins, 'lastRankUpBonus', v_rank_bonus
     );
