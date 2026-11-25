@@ -1,0 +1,403 @@
+/* ============== FaeQuest Auth Form #403 (Dark Fantasy Obsidian & Sunset Amber) ============== */
+
+/* Ô nhập liệu Floating Label + Icon */
+.u403-fw {
+  width: 100%;
+}
+
+.u403-f {
+  position: relative;
+  height: 54px;
+  border-radius: 14px;
+  background: #0d1b24;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  transition:
+    box-shadow 0.25s ease,
+    background-color 0.2s ease;
+  overflow: hidden;
+}
+
+.u403-f:hover:not(.is-f):not(.is-err) {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+}
+
+.u403-f.is-f {
+  box-shadow:
+    inset 0 0 0 1.5px #f5b942,
+    0 0 0 4px rgba(245, 185, 66, 0.14);
+}
+
+.u403-f.is-err {
+  box-shadow:
+    inset 0 0 0 1.5px rgba(251, 113, 133, 0.85),
+    0 0 0 4px rgba(251, 113, 133, 0.14);
+}
+
+/* Thanh gạch chân đỏ trượt từ trái sang phải khi báo lỗi */
+.u403-f::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #fb7185;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.32s cubic-bezier(0.34, 1.35, 0.64, 1);
+  pointer-events: none;
+}
+
+.u403-f.is-err::after {
+  transform: scaleX(1);
+}
+
+/* Rung ngang khi nhập sai */
+.u403-f.is-shake {
+  animation: u403-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes u403-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(-7px);
+  }
+  36% {
+    transform: translateX(6px);
+  }
+  54% {
+    transform: translateX(-5px);
+  }
+  72% {
+    transform: translateX(3px);
+  }
+  88% {
+    transform: translateX(-2px);
+  }
+}
+
+/* Icon dẫn đầu bên trái */
+.u403-ic {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(155, 168, 171, 0.78);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.22s ease;
+  z-index: 2;
+}
+
+.u403-f.is-f .u403-ic {
+  color: #f5b942;
+}
+
+.u403-f.is-err .u403-ic {
+  color: #fb7185;
+}
+
+/* Thẻ input */
+.u403-in {
+  width: 100%;
+  height: 54px;
+  padding: 20px 14px 6px 44px;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #f4f0e8;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  box-sizing: border-box;
+}
+
+.u403-in.has-eye {
+  padding-right: 46px;
+}
+
+.u403-in[type='password'] {
+  letter-spacing: 0.14em;
+  font-variant-ligatures: none;
+}
+
+/* Khắc phục Autofill làm trắng nền của Chrome / Safari */
+.u403-in:-webkit-autofill,
+.u403-in:-webkit-autofill:hover,
+.u403-in:-webkit-autofill:focus,
+.u403-in:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0d1b24 inset !important;
+  box-shadow: 0 0 0 1000px #0d1b24 inset !important;
+  -webkit-text-fill-color: #f4f0e8 !important;
+  caret-color: #f4f0e8;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Floating Label */
+.u403-lbl {
+  position: absolute;
+  left: 44px;
+  right: 42px;
+  top: 50%;
+  transform: translateY(-50%) scale(1);
+  transform-origin: left center;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgba(155, 168, 171, 0.85);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    transform 0.34s cubic-bezier(0.34, 1.45, 0.64, 1),
+    color 0.22s ease;
+  z-index: 2;
+}
+
+.u403-f.is-up .u403-lbl,
+.u403-f:has(.u403-in:-webkit-autofill) .u403-lbl {
+  transform: translateY(calc(-50% - 11px)) scale(0.76);
+  color: rgba(244, 240, 232, 0.65);
+}
+
+.u403-f.is-f .u403-lbl {
+  color: #f5b942;
+}
+
+.u403-f.is-err .u403-lbl {
+  color: #fb7185;
+}
+
+/* Nút Ẩn/Hiện mật khẩu 2 lớp SVG chớp mí */
+.u403-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0);
+  border: 0;
+  color: #9ba8ab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+  z-index: 3;
+}
+
+.u403-eye:hover {
+  color: #f4f0e8;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.u403-eye svg {
+  width: 19px;
+  height: 19px;
+  overflow: visible;
+}
+
+.u403-eye .lid {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(0.1);
+  opacity: 0;
+  transition:
+    transform 0.38s cubic-bezier(0.34, 1.45, 0.64, 1),
+    opacity 0.2s ease;
+}
+
+.u403-eye[aria-pressed='true'] .lid {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.u403-eye .lash {
+  transform: translateY(0);
+  opacity: 1;
+  transition:
+    transform 0.34s cubic-bezier(0.34, 1.45, 0.64, 1),
+    opacity 0.22s ease;
+}
+
+.u403-eye[aria-pressed='true'] .lash {
+  transform: translateY(-3px);
+  opacity: 0;
+}
+
+/* Dòng thông báo lỗi trượt mượt bên dưới trường */
+.u403-msg {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #fb7185;
+  padding: 0 4px;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  overflow: hidden;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    margin-top 0.25s ease;
+}
+
+.u403-msg.is-on {
+  margin-top: 5px;
+  max-height: 44px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Nút Submit biến hình 3 trạng thái */
+.u403-go-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.u403-go {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 48px;
+  border-radius: 24px;
+  border: 0;
+  background: #eae7e1;
+  color: #0b1720;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 10px 26px -10px rgba(234, 231, 225, 0.38);
+  transition:
+    max-width 0.55s cubic-bezier(0.34, 1.45, 0.64, 1),
+    background-color 0.28s ease,
+    color 0.2s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s ease;
+  will-change: max-width, transform;
+}
+
+.u403-go:hover:not(:disabled):not(.is-busy):not(.is-ok) {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -10px rgba(255, 255, 255, 0.42);
+}
+
+.u403-go:active:not(:disabled):not(.is-busy):not(.is-ok) {
+  transform: scale(0.97, 0.94);
+}
+
+.u403-go.is-busy {
+  max-width: 48px;
+  cursor: wait;
+  box-shadow: 0 10px 26px -8px rgba(245, 185, 66, 0.4);
+}
+
+.u403-go.is-ok {
+  max-width: 48px;
+  background: #34d399;
+  color: #06141b;
+  cursor: default;
+  box-shadow: 0 10px 28px -6px rgba(52, 211, 153, 0.55);
+}
+
+.u403-go-lbl {
+  white-space: nowrap;
+  transition: opacity 0.18s ease;
+}
+
+.u403-go.is-busy .u403-go-lbl,
+.u403-go.is-ok .u403-go-lbl {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.u403-spin {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  border: 2.5px solid rgba(11, 23, 32, 0.2);
+  border-top-color: #0b1720;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.u403-go.is-busy .u403-spin {
+  opacity: 1;
+  animation: u403-spin 0.72s linear infinite;
+}
+
+@keyframes u403-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.u403-ok-ic {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.u403-ok-ic path {
+  fill: none;
+  stroke: #06141b;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 22;
+  stroke-dashoffset: 22;
+}
+
+.u403-go.is-ok .u403-ok-ic {
+  opacity: 1;
+}
+
+.u403-go.is-ok .u403-ok-ic path {
+  animation: u403-check-draw 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.08s forwards;
+}
+
+@keyframes u403-check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u403-f,
+  .u403-f::after,
+  .u403-lbl,
+  .u403-eye .lid,
+  .u403-eye .lash,
+  .u403-msg,
+  .u403-go {
+    transition: none;
+  }
+  .u403-f.is-shake,
+  .u403-go.is-ok .u403-ok-ic path {
+    animation: none;
+  }
+  .u403-go.is-ok .u403-ok-ic path {
+    stroke-dashoffset: 0;
+  }
+}

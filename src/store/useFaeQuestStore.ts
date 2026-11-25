@@ -617,8 +617,17 @@ interface FaeQuestState {
 
   // Authentication Actions
   initAuth: () => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (
+    name: string,
+    email: string,
+    password: string,
+    onSuccessHold?: () => Promise<void> | void
+  ) => Promise<{ success: boolean; error?: string }>;
+  signIn: (
+    email: string,
+    password: string,
+    onSuccessHold?: () => Promise<void> | void
+  ) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -4409,7 +4418,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         });
       },
 
-      signUp: async (name: string, email: string, password: string) => {
+      signUp: async (
+        name: string,
+        email: string,
+        password: string,
+        onSuccessHold?: () => Promise<void> | void
+      ) => {
         const cleanName = name.trim();
         const cleanEmail = email.trim();
         if (!cleanName) return { success: false, error: 'Vui lòng nhập Tên Thợ Săn' };
@@ -4499,6 +4513,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
 
           if (data.session) {
+            if (onSuccessHold) {
+              await onSuccessHold();
+            }
             set({
               currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
               hunterId: newUserId,
@@ -4535,7 +4552,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().fetchSystemAchievements();
             get().fetchJournals();
             playSound('coin_purchase', get().soundEnabled);
-            get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
+            toast.ok(`Chào mừng Tân Binh "${cleanName}"!`, 'Khởi đầu bậc ĐỒNG • Tặng ngay 25 Xu Vàng');
             return { success: true };
           } else {
             // Auto sign in with password in case confirmation isn't blocking
@@ -4545,6 +4562,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
 
             if (signInRes.data.session) {
+              if (onSuccessHold) {
+                await onSuccessHold();
+              }
               set({
                 currentUser: { id: newUserId, email: cleanEmail, name: cleanName },
                 hunterId: newUserId,
@@ -4576,10 +4596,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               get().fetchSystemShopItems();
               get().fetchSystemAchievements();
               playSound('coin_purchase', get().soundEnabled);
-              get().addToast(`🎉 Chào mừng Tân Binh "${cleanName}"! Tặng ngay 25 Xu Vàng!`, 'success');
+              toast.ok(`Chào mừng Tân Binh "${cleanName}"!`, 'Khởi đầu bậc ĐỒNG • Tặng ngay 25 Xu Vàng');
               return { success: true };
             }
 
+            if (onSuccessHold) {
+              await onSuccessHold();
+            }
             return {
               success: true,
               error: 'Đăng ký thành công! Vui lòng kiểm tra email xác nhận hoặc đăng nhập ngay.',
@@ -4590,7 +4613,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
-      signIn: async (email: string, password: string) => {
+      signIn: async (
+        email: string,
+        password: string,
+        onSuccessHold?: () => Promise<void> | void
+      ) => {
         const cleanEmail = email.trim();
         if (!cleanEmail || !password) {
           return { success: false, error: 'Vui lòng nhập đầy đủ Email và Mật khẩu' };
@@ -4648,7 +4675,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               authLoading: false,
             });
 
-            get().addToast('⚠️ Tài khoản này đã bị Quản Trị Viên xóa khỏi hệ thống!', 'error');
+            toast.err('Tài khoản không khả dụng', 'Tài khoản này đã bị Quản Trị Viên xóa khỏi hệ thống!');
             return { success: false, error: 'Tài khoản này đã bị Quản Trị Viên xóa khỏi hệ thống!' };
           }
 
@@ -4698,6 +4725,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             const savedActiveDate = s.lastActiveDate || '';
             const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
 
+            if (onSuccessHold) {
+              await onSuccessHold();
+            }
+
             set({
               currentUser: { id: userId, email: cleanEmail, name: hunterName },
               hunterId: userId,
@@ -4728,7 +4759,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount || 0),
               dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount || 0),
               lastActiveDate: isCloudNewDay ? today : savedActiveDate,
-              lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
+              lastStreakDate: String(profile?.last_streak_date || s.lastStreakDate || '').slice(0, 10),
               tasks: Array.isArray(s.tasks) ? s.tasks : [],
               shopItems: Array.isArray(s.shopItems) ? (() => {
                 saveStoredShopItems(s.shopItems);
@@ -4774,6 +4805,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 rewardClaimed: false,
               },
             ];
+
+            if (onSuccessHold) {
+              await onSuccessHold();
+            }
+
+            if (onSuccessHold) {
+              await onSuccessHold();
+            }
 
             set({
               currentUser: { id: userId, email: cleanEmail, name: hunterName },
@@ -4825,7 +4864,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           await get().syncDailyLoginStreak(userId);
 
           playSoundEffect('complete', get().soundEnabled);
-          get().addToast(`⚔️ Chào mừng Thợ Săn "${hunterName}" trở lại Đấu Trường!`, 'success');
+          toast.ok(`Chào mừng "${hunterName}" trở lại Đấu Trường!`, 'Chúc bạn một ngày rèn luyện bứt phá');
           return { success: true };
         } catch (err: any) {
           return { success: false, error: localizeError(err, 'Lỗi kết nối máy chủ khi đăng nhập') };
