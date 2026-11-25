@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toPng } from 'html-to-image';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { toast } from '../../store/useToastStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { resolveTitleObject } from '../../constants/systemQuests';
 import { uploadImageToCloudinary } from '../../utils/cloudinaryUpload';
@@ -247,7 +248,10 @@ export const ProfileView: React.FC = () => {
     }
 
     setIsExportingCard(true);
-    addToast('Đang chuẩn bị nguyên liệu rèn Thẻ Chiến Tích...', 'info');
+    const exportToastId = toast.wait(
+      'Đang kết xuất Thẻ Chiến Tích...',
+      'Đang hoàn thiện ảnh độ nét cao 9:16'
+    );
 
     try {
       // 1. Chuyển đổi Avatar, Ảnh bìa, Logo, Rank Icon & Title Icon sang Base64 tối ưu kích thước
@@ -357,10 +361,22 @@ export const ProfileView: React.FC = () => {
 
       setExportedCardUrl(dataUrl);
       setIsPreviewModalOpen(true);
-      addToast('Đã rèn Thẻ Chiến Tích 9:16 thành công!', 'success');
+      toast.update(exportToastId, {
+        kind: 'ok',
+        title: 'Đã sẵn sàng Thẻ Chiến Tích',
+        description: 'Chạm để tải về hoặc chia sẻ ngay',
+      });
     } catch (err) {
       console.error('Lỗi khi xuất Thẻ Chiến Tích:', err);
-      addToast('Không thể xuất Thẻ Chiến Tích. Vui lòng thử lại!', 'error');
+      toast.update(exportToastId, {
+        kind: 'err',
+        title: 'Kết xuất thẻ thất bại',
+        description: 'Vui lòng thử lại sau giây lát',
+        action: {
+          label: 'Thử lại',
+          onClick: () => handleExportBattleCard(),
+        },
+      });
     } finally {
       setIsExportingCard(false);
     }

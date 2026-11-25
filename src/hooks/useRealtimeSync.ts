@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { useFaeQuestStore } from '../store/useFaeQuestStore';
+import { toast } from '../store/useToastStore';
 import { playSoundEffect } from '../utils/soundEffects';
 
 /**
@@ -69,13 +70,19 @@ export const useRealtimeSync = (): void => {
             if (newMsg.message_type === 'warning') {
               playSoundEffect('warning', soundEnabled);
               useFaeQuestStore.setState({ activeWarningMessage: newMsg });
-              addToast('⚠️ Bạn nhận được một Cảnh Báo khẩn cấp từ Quản Trị Viên!', 'error');
+              toast.err('Cảnh Báo Khẩn Cấp', 'Bạn nhận được thông báo quan trọng từ Quản Trị Viên');
             } else if (newMsg.message_type === 'gift') {
               playSoundEffect('rankup', soundEnabled);
-              addToast('🎁 Bạn vừa nhận được Thư Kèm Quà Tặng từ Quản Trị Viên! Hãy mở Hộp Thư để nhận!', 'success');
+              toast.reward('Quà Tặng Thợ Săn Mới!', 'Bạn vừa nhận được thư kèm quà tặng', {
+                label: 'Mở Thư',
+                onClick: () => useFaeQuestStore.getState().setUserInboxOpen(true),
+              });
             } else {
               playSoundEffect('complete', soundEnabled);
-              addToast('📬 Bạn có thư thông báo mới từ Quản Trị Viên.', 'info');
+              toast.info('Bạn có thư mới', 'Hãy mở Hộp Thư Thợ Săn để xem chi tiết', {
+                label: 'Mở Thư',
+                onClick: () => useFaeQuestStore.getState().setUserInboxOpen(true),
+              });
             }
           }
         }
@@ -239,7 +246,10 @@ export const useRealtimeSync = (): void => {
         useFaeQuestStore.getState().fetchSeasonAnnouncements();
         if (payload.eventType === 'INSERT') {
           playSoundEffect('complete', soundEnabled);
-          addToast('📢 Có thông báo Mùa Giải mới trên Đấu Trường!', 'info');
+          toast.info('Thông báo mới trên Đấu Trường', 'Ban quản trị vừa đăng bảng tin mùa giải', {
+            label: 'Xem ngay',
+            onClick: () => useFaeQuestStore.getState().setSeasonAnnouncementsModalOpen(true),
+          });
         }
       }
     );

@@ -5,6 +5,7 @@ import { DefaultPixelArtView } from './pixelScenes/DefaultPixelArtView';
 import { ChillyMusicPlayer } from './ChillyMusicPlayer';
 import { useChillyAudioStore } from '../../store/useChillyAudioStore';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { toast } from '../../store/useToastStore';
 import {
   saveCustomPixelArtBlob,
   getCustomPixelArtBlob,
@@ -139,8 +140,12 @@ export const ChillyHealingView: React.FC = () => {
       setIsUploading(true);
       const newUrl = await saveCustomPixelArtBlob(file);
       setCustomArtUrl(newUrl);
+      toast.info('Đã cập nhật không gian Healing', `Đã áp dụng hình nền «${file.name}»`, {
+        accent: 'healing',
+      });
     } catch (err) {
       console.error('Lỗi tải ảnh cá nhân:', err);
+      toast.err('Không thể đổi hình nền', 'Vui lòng thử lại với tệp ảnh khác');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -460,7 +465,7 @@ export const ChillyHealingView: React.FC = () => {
                 }, 4000);
               }
             }}
-            className={`z-[9999] bg-[#06141B] overflow-hidden flex items-center justify-center select-none overscroll-none touch-none transition-transform duration-300 ${
+            className={`z-[9990] bg-[#06141B] overflow-hidden flex items-center justify-center select-none overscroll-none touch-none transition-transform duration-300 ${
               isRotatedLandscape
                 ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rotate-90 w-[100dvh] h-[100dvw]'
                 : 'fixed inset-0 rotate-0 w-screen h-[100dvh]'

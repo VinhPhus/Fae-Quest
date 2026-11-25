@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './ChillyMusicPlayer.css';
 import { ChillyTrack } from '../../types';
 import { useChillyAudioStore, DrawerTab } from '../../store/useChillyAudioStore';
-import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { toast } from '../../store/useToastStore';
 import { saveCustomTrackFiles } from '../../utils/chillyStorage';
 import {
   searchAudiusTracks,
@@ -215,6 +215,9 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
 
     await addTrackToFavorites(chillyTrack, false);
     setFavoriteSuccessId(audiusTrack.id);
+    toast.info('Đã cập nhật không gian Healing', `Đã lưu «${audiusTrack.title}» vào danh sách`, {
+      accent: 'healing',
+    });
     setTimeout(() => setFavoriteSuccessId(null), 1800);
   };
 
@@ -247,6 +250,9 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
         await addTrackToFavorites(track, false);
       }
 
+      toast.info('Đã cập nhật không gian Healing', `Đã thêm «${meta.title}» vào danh sách`, {
+        accent: 'healing',
+      });
       setYtUrl('');
       setActiveDrawerTab('playlist');
     } catch (err) {
@@ -261,6 +267,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
+    const uploadToastId = toast.wait('Đang tải nhạc lên...', 'Đang đồng bộ tệp vào danh sách phát');
     try {
       setIsUploadingFile(true);
       const saved = await saveCustomTrackFiles(Array.from(files));
@@ -270,16 +277,33 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
           if (!tr.cloudUrl) hasOfflineOnly = true;
           await addTrackToFavorites(tr, false);
         }
-        const addToast = useFaeQuestStore.getState().addToast;
+        const firstTitle = saved.length === 1 ? `«${saved[0].title}»` : `${saved.length} bài hát mới`;
         if (hasOfflineOnly) {
-          addToast('Một số tệp quá lớn hoặc chưa có mạng nên chỉ lưu trên thiết bị này.', 'info');
+          toast.update(uploadToastId, {
+            kind: 'info',
+            accent: 'healing',
+            title: 'Đã lưu nhạc trên thiết bị này',
+            description: `${firstTitle} vượt dung lượng hoặc chưa có mạng để đồng bộ`,
+          });
         } else {
-          addToast('Đã tải lên và đồng bộ nhạc lên tài khoản của bạn!', 'success');
+          toast.update(uploadToastId, {
+            kind: 'info',
+            accent: 'healing',
+            title: 'Đã cập nhật không gian Healing',
+            description: `Đã thêm ${firstTitle} và đồng bộ đa thiết bị`,
+          });
         }
         setActiveDrawerTab('playlist');
+      } else {
+        toast.dismiss(uploadToastId);
       }
     } catch (err) {
       console.warn('Upload file error:', err);
+      toast.update(uploadToastId, {
+        kind: 'err',
+        title: 'Không thể tải tệp nhạc',
+        description: 'Vui lòng thử lại với định dạng .mp3, .m4a hoặc .wav',
+      });
     } finally {
       setIsUploadingFile(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

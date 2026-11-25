@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { toast } from '../../store/useToastStore';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { SYSTEM_TITLES, resolveTitleObject } from '../../constants/systemQuests';
 import { playSound } from '../../utils/soundEngine';
@@ -82,6 +83,7 @@ export const LeaderboardHeader: React.FC = () => {
       await fetchCommunityProfiles();
       syncToCloud(true).catch((e) => console.warn('Background sync error in leaderboard:', e));
       window.dispatchEvent(new CustomEvent('faequest:reload_leaderboard'));
+      toast.info('Đã làm mới Đấu Trường', 'Bảng xếp hạng Thợ Săn đã được cập nhật');
     } catch (err) {
       console.error('Leaderboard refresh error:', err);
     } finally {

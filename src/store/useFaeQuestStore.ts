@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import confetti from 'canvas-confetti';
+import { toast } from './useToastStore';
 import {
   Task,
   TaskCategory,
@@ -2365,7 +2366,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           const lockUntil = initial.taskLocks[id] || 0;
           if (lockUntil > now) {
             playSoundEffect('warning', initial.soundEnabled);
-            initial.addToast(`Thao tác quá nhanh! Nút trạng thái của nhiệm vụ này đang bị tạm khóa trong ${Math.ceil((lockUntil - now) / 1000)} giây.`, 'info');
+            toast.err(
+              'Chưa đủ thời gian rèn luyện',
+              `Hoàn thành thật sau ${Math.ceil((lockUntil - now) / 1000)} giây nữa để nhận thưởng`
+            );
             return false;
           }
           const recentToggles = (initial.taskToggleHistory[id] || []).filter((t) => t > now - 60_000);
@@ -2376,25 +2380,36 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
           if (isLocked) {
             playSoundEffect('warning', initial.soundEnabled);
-            initial.addToast('Phát hiện thao tác liên tục! Nút hoàn thành của nhiệm vụ này đã bị tạm khóa trong 30 giây.', 'info');
+            toast.err(
+              'Chưa đủ thời gian rèn luyện',
+              'Hoàn thành thật sau 30 giây nữa để nhận thưởng'
+            );
             return false;
           }
           if (task.target_date && task.target_date > today) {
             playSoundEffect('warning', initial.soundEnabled);
-            initial.addToast('🌅 Nhiệm vụ này được lên lịch cho Ngày Mai. Chưa thể nghiệm thu trước hạn!', 'info');
+            toast.info('Nhiệm vụ ngày mai', 'Lệnh này được lên lịch cho ngày mai, chưa thể nghiệm thu trước hạn');
             return false;
           }
           const createdAt = task.createdAt || Date.parse((task as Task & { created_at?: string }).created_at ?? '');
           const ageMs = Number.isFinite(createdAt) ? Math.max(0, now - createdAt) : 0;
           if (!forceSkipAgeCheck && task.focusDuration && task.focusDuration >= 15 && ageMs < task.focusDuration * 18_000) {
             playSoundEffect('warning', initial.soundEnabled);
-            initial.addToast('Thử thách cần thêm thời gian rèn luyện hoặc hãy bật chế độ Focus để nghiệm thu!', 'info');
+            const waitSecs = Math.max(1, Math.ceil((task.focusDuration * 18_000 - ageMs) / 1000));
+            toast.err(
+              'Chưa đủ thời gian rèn luyện',
+              `Hoàn thành thật sau ${waitSecs} giây nữa hoặc dùng Focus để nhận thưởng`
+            );
             return false;
           }
           if (ageMs < 120_000) {
             if (getQuickCompletions().length >= 2) {
               playSoundEffect('warning', initial.soundEnabled);
-              initial.addToast('Lệnh vừa khắc chưa đủ thời gian tôi luyện. Hãy hoàn thành thử thách thực tế trước khi nghiệm thu!', 'info');
+              const waitSecs = Math.max(1, Math.ceil((120_000 - ageMs) / 1000));
+              toast.err(
+                'Chưa đủ thời gian rèn luyện',
+                `Hoàn thành thật sau ${waitSecs} giây nữa để nhận thưởng`
+              );
               return false;
             }
             recordQuickCompletion();
@@ -2596,11 +2611,25 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                   });
                 } catch { }
                 if (!session) playSound('rank_up', state.soundEnabled);
+                toast.reward('Thăng Bậc Hạng Mới!', `Bạn đã chạm mốc ${tier.name}`, {
+                  label: 'Xem Thẻ',
+                  onClick: () => get().setActiveTab('profile'),
+                });
                 setTimeout(() => {
                   set({ rankUpData: { achievedTier: tier, bonusCoins: result.rank_bonus_coins } });
                 }, 3200);
               }
-              get().addToast(`${session ? '⚔️ Hoàn thành Focus!' : 'Hoàn thành!'} Nhận +${awardedExp} EXP và +${awardedCoins} Xu`, 'success');
+              if (session) {
+                toast.ok(
+                  'Chinh phục phiên Focus',
+                  `Đã nghiệm thu «${currentTask.title}» • +${awardedExp} EXP`
+                );
+              } else {
+                toast.ok(
+                  'Nghiệm thu Lệnh thành công',
+                  `+${awardedExp} EXP • +${awardedCoins} Xu đã vào hành trang`
+                );
+              }
             }
             if (result.reward_cap) {
               get().addToast('Nhiệm vụ đã được nghiệm thu. Thợ săn đã chạm ngưỡng thể lực hôm nay.', 'info');
@@ -2741,7 +2770,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }));
 
         playSound('coin_purchase', state.soundEnabled);
-        get().addToast('🎒 Đã thêm vật phẩm vào Túi Đồ!', 'success');
+        toast.ok('Đổi thưởng thành công', `Đã thêm «${item.title}» vào Túi Đồ`);
         debouncedAutoSync(get());
       },
 
@@ -2789,10 +2818,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }));
 
         // 3. Thông báo Toast chúc mừng
-        get().addToast(
-          `✨ Đã kích hoạt phần thưởng "${target.title}"! Chúc Thợ Săn tận hưởng xứng đáng.`,
-          'success'
-        );
+        toast.ok('Kích hoạt phần thưởng thành công', `Đã sử dụng «${target.title}»`);
 
         // Đồng bộ ngay lên Supabase
         debouncedAutoSync(get());
@@ -3407,11 +3433,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         if (isCompleted) {
           playSound('rank_up', state.soundEnabled);
-          get().addToast(`🔥 XUẤT SẮC! Hoàn thành chuỗi ${quest.targetDays} ngày của "${quest.title}"! Hãy nhận thưởng!`, 'success');
+          toast.reward(`Hoàn thành chuỗi ${quest.targetDays} ngày!`, `«${quest.title}» đã sẵn sàng nhận thưởng`);
         } else if (quest.lastCheckInDate === yesterday) {
-          get().addToast(`🔥 Điểm danh thành công ngày ${nextStreak}/${quest.targetDays}! Giữ vững ngọn lửa kỷ luật!`, 'success');
+          toast.reward(`Chuỗi Kỷ Luật đạt ${nextStreak}N`, `Điểm danh «${quest.title}» ngày mới thành công`);
         } else {
-          get().addToast(`🔥 Bắt đầu chuỗi mới: Ngày ${nextStreak}/${quest.targetDays}! Hãy kiên trì mỗi ngày!`, 'success');
+          toast.reward(`Bắt đầu chuỗi ngày ${nextStreak}/${quest.targetDays}`, `Giữ vững ngọn lửa «${quest.title}» nhé`);
         }
         debouncedAutoSync(get());
       },
@@ -3501,7 +3527,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .then(() => { });
         }
         playSound('scroll_open', state.soundEnabled);
-        get().addToast(`Đã trang bị danh hiệu "${titleInfo?.name || titleId}"!`, 'success');
+        toast.ok('Trang bị thành công', `Đã áp dụng «${titleInfo?.name || titleId}» vào hồ sơ`);
         debouncedAutoSync(get());
       },
 
@@ -3554,21 +3580,17 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       addToast: (text, type = 'info') => {
-        const id = 'toast_' + Math.random().toString(36).substring(2, 9);
-        set((prev) => ({
-          toasts: [...prev.toasts, { id, text, type }],
-        }));
-        setTimeout(() => {
-          set((prev) => ({
-            toasts: prev.toasts.filter((t) => t.id !== id),
-          }));
-        }, 3500);
+        if (type === 'success') {
+          toast.ok(text);
+        } else if (type === 'error') {
+          toast.err(text);
+        } else {
+          toast.info(text);
+        }
       },
 
       removeToast: (id: string) => {
-        set((prev) => ({
-          toasts: prev.toasts.filter((t) => t.id !== id),
-        }));
+        toast.dismiss(id);
       },
 
       checkDailyReset: () => {
@@ -3754,7 +3776,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           if (finalStreak > currentStreak || currentStreak === 0) {
-            get().addToast(`🔥 Điểm danh ngày mới! Chuỗi kỷ luật đạt ${finalStreak}N`, 'success');
+            toast.reward(`Chuỗi Kỷ Luật đạt ${finalStreak}N`, 'Điểm danh ngày mới thành công');
             playSoundEffect('rankup', get().soundEnabled);
           }
 
