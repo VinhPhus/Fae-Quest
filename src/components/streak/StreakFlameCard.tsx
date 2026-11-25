@@ -37,23 +37,6 @@ function addDaysToYmd(ymd: string, deltaDays: number): string {
   return getLocalDateStr(dt);
 }
 
-function getCountdownToMidnight(): string {
-  const now = new Date();
-  const nextMidnight = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + 1,
-    0,
-    0,
-    0,
-    0
-  );
-  const diffMinutes = Math.max(0, Math.ceil((nextMidnight.getTime() - now.getTime()) / 60000));
-  const hours = Math.floor(diffMinutes / 60);
-  const mins = diffMinutes % 60;
-  return `${hours}g ${String(mins).padStart(2, '0')}p`;
-}
-
 export interface StreakFlameCardProps {
   mode?: 'view' | 'modal';
   onClose?: () => void;
@@ -78,9 +61,8 @@ export const StreakFlameCard: React.FC<StreakFlameCardProps> = ({
   const midGradId = `u379-mg-${uid}`;
   const coreGradId = `u379-cg-${uid}`;
 
-  // Ngày hôm nay theo giờ địa phương, tự cập nhật khi chạy qua 00:00
+  // Ngày hôm nay theo giờ địa phương, tự cập nhật khi chạy qua 00:00 hoặc mở lại trên điện thoại
   const [todayStr, setTodayStr] = useState<string>(() => getLocalDateStr());
-  const [countdown, setCountdown] = useState<string>(() => getCountdownToMidnight());
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Điều khiển chuỗi diễn hoạt chúc mừng ngày mới (sau 350ms mới cuộn Odometer + bùng lửa + tích hôm nay)
@@ -89,21 +71,29 @@ export const StreakFlameCard: React.FC<StreakFlameCardProps> = ({
   const [todayJustPopped, setTodayJustPopped] = useState<boolean>(false);
 
   useEffect(() => {
-    const tickClock = () => {
-      setTodayStr(getLocalDateStr());
-      setCountdown(getCountdownToMidnight());
+    const refreshToday = () => {
+      const next = getLocalDateStr();
+      setTodayStr((prev) => (prev === next ? prev : next));
     };
-    tickClock();
-    const timer = window.setInterval(tickClock, 15000);
-    return () => window.clearInterval(timer);
+    refreshToday();
+    const timer = window.setInterval(refreshToday, 15000);
+    window.addEventListener('focus', refreshToday);
+    document.addEventListener('visibilitychange', refreshToday);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refreshToday);
+      document.removeEventListener('visibilitychange', refreshToday);
+    };
   }, []);
+
+  const normalizedLastStreakDate = String(storeLastStreakDate || '').slice(0, 10);
 
   // Giá trị hiển thị thực tế (tôn trọng nhịp trễ 350ms khi mở Modal chúc mừng)
   const effectiveStreak = hasCelebrationAnim && !celebrationRevealed ? celebrationFrom : storeStreakDays;
   const isCheckedInToday =
     hasCelebrationAnim && !celebrationRevealed
       ? false
-      : storeLastStreakDate === todayStr && storeStreakDays > 0;
+      : normalizedLastStreakDate === todayStr && storeStreakDays > 0;
 
   // Suy ngược chính xác 7 ngày trong tuần hiện tại (T2 = index 0 .. CN = index 6)
   const weekState = useMemo(() => {
@@ -117,8 +107,8 @@ export const StreakFlameCard: React.FC<StreakFlameCardProps> = ({
       if (hasCelebrationAnim && !celebrationRevealed) {
         // Trước khoảnh khắc chúc mừng: mốc cuối là hôm qua (nếu hôm nay mới nối tiếp)
         anchorStr = addDaysToYmd(todayStr, -1);
-      } else if (storeLastStreakDate && /^\d{4}-\d{2}-\d{2}$/.test(storeLastStreakDate)) {
-        anchorStr = storeLastStreakDate;
+      } else if (normalizedLastStreakDate && /^\d{4}-\d{2}-\d{2}$/.test(normalizedLastStreakDate)) {
+        anchorStr = normalizedLastStreakDate;
       } else {
         anchorStr = todayStr;
       }
@@ -142,7 +132,7 @@ export const StreakFlameCard: React.FC<StreakFlameCardProps> = ({
 
     const doneInWeek = days.filter((d) => d.isOn).length;
     return { days, todayWeekIdx, doneInWeek };
-  }, [todayStr, effectiveStreak, storeLastStreakDate, hasCelebrationAnim, celebrationRevealed]);
+  }, [todayStr, effectiveStreak, normalizedLastStreakDate, hasCelebrationAnim, celebrationRevealed]);
 
   // Ref vật lý cho vòng lặp requestAnimationFrame
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -545,7 +535,7 @@ export const StreakFlameCard: React.FC<StreakFlameCardProps> = ({
           </button>
         ) : isCheckedInToday ? (
           <div className="u379-status">
-            🔥 Đã giữ lửa hôm nay • Đợt mới sau {countdown}
+            🔥 Đã giữ lửa hôm nay
           </div>
         ) : (
           <button

@@ -609,6 +609,8 @@ interface FaeQuestState {
   setHasSeenTutorial: (seen: boolean) => Promise<void>;
   setHunterId: (id: string) => void;
   syncToCloud: (silent?: boolean) => Promise<boolean>;
+  pullLatestFromCloud: () => Promise<boolean>;
+  applyRemoteCloudState: (remoteState: UserStateCloud, options?: { fromRealtime?: boolean }) => void;
   restoreFromCloud: (targetHunterId: string) => Promise<boolean>;
   fetchCommunityProfiles: () => Promise<HunterProfileCloud[]>;
 
@@ -622,6 +624,8 @@ interface FaeQuestState {
 let autoSyncTimer: any = null;
 let rewardPopupTimer: any = null;
 let cloudWrite = Promise.resolve();
+let lastCloudWriteFinishedAt = 0;
+let lastCloudPullAt = 0;
 let authInitInFlight = false;
 let authListenerRegistered = false;
 
@@ -683,6 +687,7 @@ function focusState(session: FocusSession | null) {
 const debouncedAutoSync = (store: any) => {
   if (autoSyncTimer) clearTimeout(autoSyncTimer);
   autoSyncTimer = setTimeout(() => {
+    autoSyncTimer = null;
     store.syncToCloud(true);
   }, 500);
 };
@@ -3944,6 +3949,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           const res = await syncProfileAndStateToCloud(owner, cloudSnapshot(state));
           if (focusOwner(get()) !== owner) return false;
           if (res.success) {
+            lastCloudWriteFinishedAt = Date.now();
             const nowStr = new Date().toLocaleTimeString('vi-VN', {
               hour: '2-digit',
               minute: '2-digit',
@@ -3957,6 +3963,71 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           if (!silent) get().addToast(`⚠️ Lỗi đồng bộ đám mây: ${localizeError(res.error, 'Kết nối gián đoạn')}`, 'error');
           return false;
         });
+      },
+
+      applyRemoteCloudState: (s: UserStateCloud, options?: { fromRealtime?: boolean }) => {
+        const curr = get();
+        if (!s || !curr.currentUser || curr.authLoading) return;
+        if (autoSyncTimer !== null || curr.cloudSyncStatus === 'syncing') return;
+        if (options?.fromRealtime && Date.now() - lastCloudWriteFinishedAt < 2500) return;
+
+        const today = getLocalDateStr();
+        const savedActiveDate = String(s.lastActiveDate || '').slice(0, 10);
+        const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
+
+        set({
+          playerName: s.playerName || curr.playerName,
+          avatarUrl: s.avatarUrl !== undefined ? s.avatarUrl : curr.avatarUrl,
+          coverUrl: s.coverUrl !== undefined ? s.coverUrl : curr.coverUrl,
+          exp: typeof s.exp === 'number' ? s.exp : curr.exp,
+          coins: typeof s.coins === 'number' ? s.coins : curr.coins,
+          stars: typeof s.stars === 'number' ? s.stars : curr.stars,
+          completedTotal: typeof s.completedTotal === 'number' ? s.completedTotal : curr.completedTotal,
+          streakDays: typeof s.streakDays === 'number' ? s.streakDays : curr.streakDays,
+          lastStreakDate: s.lastStreakDate ? String(s.lastStreakDate).slice(0, 10) : curr.lastStreakDate,
+          dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount ?? curr.dailyCompletedCount),
+          dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount ?? curr.dailyBossCompletedCount),
+          lastActiveDate: isCloudNewDay ? today : savedActiveDate,
+          tasks: Array.isArray(s.tasks) ? s.tasks : curr.tasks,
+          shopItems: Array.isArray(s.shopItems)
+            ? (() => {
+                saveStoredShopItems(s.shopItems);
+                return s.shopItems;
+              })()
+            : curr.shopItems,
+          inventory: Array.isArray(s.inventory) ? s.inventory : curr.inventory,
+          systemQuests: Array.isArray(s.systemQuests) ? s.systemQuests : curr.systemQuests,
+          unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : curr.unlockedTitleIds,
+          equippedTitleId: s.equippedTitleId || curr.equippedTitleId,
+          focusSessionsCompleted:
+            typeof s.focusSessionsCompleted === 'number' ? s.focusSessionsCompleted : curr.focusSessionsCompleted,
+          cumulativeCategoryStats: s.cumulativeCategoryStats || curr.cumulativeCategoryStats,
+          cumulativeDifficultyStats: s.cumulativeDifficultyStats || curr.cumulativeDifficultyStats,
+          dailyActivityHistory: s.dailyActivityHistory || curr.dailyActivityHistory,
+          ...(Array.isArray(s.chillyTracks) ? { chillyTracks: s.chillyTracks } : {}),
+        });
+      },
+
+      pullLatestFromCloud: async () => {
+        const initial = get();
+        const owner = focusOwner(initial);
+        if (!owner || !initial.currentUser || initial.authLoading) return false;
+        if (autoSyncTimer !== null || initial.cloudSyncStatus === 'syncing') return false;
+        const now = Date.now();
+        if (now - lastCloudWriteFinishedAt < 1800 || now - lastCloudPullAt < 3000) return false;
+        lastCloudPullAt = now;
+
+        try {
+          const res = await restoreUserStateFromCloud(owner);
+          if (res.success && res.state && focusOwner(get()) === owner) {
+            get().applyRemoteCloudState(res.state);
+            get().checkDailyReset();
+            return true;
+          }
+        } catch (err) {
+          console.warn('Pull latest cloud state warning:', err);
+        }
+        return false;
       },
 
       restoreFromCloud: async (targetHunterId: string) => {
@@ -3986,7 +4057,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount || 0),
             dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount || 0),
             lastActiveDate: isCloudNewDay ? today : savedActiveDate,
-            lastStreakDate: s.lastStreakDate || '',
+            lastStreakDate: s.lastStreakDate ? String(s.lastStreakDate).slice(0, 10) : '',
             tasks: Array.isArray(s.tasks) ? s.tasks : get().tasks,
             shopItems: Array.isArray(s.shopItems) ? (() => {
               saveStoredShopItems(s.shopItems);
@@ -4171,7 +4242,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 dailyCompletedCount: isCloudNewDay ? 0 : (s.dailyCompletedCount || 0),
                 dailyBossCompletedCount: isCloudNewDay ? 0 : (s.dailyBossCompletedCount || 0),
                 lastActiveDate: isCloudNewDay ? today : savedActiveDate,
-                lastStreakDate: profile?.last_streak_date || s.lastStreakDate || '',
+                lastStreakDate: String(profile?.last_streak_date || s.lastStreakDate || '').slice(0, 10),
                 tasks: Array.isArray(s.tasks) ? s.tasks : [],
                 shopItems: Array.isArray(s.shopItems) ? (() => {
                   saveStoredShopItems(s.shopItems);

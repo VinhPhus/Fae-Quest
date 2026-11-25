@@ -166,22 +166,38 @@ export const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [cleanupExpiredInventory, checkDailyReset]);
 
-  // Tự động kích hoạt khi người dùng quay lại ứng dụng (visibilitychange & focus)
+  // Tự động đồng bộ từ Đám mây & kiểm tra chuỗi khi quay lại ứng dụng trên điện thoại/máy tính
   useEffect(() => {
-    const handleAppResume = () => {
+    const handleAppResume = async () => {
       if (document.visibilityState === 'visible') {
-        checkDailyReset();
-        const user = useFaeQuestStore.getState().currentUser;
+        const store = useFaeQuestStore.getState();
+        const user = store.currentUser;
         if (user) {
-          useFaeQuestStore.getState().syncDailyLoginStreak(user.id);
+          await store.pullLatestFromCloud();
+          store.checkDailyReset();
+          await store.syncDailyLoginStreak(user.id);
+        } else {
+          checkDailyReset();
         }
+      }
+    };
+    const handleOnline = () => {
+      const store = useFaeQuestStore.getState();
+      const user = store.currentUser;
+      if (user) {
+        store.pullLatestFromCloud().then(() => {
+          store.checkDailyReset();
+          store.syncDailyLoginStreak(user.id);
+        });
       }
     };
     document.addEventListener('visibilitychange', handleAppResume);
     window.addEventListener('focus', handleAppResume);
+    window.addEventListener('online', handleOnline);
     return () => {
       document.removeEventListener('visibilitychange', handleAppResume);
       window.removeEventListener('focus', handleAppResume);
+      window.removeEventListener('online', handleOnline);
     };
   }, [checkDailyReset]);
 

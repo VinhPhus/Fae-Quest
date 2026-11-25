@@ -153,7 +153,7 @@ export const useRealtimeSync = (): void => {
             patch.streakDays = p.streak;
           }
           if (p.last_streak_date !== undefined) {
-            patch.lastStreakDate = p.last_streak_date || '';
+            patch.lastStreakDate = p.last_streak_date ? String(p.last_streak_date).slice(0, 10) : '';
           }
 
           // Cập nhật ảnh bìa & Avatar Realtime cho chính tài khoản hiện tại
@@ -254,7 +254,7 @@ export const useRealtimeSync = (): void => {
       }
     );
 
-    // 8. Kênh lắng nghe Realtime user_states để đồng bộ danh sách nhạc Chilly giữa PC & Điện thoại
+    // 8. Kênh lắng nghe Realtime user_states để đồng bộ toàn bộ tiến trình giữa PC & Điện thoại
     channel.on(
       'postgres_changes',
       {
@@ -264,9 +264,9 @@ export const useRealtimeSync = (): void => {
         filter: `user_id=eq.${currentUser.id}`,
       },
       (payload) => {
-        const cloudTracks = (payload.new as any)?.state_json?.chillyTracks;
-        if (Array.isArray(cloudTracks)) {
-          useFaeQuestStore.setState({ chillyTracks: cloudTracks });
+        const cloudState = (payload.new as any)?.state_json;
+        if (cloudState) {
+          useFaeQuestStore.getState().applyRemoteCloudState(cloudState, { fromRealtime: true });
         }
       }
     );
