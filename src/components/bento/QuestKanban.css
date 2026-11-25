@@ -1,0 +1,197 @@
+/* ==========================================================================
+   FaeQuest Dark Fantasy 3-Column Kanban Board
+   ========================================================================== */
+
+.u255-col {
+  border-radius: 16px;
+  background: rgba(11, 25, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition:
+    background-color 0.24s ease,
+    box-shadow 0.24s ease,
+    border-color 0.24s ease;
+}
+
+.u255-col[data-status='todo'] {
+  --col-glow: rgba(148, 163, 184, 0.55);
+}
+
+.u255-col[data-status='in_progress'] {
+  --col-glow: rgba(245, 185, 66, 0.65);
+}
+
+.u255-col[data-status='done'] {
+  --col-glow: rgba(16, 185, 129, 0.65);
+}
+
+.u255-col.is-over {
+  background: rgba(16, 34, 46, 0.94);
+  border-color: transparent;
+  box-shadow:
+    inset 0 0 0 1.5px var(--col-glow),
+    0 14px 32px -12px rgba(0, 0, 0, 0.72);
+}
+
+/* Đầu cột + số đếm bật nảy */
+.u255-ch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+@keyframes u255-count-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.u255-ch b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #CCD0CF;
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.u255-ch b.is-pop {
+  animation: u255-count-pop 0.4s cubic-bezier(0.3, 1.7, 0.5, 1);
+}
+
+/* Khung giữ chỗ nét đứt khi kéo qua */
+.u255-ph {
+  border-radius: 14px;
+  border: 1.5px dashed rgba(245, 185, 66, 0.45);
+  background: rgba(245, 185, 66, 0.06);
+  box-sizing: border-box;
+  pointer-events: none;
+  transition: height 0.18s ease, opacity 0.18s ease;
+}
+
+/* Thẻ nhiệm vụ Dark Fantasy */
+.u255-cd {
+  position: relative;
+  border-radius: 14px;
+  background: #10222E;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 13px;
+  color: #F4F0E8;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  outline: none;
+}
+
+.u255-cd:hover {
+  background: #142A39;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.u255-cd:focus-visible {
+  box-shadow: 0 0 0 2px rgba(245, 185, 66, 0.65);
+}
+
+@media (min-width: 1024px) {
+  .u255-cd.is-draggable {
+    cursor: grab;
+  }
+}
+
+/* Thẻ được nhấc nổi khi đang kéo */
+.u255-cd.is-lift {
+  position: fixed;
+  z-index: 9000;
+  pointer-events: none;
+  margin: 0;
+  background: #142B3A;
+  border-color: rgba(245, 185, 66, 0.55);
+  transform: rotate(3deg) scale(1.04);
+  box-shadow: 0 20px 36px -12px rgba(0, 0, 0, 0.75);
+  cursor: grabbing;
+  transition: none !important;
+}
+
+/* Thẻ hạ cánh mượt từ vị trí thả vào vị trí đích */
+.u255-cd.is-land {
+  position: fixed;
+  z-index: 9000;
+  pointer-events: none;
+  margin: 0;
+  transform: rotate(0deg) scale(1);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.55);
+  transition:
+    left 0.28s cubic-bezier(0.3, 1.2, 0.5, 1),
+    top 0.28s cubic-bezier(0.3, 1.2, 0.5, 1),
+    transform 0.28s cubic-bezier(0.3, 1.2, 0.5, 1),
+    box-shadow 0.28s ease;
+}
+
+/* Cột Đã Nghiệm Thu */
+.u255-cd.is-done {
+  background: rgba(11, 25, 34, 0.72);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.u255-cd.is-done:hover {
+  background: rgba(16, 34, 46, 0.8);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+@keyframes u255-check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.u255-cd.is-done em {
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #10B981;
+  color: #06141B;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+  animation: u255-check-pop 0.42s cubic-bezier(0.3, 1.7, 0.5, 1) forwards;
+}
+
+body.u255-grabbing,
+body.u255-grabbing * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u255-col,
+  .u255-ch b.is-pop,
+  .u255-ph,
+  .u255-cd,
+  .u255-cd.is-land,
+  .u255-cd.is-done em {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

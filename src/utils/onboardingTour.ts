@@ -141,13 +141,13 @@ export function getOnboardingTourDriver(): Driver {
         },
       },
 
-      // Bước 3: Lưới Nhiệm Vụ
+      // Bước 3: Bảng Kanban Nhiệm Vụ
       {
         element: '#tour-task-grid',
         popover: {
           title: '⚔️ Chinh Phục & Nhận Thưởng',
           description:
-            'Mỗi khi hoàn thành nhiệm vụ, bạn sẽ nhận được EXP để thăng hạng Danh Vọng và Xu Vàng. Dùng bộ lọc trạng thái và danh mục để quản lý công việc.',
+            'Kéo thả hoặc chuyển thẻ qua 3 cột (Chờ Thực Hiện, Đang Rèn Luyện, Đã Nghiệm Thu), bấm Focus để tập trung sâu và dùng bộ lọc theo nhóm hoặc độ khó để quản lý mục tiêu.',
           side: 'top',
           align: 'center',
         },

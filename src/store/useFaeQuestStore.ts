@@ -31,6 +31,7 @@ import {
   CategoryStatRecord,
   DailyActivityRecord,
   ChillyTrack,
+  TaskStatus,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import {
@@ -553,6 +554,7 @@ interface FaeQuestState {
   ) => void;
   updateTaskFocusDuration: (taskId: string, duration: number) => void;
   toggleTask: (id: string, coords?: { x: number; y: number }, forceSkipAgeCheck?: boolean) => Promise<void> | void;
+  moveTaskStatus: (id: string, nextStatus: TaskStatus, coords?: { x: number; y: number }) => Promise<boolean>;
   completeQuest: (id: string, options?: { completedViaFocus?: boolean; coords?: { x: number; y: number }; forceSkipAgeCheck?: boolean }) => Promise<boolean>;
   confirmEarlyTaskCompletion: () => void;
   cancelEarlyTaskConfirmation: () => void;
@@ -2263,7 +2265,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           description: description?.trim() || undefined,
           category,
           difficulty,
+          status: 'todo',
           completed: false,
+          is_completed: false,
           rewardClaimed: false,
           isDailyRecurring: isDailyRecurring && isTargetToday,
           focusDuration: duration,
@@ -2348,6 +2352,49 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
       toggleTask: async (id, coords, forceSkipAgeCheck) => {
         await get().completeQuest(id, { coords, forceSkipAgeCheck });
+      },
+
+      moveTaskStatus: async (id: string, nextStatus: TaskStatus, coords?: { x: number; y: number }) => {
+        const state = get();
+        const task = state.tasks.find((t) => t.id === id);
+        if (!task || state.authLoading || state.processingTaskIds.includes(id)) return false;
+
+        const currentStatus: TaskStatus =
+          task.completed || task.is_completed || task.status === 'done'
+            ? 'done'
+            : task.status === 'in_progress'
+              ? 'in_progress'
+              : 'todo';
+
+        // Khóa chống kéo ngược từ Đã Nghiệm Thu để nhận thưởng lần 2
+        if (currentStatus === 'done' && nextStatus !== 'done') {
+          toast.info('Lệnh đã được nghiệm thu', 'Không thể kéo ngược nhiệm vụ đã hoàn thành');
+          return false;
+        }
+
+        if (currentStatus === nextStatus) return true;
+
+        // Kéo sang Đã Nghiệm Thu -> Bắt buộc chạy qua completeQuest (Anti-Cheat + EXP/Xu + Toast)
+        if (nextStatus === 'done') {
+          return await get().completeQuest(id, { coords });
+        }
+
+        // Chuyển giữa Chờ Thực Hiện <-> Đang Rèn Luyện
+        set((prev) => ({
+          tasks: prev.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  status: nextStatus,
+                  completed: false,
+                  is_completed: false,
+                }
+              : t
+          ),
+        }));
+        playSound('ui_click', state.soundEnabled);
+        debouncedAutoSync(get());
+        return true;
       },
 
       completeQuest: async (id, { completedViaFocus = false, coords, forceSkipAgeCheck = false } = {}) => {
@@ -2451,7 +2498,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             let result = {
               task: {
                 ...currentTask,
+                status: 'done' as TaskStatus,
                 completed: true,
+                is_completed: true,
                 completedAt,
                 completionDate: completedDate,
                 rewardClaimed: !localCap,
@@ -2541,7 +2590,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                     lastCompletedTimestamp: savedTask.completedAt,
                     tasks: prev.tasks.map((t) => t.id === id ? {
                       ...t,
+                      status: savedTask.completed ? ('done' as TaskStatus) : (t.status || 'todo'),
                       completed: savedTask.completed,
+                      is_completed: Boolean(savedTask.completed),
                       completedAt: savedTask.completedAt,
                       completionDate: savedTask.completionDate,
                       lastFocusSessionId: savedTask.lastFocusSessionId ?? t.lastFocusSessionId,
@@ -3009,7 +3060,17 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           remainingWhenPaused: 0,
         };
         saveFocusSession(focusOwner(state), session);
-        set({ ...focusState(session), isFocusModalOpen: false });
+        set((prev) => ({
+          ...focusState(session),
+          isFocusModalOpen: false,
+          // Tự động đưa thẻ từ Chờ Thực Hiện sang Đang Rèn Luyện khi bấm Focus
+          tasks: prev.tasks.map((t) =>
+            t.id === taskId && !t.completed && !t.is_completed
+              ? { ...t, status: 'in_progress' as TaskStatus, completed: false, is_completed: false }
+              : t
+          ),
+        }));
+        debouncedAutoSync(get());
         state.refreshFocusMedia();
         requestFocusNotifications();
       },
@@ -3642,7 +3703,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             if ((isNewDay && task.isDailyRecurring) || isCompletedBeforeToday) {
               return {
                 ...task,
+                status: 'todo' as TaskStatus,
                 completed: false,
+                is_completed: false,
                 rewardClaimed: false,
                 completedAt: undefined,
                 focusRewardClaimed: false,

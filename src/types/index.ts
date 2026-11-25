@@ -1,5 +1,6 @@
 export type TaskCategory = 'hoc-tap' | 'cong-viec' | 'the-luc' | 'ca-nhan' | 'sang-tao';
 export type TaskDifficulty = 'easy' | 'medium' | 'hard' | 'boss';
+export type TaskStatus = 'todo' | 'in_progress' | 'done';
 export type RankId = 'dong' | 'bac' | 'vang' | 'luc-bao' | 'cao-thu' | 'dai-cao-thu' | 'thach-dau';
 
 export interface Task {
@@ -8,7 +9,9 @@ export interface Task {
   description?: string;
   category: TaskCategory;
   difficulty: TaskDifficulty;
+  status?: TaskStatus;
   completed: boolean;
+  is_completed?: boolean;
   rewardClaimed?: boolean;
   isDailyRecurring?: boolean;
   pomodoroMinutes?: number | null;
