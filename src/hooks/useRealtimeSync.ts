@@ -244,6 +244,23 @@ export const useRealtimeSync = (): void => {
       }
     );
 
+    // 8. Kênh lắng nghe Realtime user_states để đồng bộ danh sách nhạc Chilly giữa PC & Điện thoại
+    channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'user_states',
+        filter: `user_id=eq.${currentUser.id}`,
+      },
+      (payload) => {
+        const cloudTracks = (payload.new as any)?.state_json?.chillyTracks;
+        if (Array.isArray(cloudTracks)) {
+          useFaeQuestStore.setState({ chillyTracks: cloudTracks });
+        }
+      }
+    );
+
     channel.subscribe();
 
     return () => {

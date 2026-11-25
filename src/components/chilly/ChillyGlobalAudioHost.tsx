@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useChillyAudioStore } from '../../store/useChillyAudioStore';
+import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { chillySynth } from '../../utils/chillySynth';
 
 declare global {
@@ -20,12 +21,19 @@ export const ChillyGlobalAudioHost: React.FC = () => {
     seekRequestTime,
     seekRequestNonce,
     initAudioStore,
+    syncFromCloudTracks,
+    resetToBuiltInTracks,
     setCurrentTime,
     setDuration,
     setIsLoading,
     setIsPlaying,
     handleTrackEnded,
   } = useChillyAudioStore();
+
+  const currentUser = useFaeQuestStore((s) => s.currentUser);
+  const authLoading = useFaeQuestStore((s) => s.authLoading);
+  const cloudChillyTracks = useFaeQuestStore((s) => s.chillyTracks);
+  const pullChillyTracksFromCloud = useFaeQuestStore((s) => s.pullChillyTracksFromCloud);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
@@ -42,6 +50,35 @@ export const ChillyGlobalAudioHost: React.FC = () => {
   useEffect(() => {
     initAudioStore();
   }, [initAudioStore]);
+
+  // 1b. Đồng bộ hai chiều với tài khoản đám mây (khi đăng nhập / đổi thiết bị / có cập nhật realtime)
+  useEffect(() => {
+    if (authLoading) return;
+    if (currentUser?.id) {
+      syncFromCloudTracks(cloudChillyTracks);
+    } else {
+      resetToBuiltInTracks();
+    }
+  }, [currentUser?.id, authLoading, cloudChillyTracks, syncFromCloudTracks, resetToBuiltInTracks]);
+
+  // 1c. Tự động làm mới danh sách nhạc khi điện thoại quay lại nền trước hoặc có mạng lại
+  useEffect(() => {
+    if (!currentUser?.id || typeof window === 'undefined') return;
+    const handleResume = () => {
+      if (document.visibilityState === 'visible') {
+        pullChillyTracksFromCloud();
+      }
+    };
+    const handleOnline = () => {
+      pullChillyTracksFromCloud();
+    };
+    document.addEventListener('visibilitychange', handleResume);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', handleResume);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [currentUser?.id, pullChillyTracksFromCloud]);
 
   // 2. Khởi tạo YouTube IFrame Player ngầm một lần duy nhất
   useEffect(() => {

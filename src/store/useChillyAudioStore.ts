@@ -4,7 +4,12 @@ import {
   getAllStoredTracks,
   saveTrackToStorage,
   deleteStoredTrack,
+  getStoredTrackBlob,
+  updateStoredTrackCloudUrl,
+  syncCloudTracksToIndexedDB,
 } from '../utils/chillyStorage';
+import { uploadAudioToCloudinary } from '../utils/cloudinaryUpload';
+import { useFaeQuestStore } from './useFaeQuestStore';
 
 export const BUILT_IN_SYNTH_TRACKS: ChillyTrack[] = [
   {
@@ -29,6 +34,16 @@ export const BUILT_IN_SYNTH_TRACKS: ChillyTrack[] = [
 
 export type DrawerTab = 'search' | 'youtube' | 'playlist';
 
+const toSyncableTracks = (list: ChillyTrack[]): ChillyTrack[] =>
+  list
+    .filter((t) => !t.isBuiltInSynth)
+    .map((t) => ({
+      ...t,
+      src: t.cloudUrl || (t.src && !t.src.startsWith('blob:') ? t.src : ''),
+    }));
+
+let cloudSyncLock = false;
+
 interface ChillyAudioState {
   playlist: ChillyTrack[];
   currentTrackIndex: number;
@@ -50,6 +65,8 @@ interface ChillyAudioState {
 
   // Actions
   initAudioStore: () => Promise<void>;
+  syncFromCloudTracks: (cloudTracks?: ChillyTrack[]) => Promise<void>;
+  resetToBuiltInTracks: () => void;
   playTrack: (index: number) => void;
   playSpecificTrack: (track: ChillyTrack) => Promise<void>;
   togglePlay: () => void;
@@ -92,7 +109,14 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
   initAudioStore: async () => {
     try {
       const stored = await getAllStoredTracks();
-      // Loại trừ các track trùng ID nếu đã có
+      const cloudTracks = useFaeQuestStore.getState().chillyTracks;
+
+      // Nếu đã có dữ liệu đám mây, ưu tiên đồng bộ từ đám mây
+      if (Array.isArray(cloudTracks)) {
+        await get().syncFromCloudTracks(cloudTracks);
+        return;
+      }
+
       const storedIds = new Set(stored.map((t) => t.id));
       const combined = [
         ...BUILT_IN_SYNTH_TRACKS.filter((t) => !storedIds.has(t.id)),
@@ -102,6 +126,110 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
     } catch (err) {
       console.warn('Lỗi load playlist Chilly:', err);
     }
+  },
+
+  syncFromCloudTracks: async (cloudTracks?: ChillyTrack[]) => {
+    if (cloudSyncLock) return;
+    cloudSyncLock = true;
+    try {
+      const prevState = get();
+      const activeTrackId = prevState.playlist[prevState.currentTrackIndex]?.id;
+
+      // 1. Đọc danh sách cục bộ hiện tại và tự động tải lên đám mây nếu có bài từ máy chưa có link từ xa
+      const localStored = await getAllStoredTracks();
+      const uploadedLocalTracks: ChillyTrack[] = [];
+      let uploadedAnyNew = false;
+
+      for (const localTrack of localStored) {
+        if (localTrack.isBuiltInSynth) continue;
+        const hasRemote = Boolean(
+          localTrack.cloudUrl || (localTrack.src && localTrack.src.startsWith('http'))
+        );
+
+        if (!hasRemote && localTrack.blobId && typeof navigator !== 'undefined' && navigator.onLine) {
+          const blobData = await getStoredTrackBlob(localTrack.blobId);
+          if (blobData?.blob && blobData.blob.size <= 50 * 1024 * 1024) {
+            try {
+              const cloudUrl = await uploadAudioToCloudinary(blobData.blob, `${blobData.title}.mp3`);
+              await updateStoredTrackCloudUrl(localTrack.id, cloudUrl);
+              uploadedLocalTracks.push({
+                ...localTrack,
+                cloudUrl,
+                src: localTrack.src || cloudUrl,
+              });
+              uploadedAnyNew = true;
+              continue;
+            } catch (uploadErr) {
+              console.warn('Tự động đồng bộ file nhạc cục bộ thất bại:', uploadErr);
+            }
+          }
+        }
+
+        if (hasRemote || localTrack.youtubeVideoId) {
+          uploadedLocalTracks.push({
+            ...localTrack,
+            cloudUrl:
+              localTrack.cloudUrl ||
+              (localTrack.src && localTrack.src.startsWith('http') ? localTrack.src : undefined),
+          });
+        }
+      }
+
+      let finalUserTracks: ChillyTrack[] = [];
+
+      if (cloudTracks === undefined) {
+        // Tài khoản chưa từng lưu danh sách nhạc lên đám mây -> đẩy danh sách cục bộ hiện có lên
+        finalUserTracks = await syncCloudTracksToIndexedDB(uploadedLocalTracks);
+        if (finalUserTracks.length > 0 || uploadedAnyNew) {
+          useFaeQuestStore.getState().setChillyTracks(toSyncableTracks(finalUserTracks), true);
+        }
+      } else {
+        // Đã có danh sách từ đám mây: hợp nhất thêm các bài vừa upload lần đầu trên thiết bị này (nếu có)
+        const cloudIdSet = new Set(cloudTracks.map((t) => t.id));
+        const newlyMigrated = uploadedLocalTracks.filter(
+          (lt) => !cloudIdSet.has(lt.id) && (lt.cloudUrl || lt.youtubeVideoId)
+        );
+
+        const mergedCloud =
+          newlyMigrated.length > 0 ? [...cloudTracks, ...newlyMigrated] : cloudTracks;
+
+        finalUserTracks = await syncCloudTracksToIndexedDB(mergedCloud);
+
+        if (newlyMigrated.length > 0 || uploadedAnyNew) {
+          useFaeQuestStore.getState().setChillyTracks(toSyncableTracks(mergedCloud), true);
+        }
+      }
+
+      const finalIds = new Set(finalUserTracks.map((t) => t.id));
+      const newPlaylist = [
+        ...BUILT_IN_SYNTH_TRACKS.filter((t) => !finalIds.has(t.id)),
+        ...finalUserTracks,
+      ];
+
+      // Giữ nguyên bài đang phát nếu còn trong danh sách
+      const preservedIdx = activeTrackId
+        ? newPlaylist.findIndex((t) => t.id === activeTrackId)
+        : -1;
+
+      set({
+        playlist: newPlaylist,
+        currentTrackIndex: preservedIdx !== -1 ? preservedIdx : 0,
+      });
+    } catch (err) {
+      console.warn('Lỗi đồng bộ nhạc từ đám mây:', err);
+    } finally {
+      cloudSyncLock = false;
+    }
+  },
+
+  resetToBuiltInTracks: () => {
+    set({
+      playlist: BUILT_IN_SYNTH_TRACKS,
+      currentTrackIndex: 0,
+      isPlaying: false,
+      currentTime: 0,
+      duration: BUILT_IN_SYNTH_TRACKS[0].duration || 360,
+    });
   },
 
   playTrack: (index: number) => {
@@ -151,7 +279,6 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
   prevTrack: () => {
     const { playlist, currentTrackIndex, currentTime } = get();
     if (playlist.length === 0) return;
-    // Nếu đã phát quá 3 giây, cho phát lại từ đầu bài hiện tại
     if (currentTime > 3) {
       set({ currentTime: 0, seekRequestTime: 0, seekRequestNonce: Date.now() });
       return;
@@ -195,8 +322,16 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
     const exists = playlist.some((t) => t.id === track.id);
     let newPlaylist = playlist;
     if (!exists) {
-      newPlaylist = [...playlist, track];
-      await saveTrackToStorage(track);
+      const normalizedTrack: ChillyTrack = {
+        ...track,
+        cloudUrl:
+          track.cloudUrl ||
+          (track.src && track.src.startsWith('http') ? track.src : undefined),
+      };
+      newPlaylist = [...playlist, normalizedTrack];
+      await saveTrackToStorage(normalizedTrack);
+      // Đẩy danh sách mới lên đám mây để đồng bộ sang điện thoại / máy khác
+      useFaeQuestStore.getState().setChillyTracks(toSyncableTracks(newPlaylist), true);
     }
     const newIdx = newPlaylist.findIndex((t) => t.id === track.id);
     set({
@@ -214,7 +349,6 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
 
   removeTrack: async (trackId: string) => {
     const { playlist, currentTrackIndex } = get();
-    // Không cho xóa 2 bản synth mặc định
     if (trackId.startsWith('synth_')) return;
 
     await deleteStoredTrack(trackId);
@@ -223,10 +357,14 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
     if (nextIdx >= newPlaylist.length) {
       nextIdx = Math.max(0, newPlaylist.length - 1);
     }
+    const finalPlaylist = newPlaylist.length > 0 ? newPlaylist : BUILT_IN_SYNTH_TRACKS;
     set({
-      playlist: newPlaylist.length > 0 ? newPlaylist : BUILT_IN_SYNTH_TRACKS,
+      playlist: finalPlaylist,
       currentTrackIndex: nextIdx,
     });
+
+    // Đồng bộ việc xóa bài lên đám mây
+    useFaeQuestStore.getState().setChillyTracks(toSyncableTracks(finalPlaylist), true);
   },
 
   setIsSeeking: (isSeeking: boolean) => set({ isSeeking }),
@@ -243,10 +381,8 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
     if (playlist.length === 0) return;
 
     if (repeatMode === 'one') {
-      // Lặp lại bài này
       set({ currentTime: 0, isPlaying: true, seekRequestTime: 0, seekRequestNonce: Date.now() });
     } else if (repeatMode === 'all') {
-      // Chuyển bài kế tiếp
       const nextIdx = (currentTrackIndex + 1) % playlist.length;
       set({
         currentTrackIndex: nextIdx,
@@ -255,7 +391,6 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
         duration: playlist[nextIdx].duration || 240,
       });
     } else {
-      // Repeat off: nếu còn bài thì sang tiếp, hết danh sách thì dừng
       if (currentTrackIndex < playlist.length - 1) {
         const nextIdx = currentTrackIndex + 1;
         set({

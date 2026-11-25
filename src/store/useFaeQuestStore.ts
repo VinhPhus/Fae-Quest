@@ -29,6 +29,7 @@ import {
   AdminAssetCategory,
   CategoryStatRecord,
   DailyActivityRecord,
+  ChillyTrack,
 } from '../types';
 import { supabase } from '../utils/supabaseClient';
 import {
@@ -470,8 +471,11 @@ interface FaeQuestState {
   floatingRewards: FloatingRewardItem[];
   rewardPopup: RewardPopupData | null;
   toasts: ToastMessage[];
+  chillyTracks?: ChillyTrack[];
 
   // Actions
+  setChillyTracks: (tracks: ChillyTrack[], triggerSync?: boolean) => void;
+  pullChillyTracksFromCloud: () => Promise<ChillyTrack[] | undefined>;
   setWriteJournalOpen: (open: boolean, journalToEdit?: JournalEntry | null) => void;
   fetchJournals: () => Promise<void>;
   saveJournal: (entry: { id?: string; date: string; mood: JournalMood; content: string; images: string[] }) => Promise<boolean>;
@@ -647,6 +651,14 @@ function cloudSnapshot(state: FaeQuestState): UserStateCloud {
     cumulativeCategoryStats: state.cumulativeCategoryStats,
     cumulativeDifficultyStats: state.cumulativeDifficultyStats,
     dailyActivityHistory: state.dailyActivityHistory,
+    ...(Array.isArray(state.chillyTracks)
+      ? {
+          chillyTracks: state.chillyTracks.map((t) => ({
+            ...t,
+            src: t.cloudUrl || (t.src && !t.src.startsWith('blob:') ? t.src : ''),
+          })),
+        }
+      : {}),
   };
 }
 
@@ -3766,6 +3778,40 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
+      setChillyTracks: (tracks: ChillyTrack[], triggerSync = true) => {
+        const sanitized = tracks
+          .filter((t) => !t.isBuiltInSynth)
+          .map((t) => ({
+            ...t,
+            src: t.cloudUrl || (t.src && !t.src.startsWith('blob:') ? t.src : ''),
+          }));
+        set({ chillyTracks: sanitized });
+        if (triggerSync && get().currentUser) {
+          get().syncToCloud(true);
+        }
+      },
+
+      pullChillyTracksFromCloud: async () => {
+        const state = get();
+        const owner = focusOwner(state);
+        if (!owner || !state.currentUser) return undefined;
+        try {
+          const { data } = await supabase
+            .from('user_states')
+            .select('state_json')
+            .eq('user_id', owner)
+            .maybeSingle();
+          const cloudList = (data?.state_json as any)?.chillyTracks;
+          if (Array.isArray(cloudList)) {
+            set({ chillyTracks: cloudList });
+            return cloudList as ChillyTrack[];
+          }
+        } catch (err) {
+          console.warn('Pull chilly tracks warning:', err);
+        }
+        return undefined;
+      },
+
       syncToCloud: async (silent = false) => {
         const initial = get();
         if (initial.authLoading || (silent && !initial.currentUser)) return false;
@@ -3834,6 +3880,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             cumulativeCategoryStats: s.cumulativeCategoryStats || get().cumulativeCategoryStats,
             cumulativeDifficultyStats: s.cumulativeDifficultyStats || get().cumulativeDifficultyStats,
             dailyActivityHistory: s.dailyActivityHistory || get().dailyActivityHistory,
+            chillyTracks: Array.isArray(s.chillyTracks) ? s.chillyTracks : undefined,
             cloudSyncStatus: 'synced',
             lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
               hour: '2-digit',
@@ -4015,6 +4062,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
                 unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
                 equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
                 focusSessionsCompleted: s.focusSessionsCompleted || 0,
+                chillyTracks: Array.isArray(s.chillyTracks) ? s.chillyTracks : undefined,
                 hasSeenTutorial: hasSeenTutorialVal,
                 cloudSyncStatus: 'synced',
                 lastSyncedAt: new Date().toLocaleTimeString('vi-VN', {
@@ -4459,6 +4507,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               unlockedTitleIds: Array.isArray(s.unlockedTitleIds) ? s.unlockedTitleIds : ['title_tan_binh_gai_do'],
               equippedTitleId: s.equippedTitleId || profile?.equipped_title || 'title_tan_binh_gai_do',
               focusSessionsCompleted: s.focusSessionsCompleted || 0,
+              chillyTracks: Array.isArray(s.chillyTracks) ? s.chillyTracks : undefined,
               hasSeenTutorial: hasSeenTutorialVal,
               cloudSyncStatus: 'synced',
               authLoading: false,
@@ -4599,6 +4648,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           unlockedTitleIds: ['title_tan_binh_gai_do'],
           equippedTitleId: 'title_tan_binh_gai_do',
           focusSessionsCompleted: 0,
+          chillyTracks: undefined,
           cloudSyncStatus: 'idle',
           lastSyncedAt: undefined,
         });

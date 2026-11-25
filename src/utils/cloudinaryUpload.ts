@@ -1,4 +1,4 @@
-import { CLOUDINARY_UPLOAD_URL, CLOUDINARY_UPLOAD_PRESET } from '../constants/cloudinary';
+import { CLOUDINARY_UPLOAD_URL, CLOUDINARY_AUDIO_UPLOAD_URL, CLOUDINARY_UPLOAD_PRESET } from '../constants/cloudinary';
 import { compressImage } from './imageCompression';
 
 export interface CloudinaryUploadResult {
@@ -27,6 +27,32 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error?.message || `Lỗi tải ảnh lên kho lưu trữ (${response.status})`);
+  }
+
+  const data = await response.json();
+  return data.secure_url || data.url;
+};
+
+/**
+ * Tải tệp âm thanh (.mp3, .m4a, .wav, .ogg) lên kho lưu trữ để phát đồng bộ trên mọi thiết bị
+ */
+export const uploadAudioToCloudinary = async (file: File | Blob, fileName?: string): Promise<string> => {
+  const formData = new FormData();
+  if (file instanceof File) {
+    formData.append('file', file);
+  } else {
+    formData.append('file', file, fileName || 'track.mp3');
+  }
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  const response = await fetch(CLOUDINARY_AUDIO_UPLOAD_URL, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Không thể tải tệp âm thanh lên máy chủ (${response.status})`);
   }
 
   const data = await response.json();

@@ -4,6 +4,7 @@ import { ChillySharpness, ChillyFrameMode } from '../../types';
 import { DefaultPixelArtView } from './pixelScenes/DefaultPixelArtView';
 import { ChillyMusicPlayer } from './ChillyMusicPlayer';
 import { useChillyAudioStore } from '../../store/useChillyAudioStore';
+import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import {
   saveCustomPixelArtBlob,
   getCustomPixelArtBlob,
@@ -68,6 +69,11 @@ export const ChillyHealingView: React.FC = () => {
     setIsChillyFullscreen(isFullscreen);
     return () => setIsChillyFullscreen(false);
   }, [isFullscreen, setIsChillyFullscreen]);
+
+  // Kéo danh sách nhạc mới nhất từ đám mây mỗi khi mở Chilly Healing
+  useEffect(() => {
+    useFaeQuestStore.getState().pullChillyTracksFromCloud();
+  }, []);
 
   const isMobileDevice = viewport.isCoarsePointer || viewport.width <= 1024;
   const isPortraitScreen = viewport.height > viewport.width;

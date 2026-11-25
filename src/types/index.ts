@@ -131,6 +131,7 @@ export interface ChillyTrack {
   title: string;
   artist: string;
   src?: string; // URL audio or object URL or stream URL
+  cloudUrl?: string; // Permanent HTTPS URL synced across devices
   blobId?: string; // IndexedDB key if stored locally
   duration?: number;
   isBuiltInSynth?: boolean;

@@ -18,3 +18,4 @@ export const CLOUDINARY_UPLOAD_PRESET =
 
 // Đường dẫn REST API upload trực tiếp từ trình duyệt
 export const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+export const CLOUDINARY_AUDIO_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`;

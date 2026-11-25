@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './ChillyMusicPlayer.css';
 import { ChillyTrack } from '../../types';
 import { useChillyAudioStore, DrawerTab } from '../../store/useChillyAudioStore';
+import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { saveCustomTrackFiles } from '../../utils/chillyStorage';
 import {
   searchAudiusTracks,
@@ -264,8 +265,16 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
       setIsUploadingFile(true);
       const saved = await saveCustomTrackFiles(Array.from(files));
       if (saved.length > 0) {
+        let hasOfflineOnly = false;
         for (const tr of saved) {
+          if (!tr.cloudUrl) hasOfflineOnly = true;
           await addTrackToFavorites(tr, false);
+        }
+        const addToast = useFaeQuestStore.getState().addToast;
+        if (hasOfflineOnly) {
+          addToast('Một số tệp quá lớn hoặc chưa có mạng nên chỉ lưu trên thiết bị này.', 'info');
+        } else {
+          addToast('Đã tải lên và đồng bộ nhạc lên tài khoản của bạn!', 'success');
         }
         setActiveDrawerTab('playlist');
       }
@@ -712,7 +721,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
                     <span>Tải File Từ Máy Tính / Điện Thoại</span>
                   </div>
                   <div className="text-[10px] text-[#9BA8AB] mt-0.5">
-                    Hỗ trợ nhạc từ máy (.mp3, .m4a, .wav, .ogg) — lưu sẵn ngoại tuyến
+                    Hỗ trợ nhạc từ máy (.mp3, .m4a, .wav, .ogg) — tự động đồng bộ mọi thiết bị
                   </div>
                 </div>
 
