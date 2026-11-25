@@ -51,7 +51,7 @@ function getCountdownToMidnight(): string {
   const diffMinutes = Math.max(0, Math.ceil((nextMidnight.getTime() - now.getTime()) / 60000));
   const hours = Math.floor(diffMinutes / 60);
   const mins = diffMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  return `${hours}g ${String(mins).padStart(2, '0')}p`;
 }
 
 export interface StreakFlameCardProps {
