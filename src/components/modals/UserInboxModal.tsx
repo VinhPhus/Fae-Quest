@@ -1,25 +1,35 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useFaeQuestStore } from '../../store/useFaeQuestStore';
-import { UserMessage } from '../../types';
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
-  Mail,
   X,
   CheckCircle2,
-  AlertTriangle,
-  Bell,
-  Gift,
-  Clock,
   ChevronDown,
-  ChevronUp,
   Inbox,
   CheckCheck,
   Sparkles,
   Coins,
   Star,
   Trash2,
+  Gift,
+  AlertTriangle,
+  ScrollText,
+  Clock,
+  Loader2,
 } from 'lucide-react';
+import { useFaeQuestStore } from '../../store/useFaeQuestStore';
+import { UserMessage } from '../../types';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { getVisibleInboxAnchor, isInboxTriggerElement } from '../layout/InboxBellButton';
+import './InboxPopover.css';
+
+type MailFilterTab = 'all' | 'warning' | 'notice' | 'gift';
+
+const TAB_ITEMS: Array<{ id: MailFilterTab; label: string }> = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'warning', label: 'Cảnh báo' },
+  { id: 'notice', label: 'Thông báo' },
+  { id: 'gift', label: 'Quà tặng' },
+];
 
 export const UserInboxModal: React.FC = () => {
   const {
@@ -34,55 +44,263 @@ export const UserInboxModal: React.FC = () => {
     clearClaimedMessages,
   } = useFaeQuestStore();
 
-  const [activeTab, setActiveTab] = useState<'all' | 'warning' | 'notice' | 'gift'>('all');
+  const [activeTab, setActiveTab] = useState<MailFilterTab>('all');
   const [expandedMessageId, setExpandedMessageId] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [leavingIds, setLeavingIds] = useState<Record<string, boolean>>({});
+  const [enteringIds, setEnteringIds] = useState<Record<string, boolean>>({});
+  const [dominoReadIds, setDominoReadIds] = useState<Record<string, boolean>>({});
+  const [isMarkingAllDomino, setIsMarkingAllDomino] = useState<boolean>(false);
+  const [isClearing, setIsClearing] = useState<boolean>(false);
 
-  useBodyScrollLock(isUserInboxOpen);
+  // Điều khiển vòng đời mở/đóng Popover mượt (#074)
+  const [rendered, setRendered] = useState<boolean>(false);
+  const [isClosing, setIsClosing] = useState<boolean>(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 640 : true
+  );
+  const [popoverCoords, setPopoverCoords] = useState<{
+    top: number;
+    right: number;
+    arrowRight: number;
+  }>({ top: 68, right: 20, arrowRight: 28 });
 
-  if (!isUserInboxOpen || typeof document === 'undefined') return null;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const returnFocusElRef = useRef<HTMLButtonElement | null>(null);
+  const shouldReturnFocusRef = useRef<boolean>(false);
+  const closeTimerRef = useRef<number | null>(null);
+  const dominoTimersRef = useRef<number[]>([]);
+  const knownIdsRef = useRef<Set<string>>(new Set());
 
-  const filteredMessages = userMessages.filter((msg) => {
-    if (activeTab === 'all') return true;
-    return msg.message_type === activeTab;
-  });
+  const updateViewportAndCoords = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const isDesk = window.innerWidth >= 640;
+    setIsDesktopViewport(isDesk);
+    if (!isDesk) return;
 
-  const getBadgeIcon = (type: UserMessage['message_type']) => {
-    switch (type) {
-      case 'warning':
-        return <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />;
-      case 'gift':
-        return <Gift className="w-3.5 h-3.5 text-emerald-400" />;
-      default:
-        return <Bell className="w-3.5 h-3.5 text-cyan-400" />;
+    const anchor = getVisibleInboxAnchor();
+    if (!anchor) {
+      setPopoverCoords({ top: 68, right: 20, arrowRight: 28 });
+      return;
     }
+
+    const rect = anchor.getBoundingClientRect();
+    const popWidth = Math.min(430, window.innerWidth - 24);
+    const desiredRight = Math.max(12, window.innerWidth - rect.right - 14);
+    const clampedRight = Math.min(desiredRight, window.innerWidth - popWidth - 12);
+    const panelRight = window.innerWidth - clampedRight;
+    const anchorCenterX = rect.left + rect.width / 2;
+    const arrowRight = Math.max(20, Math.min(popWidth - 20, panelRight - anchorCenterX));
+    const top = Math.min(rect.bottom + 12, Math.max(12, window.innerHeight - 260));
+
+    setPopoverCoords({ top, right: clampedRight, arrowRight });
+  }, []);
+
+  // Mở / đóng Popover giữ animation thu gọn (#074)
+  useEffect(() => {
+    if (closeTimerRef.current) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+
+    if (isUserInboxOpen) {
+      returnFocusElRef.current = getVisibleInboxAnchor();
+      shouldReturnFocusRef.current = false;
+      knownIdsRef.current = new Set(userMessages.map((m) => m.id));
+      setEnteringIds({});
+      setLeavingIds({});
+      setDominoReadIds({});
+      setIsClosing(false);
+      setRendered(true);
+    } else if (rendered) {
+      setIsClosing(true);
+      const delay = isDesktopViewport ? 300 : 240;
+      closeTimerRef.current = window.setTimeout(() => {
+        setRendered(false);
+        setIsClosing(false);
+        if (shouldReturnFocusRef.current) {
+          shouldReturnFocusRef.current = false;
+          returnFocusElRef.current?.focus({ preventScroll: true });
+        }
+      }, delay);
+    }
+  }, [isUserInboxOpen, isDesktopViewport, rendered]);
+
+  // Tính lại tọa độ neo mỗi khi mở hoặc resize màn hình
+  useLayoutEffect(() => {
+    if (!rendered) return;
+    updateViewportAndCoords();
+    window.addEventListener('resize', updateViewportAndCoords);
+    return () => window.removeEventListener('resize', updateViewportAndCoords);
+  }, [rendered, updateViewportAndCoords]);
+
+  // Bắt đầu theo dõi thư mới từ Realtime khi Popover đang mở -> hiệu ứng chèn đỉnh danh sách
+  useEffect(() => {
+    if (!rendered || !isUserInboxOpen) return;
+    const incoming: string[] = [];
+    userMessages.forEach((m) => {
+      if (!knownIdsRef.current.has(m.id)) {
+        knownIdsRef.current.add(m.id);
+        incoming.push(m.id);
+      }
+    });
+    if (incoming.length > 0) {
+      setEnteringIds((prev) => {
+        const next = { ...prev };
+        incoming.forEach((id) => {
+          next[id] = true;
+        });
+        return next;
+      });
+      const timer = window.setTimeout(() => {
+        setEnteringIds((prev) => {
+          const next = { ...prev };
+          incoming.forEach((id) => delete next[id]);
+          return next;
+        });
+      }, 500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [userMessages, rendered, isUserInboxOpen]);
+
+  // Dọn dẹp timers domino khi unmount
+  useEffect(() => {
+    return () => {
+      dominoTimersRef.current.forEach((t) => window.clearTimeout(t));
+      dominoTimersRef.current = [];
+      if (closeTimerRef.current) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Đóng khi nhấn Esc (trả focus về nút Hộp Thư) hoặc bấm ra ngoài
+  useEffect(() => {
+    if (!isUserInboxOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        shouldReturnFocusRef.current = true;
+        setUserInboxOpen(false);
+      }
+    };
+
+    const handlePointerOutside = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(target) &&
+        !isInboxTriggerElement(target)
+      ) {
+        setUserInboxOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handlePointerOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handlePointerOutside);
+    };
+  }, [isUserInboxOpen, setUserInboxOpen]);
+
+  // Chỉ khóa cuộn thân trang trên Mobile (< 640px) khi mở hộp thoại
+  useBodyScrollLock(rendered && !isDesktopViewport);
+
+  const filteredMessages = useMemo(
+    () =>
+      userMessages.filter((msg) => {
+        if (activeTab === 'all') return true;
+        return msg.message_type === activeTab;
+      }),
+    [userMessages, activeTab]
+  );
+
+  // Số lượng chưa đọc / chưa nhận quà nhỏ trên mỗi tab lọc
+  const tabCounts = useMemo(() => {
+    const counts: Record<MailFilterTab, number> = {
+      all: 0,
+      warning: 0,
+      notice: 0,
+      gift: 0,
+    };
+    userMessages.forEach((m) => {
+      const isUnread = !m.is_read && !dominoReadIds[m.id];
+      const hasUnclaimedGift =
+        m.message_type === 'gift' &&
+        !m.is_claimed &&
+        Boolean(
+          (m.reward_exp && m.reward_exp > 0) ||
+            (m.reward_coins && m.reward_coins > 0) ||
+            (m.reward_stars && m.reward_stars > 0) ||
+            (m.reward_items && m.reward_items.length > 0)
+        );
+      if (isUnread) {
+        counts.all += 1;
+        if (m.message_type === 'warning') counts.warning += 1;
+        else if (m.message_type === 'notice') counts.notice += 1;
+      }
+      if (isUnread || hasUnclaimedGift) {
+        if (m.message_type === 'gift') counts.gift += 1;
+      }
+    });
+    return counts;
+  }, [userMessages, dominoReadIds]);
+
+  const handleCloseWithFocus = () => {
+    shouldReturnFocusRef.current = true;
+    setUserInboxOpen(false);
   };
 
-  const getBadgeText = (type: UserMessage['message_type']) => {
-    switch (type) {
-      case 'warning':
-        return 'Cảnh Báo';
-      case 'gift':
-        return 'Quà Thưởng';
-      default:
-        return 'Thông Báo';
+  // Hiệu ứng Đọc tất cả kiểu domino lệch nhịp 100ms (#074)
+  const handleDominoMarkAllRead = async () => {
+    if (unreadMessagesCount <= 0 || isMarkingAllDomino) return;
+
+    const visibleUnread = filteredMessages.filter((m) => !m.is_read);
+    const targets = visibleUnread.length > 0 ? visibleUnread : userMessages.filter((m) => !m.is_read);
+
+    const reducedMotion =
+      typeof window !== 'undefined' &&
+      Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
+    if (reducedMotion || targets.length === 0) {
+      await markAllMessagesAsRead();
+      return;
     }
+
+    setIsMarkingAllDomino(true);
+    dominoTimersRef.current.forEach((t) => window.clearTimeout(t));
+    dominoTimersRef.current = [];
+
+    targets.forEach((msg, index) => {
+      const tId = window.setTimeout(() => {
+        setDominoReadIds((prev) => ({ ...prev, [msg.id]: true }));
+      }, index * 100);
+      dominoTimersRef.current.push(tId);
+    });
+
+    const finalizeTimer = window.setTimeout(async () => {
+      await markAllMessagesAsRead();
+      setDominoReadIds({});
+      setIsMarkingAllDomino(false);
+    }, targets.length * 100 + 80);
+    dominoTimersRef.current.push(finalizeTimer);
   };
 
-  const getBadgeColor = (type: UserMessage['message_type']) => {
-    switch (type) {
-      case 'warning':
-        return 'bg-rose-500/15 border-rose-500/30 text-rose-300';
-      case 'gift':
-        return 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300';
-      default:
-        return 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300';
+  const handleClearClaimed = async () => {
+    if (isClearing) return;
+    setIsClearing(true);
+    try {
+      await clearClaimedMessages();
+    } finally {
+      setIsClearing(false);
     }
   };
 
   const handleClaim = async (e: React.MouseEvent, msgId: string) => {
     e.stopPropagation();
+    if (claimingId === msgId) return;
     setClaimingId(msgId);
     try {
       await claimMailReward(msgId);
@@ -91,404 +309,441 @@ export const UserInboxModal: React.FC = () => {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, msgId: string) => {
+  // Hiệu ứng thu gọn 1fr -> 0fr trước khi xóa dòng thư khỏi Supabase
+  const handleDeleteRow = async (e: React.MouseEvent, msgId: string) => {
     e.stopPropagation();
-    setDeletingId(msgId);
-    try {
+    if (leavingIds[msgId]) return;
+
+    const reducedMotion =
+      typeof window !== 'undefined' &&
+      Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+
+    if (reducedMotion) {
       await deleteUserMessage(msgId);
-    } finally {
-      setDeletingId(null);
+      return;
     }
+
+    setLeavingIds((prev) => ({ ...prev, [msgId]: true }));
+    window.setTimeout(async () => {
+      const deleted = await deleteUserMessage(msgId);
+      if (!deleted) {
+        setLeavingIds((prev) => {
+          const next = { ...prev };
+          delete next[msgId];
+          return next;
+        });
+      }
+    }, 260);
   };
 
+  const renderMessageAvatar = (type: UserMessage['message_type']) => {
+    if (type === 'warning') {
+      return (
+        <div className="u074-av is-warning" aria-hidden="true">
+          <AlertTriangle className="w-4 h-4" />
+          <span className="u074-av-sub">⚠️</span>
+        </div>
+      );
+    }
+    if (type === 'gift') {
+      return (
+        <div className="u074-av is-gift" aria-hidden="true">
+          <Gift className="w-4 h-4" />
+          <span className="u074-av-sub">🎁</span>
+        </div>
+      );
+    }
+    return (
+      <div className="u074-av is-notice" aria-hidden="true">
+        <ScrollText className="w-4 h-4" />
+        <span className="u074-av-sub">📜</span>
+      </div>
+    );
+  };
+
+  const formatTimestamp = (iso: string) => {
+    const d = new Date(iso);
+    const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const date = d.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+    return `${time} • ${date}`;
+  };
+
+  if (!rendered || typeof document === 'undefined') return null;
+
   return createPortal(
-    <div
-      onClick={() => setUserInboxOpen(false)}
-      onTouchMove={(e) => {
-        if (e.target === e.currentTarget) e.preventDefault();
-      }}
-      className="fixed inset-0 w-screen h-[100dvh] z-[100] bg-[#06141B]/80 backdrop-blur-md touch-none overscroll-none flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
-    >
+    <>
+      {/* Lớp nền mờ chỉ dùng trên Mobile (< 640px) để dễ chạm đóng mà không che mờ Desktop */}
+      {!isDesktopViewport && (
+        <div
+          onClick={handleCloseWithFocus}
+          className={`fixed inset-0 z-[104] bg-[#06141B]/78 backdrop-blur-md transition-opacity duration-200 ${
+            isClosing ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
+      )}
+
+      {/* Khung Popover bung lò xo (#074) */}
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl bg-[#11212D] border border-[#253745] rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden overscroll-contain touch-pan-y text-[#CCD0CF]"
+        ref={panelRef}
+        role="dialog"
+        aria-modal={!isDesktopViewport}
+        aria-label="Hộp Thư Thợ Săn"
+        className={`u074-pan ${isClosing ? 'is-closing' : 'is-open'}`}
+        style={
+          isDesktopViewport
+            ? ({
+                top: `${popoverCoords.top}px`,
+                right: `${popoverCoords.right}px`,
+                '--u074-arrow-right': `${popoverCoords.arrowRight}px`,
+              } as React.CSSProperties)
+            : undefined
+        }
       >
-        {/* Header */}
-        <div className="px-5 sm:px-6 py-4.5 border-b border-[#253745] flex items-center justify-between bg-[#06141B]/60">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#253745] border border-[#4A5C6A] flex items-center justify-center text-[#CCD0CF] shadow-inner relative">
-              <Mail className="w-5 h-5" />
+        {/* Đầu khung Hộp Thư */}
+        <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-white/10 flex items-start justify-between gap-3 shrink-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-extrabold text-[#F4F0E8] font-rpg tracking-wide truncate">
+                Hộp Thư Thợ Săn
+              </h2>
               {unreadMessagesCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 border border-[#06141B] animate-pulse" />
+                <span className="px-2 py-0.5 rounded-full bg-[#FF5A6E]/20 border border-[#FF5A6E]/45 text-[10px] font-extrabold text-[#FF99A6] tabular-nums shrink-0">
+                  {unreadMessagesCount} mới
+                </span>
               )}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-white font-rpg tracking-wide">
-                  Hộp Thư Thợ Săn
-                </h2>
-                {unreadMessagesCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-[11px] font-bold text-rose-300">
-                    {unreadMessagesCount} chưa đọc
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[#9BA8AB]">
-                Thông điệp, quà tặng và chỉ thị từ Ban Quản Trị
-              </p>
-            </div>
+            <p className="text-[11px] text-[#9BA8AB] mt-0.5 truncate">
+              Thông điệp, quà tặng và chỉ thị từ Ban Quản Trị
+            </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {unreadMessagesCount > 0 && (
-              <button
-                type="button"
-                onClick={() => markAllMessagesAsRead()}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#253745] hover:bg-[#4A5C6A] text-xs font-semibold text-[#CCD0CF] transition cursor-pointer border border-[#4A5C6A]"
-                title="Đánh dấu tất cả thư là đã đọc"
-              >
-                <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Đã đọc tất cả</span>
-              </button>
-            )}
+          <button
+            type="button"
+            onClick={handleCloseWithFocus}
+            aria-label="Đóng Hộp Thư"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-[#9BA8AB] hover:text-white flex items-center justify-center transition cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Thanh 4 Tab Lọc & Thanh Tác Vụ Nhanh */}
+        <div className="px-4 sm:px-5 py-2.5 border-b border-white/10 space-y-2 shrink-0">
+          <div
+            role="tablist"
+            aria-label="Phân loại thư"
+            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"
+          >
+            {TAB_ITEMS.map((tab) => {
+              const isSelected = activeTab === tab.id;
+              const badgeCount = tabCounts[tab.id];
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="u074-tab"
+                >
+                  <span>{tab.label}</span>
+                  {badgeCount > 0 && (
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[9.5px] font-black tabular-nums ${
+                        isSelected
+                          ? 'bg-[#06141B]/20 text-[#06141B]'
+                          : 'bg-[#FF5A6E]/25 text-[#FF99A6]'
+                      }`}
+                    >
+                      {badgeCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              onClick={() => setUserInboxOpen(false)}
-              className="p-2 rounded-xl text-[#9BA8AB] hover:text-white hover:bg-[#253745] transition cursor-pointer"
+              disabled={unreadMessagesCount <= 0 || isMarkingAllDomino}
+              onClick={handleDominoMarkAllRead}
+              className="u074-all"
+              title="Đánh dấu tất cả thư là đã đọc"
             >
-              <X className="w-5 h-5" />
+              <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Đọc tất cả</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={isClearing}
+              onClick={handleClearClaimed}
+              className="u074-all hover:!bg-rose-500/15 hover:!border-rose-500/40 hover:!text-rose-300"
+              title="Xóa sạch các thư đã đọc hoặc đã nhận quà"
+            >
+              {isClearing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="w-3.5 h-3.5" />
+              )}
+              <span>Dọn thư đã nhận</span>
             </button>
           </div>
         </div>
 
-        {/* Filter Navigation Tabs & Batch Clean Action */}
-        <div className="px-5 sm:px-6 pt-3 pb-2 border-b border-[#253745] flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2">
-            {[
-              { id: 'all', label: 'Tất cả' },
-              { id: 'warning', label: 'Cảnh báo' },
-              { id: 'notice', label: 'Thông báo' },
-              { id: 'gift', label: 'Quà tặng' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
-                  activeTab === tab.id
-                    ? 'bg-[#CCD0CF] text-[#06141B] shadow-sm'
-                    : 'bg-[#06141B] text-[#9BA8AB] hover:text-[#CCD0CF] border border-[#253745]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Quick Clean Claimed / Read Messages */}
-            <button
-              type="button"
-              onClick={() => clearClaimedMessages()}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold bg-[#253745]/70 hover:bg-rose-500/20 text-[#CCD0CF] hover:text-rose-300 border border-[#4A5C6A] hover:border-rose-500/40 transition cursor-pointer flex items-center gap-1.5"
-              title="Dọn dẹp nhanh các thư đã nhận quà hoặc đã đọc"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Dọn thư đã nhận</span>
-              <span className="sm:hidden">Dọn dẹp</span>
-            </button>
-
-            {unreadMessagesCount > 0 && (
-              <button
-                type="button"
-                onClick={() => markAllMessagesAsRead()}
-                className="sm:hidden text-xs text-[#9BA8AB] hover:text-white underline shrink-0 cursor-pointer"
-              >
-                Đã đọc hết
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Messages List Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 max-h-[60vh] no-scrollbar">
+        {/* Danh sách thư cuộn mượt */}
+        <div className="u074-scroll flex-1 p-3 sm:p-4 space-y-2.5 min-h-[160px]">
           {filteredMessages.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-[#06141B] border border-[#253745] flex items-center justify-center text-[#9BA8AB]">
-                <Inbox className="w-7 h-7" />
+            <div className="py-10 px-4 flex flex-col items-center justify-center text-center space-y-2.5">
+              <div className="w-12 h-12 rounded-2xl bg-[#06141B]/80 border border-white/10 flex items-center justify-center text-[#9BA8AB] shadow-inner">
+                <Inbox className="w-6 h-6" />
               </div>
-              <p className="text-sm font-semibold text-[#9BA8AB]">
-                Không có thư nào trong mục này
-              </p>
-              <span className="text-xs text-[#9BA8AB]/60">
-                Mọi chỉ thị hoặc thông báo mới sẽ xuất hiện tại đây
+              <p className="text-sm font-bold text-[#CCD0CF]">Hộp thư hiện đang trống</p>
+              <span className="text-[11px] text-[#9BA8AB]/70 max-w-[260px]">
+                Mọi thông điệp, quà tặng và chỉ thị mới sẽ xuất hiện tại đây
               </span>
             </div>
           ) : (
             filteredMessages.map((msg) => {
               const isExpanded = expandedMessageId === msg.id;
-              const formattedDate = new Date(msg.created_at).toLocaleString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-              });
+              const effectivelyRead = msg.is_read || Boolean(dominoReadIds[msg.id]);
+              const isEntering = Boolean(enteringIds[msg.id]);
+              const isLeaving = Boolean(leavingIds[msg.id]);
 
               const hasRewards = Boolean(
                 (msg.reward_exp && msg.reward_exp > 0) ||
-                (msg.reward_coins && msg.reward_coins > 0) ||
-                (msg.reward_stars && msg.reward_stars > 0) ||
-                (msg.reward_items && msg.reward_items.length > 0)
+                  (msg.reward_coins && msg.reward_coins > 0) ||
+                  (msg.reward_stars && msg.reward_stars > 0) ||
+                  (msg.reward_items && msg.reward_items.length > 0)
               );
-
-              // Điều kiện hiển thị nút Xóa:
-              // Chỉ cho phép xóa khi thư đã nhận quà (msg.is_claimed === true)
-              // hoặc là thư thông báo/cảnh báo không có quà đính kèm
               const canDelete = msg.is_claimed || !hasRewards;
+
+              const dotToneClass =
+                msg.message_type === 'warning'
+                  ? 'is-warning'
+                  : msg.message_type === 'gift'
+                  ? 'is-gift'
+                  : 'is-notice';
 
               return (
                 <div
                   key={msg.id}
-                  className={`rounded-2xl border transition duration-200 overflow-hidden ${
-                    !msg.is_read
-                      ? 'bg-[#06141B] border-[#4A5C6A] shadow-md'
-                      : 'bg-[#06141B]/50 border-[#253745]/70 opacity-90'
+                  className={`u074-row-shell ${isEntering ? 'is-entering' : ''} ${
+                    isLeaving ? 'is-leaving' : ''
                   }`}
                 >
-                  {/* Message Item Header */}
-                  <div
-                    onClick={() => {
-                      if (!msg.is_read) {
-                        markMessageAsRead(msg.id);
-                      }
-                      setExpandedMessageId(isExpanded ? null : msg.id);
-                    }}
-                    className="p-4 flex items-start justify-between gap-3 cursor-pointer hover:bg-[#253745]/30 transition"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      {/* Unread dot or icon */}
-                      <div className="pt-0.5 shrink-0">
-                        {!msg.is_read ? (
-                          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 block shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-                        ) : (
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#4A5C6A]/50 block" />
-                        )}
-                      </div>
+                  <div className="u074-row-inner">
+                    <div
+                      className={`rounded-2xl border transition-colors duration-200 overflow-hidden ${
+                        !effectivelyRead
+                          ? 'bg-[#06141B]/90 border-white/15 shadow-md'
+                          : 'bg-[#06141B]/45 border-white/[0.07]'
+                      }`}
+                    >
+                      {/* Hàng tiêu đề thư bấm để mở rộng Accordion & đánh dấu đã đọc */}
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        onClick={() => {
+                          if (!msg.is_read) {
+                            markMessageAsRead(msg.id);
+                          }
+                          setExpandedMessageId(isExpanded ? null : msg.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (!msg.is_read) {
+                              markMessageAsRead(msg.id);
+                            }
+                            setExpandedMessageId(isExpanded ? null : msg.id);
+                          }
+                        }}
+                        className="p-3 sm:p-3.5 flex items-start gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors outline-none"
+                      >
+                        {/* Avatar tròn phân loại góc */}
+                        {renderMessageAvatar(msg.message_type)}
 
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${getBadgeColor(
-                              msg.message_type
-                            )}`}
-                          >
-                            {getBadgeIcon(msg.message_type)}
-                            <span>{getBadgeText(msg.message_type)}</span>
-                          </span>
+                        {/* Tiêu đề, tóm tắt, thời gian */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h4
+                              className={`text-[13px] leading-snug line-clamp-2 transition-colors duration-300 ${
+                                !effectivelyRead
+                                  ? 'font-extrabold text-white'
+                                  : 'font-semibold text-[#9BA8AB]'
+                              }`}
+                            >
+                              {msg.subject}
+                            </h4>
 
-                          {hasRewards && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/15 border border-emerald-500/30 text-emerald-300">
-                              <Gift className="w-3 h-3 text-emerald-400" />
-                              <span>{msg.is_claimed ? 'Đã nhận quà' : 'Đính kèm quà'}</span>
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0 pt-1">
+                              {/* Chấm chưa đọc phát sáng thu mượt về scale(0) */}
+                              <span
+                                className={`u074-dot ${dotToneClass} ${
+                                  effectivelyRead ? 'is-read' : ''
+                                }`}
+                              />
+                              <ChevronDown
+                                className={`w-3.5 h-3.5 text-[#9BA8AB] transition-transform duration-300 ${
+                                  isExpanded ? 'rotate-180 text-white' : ''
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          {!isExpanded && (
+                            <p className="text-[11.5px] text-[#9BA8AB]/85 line-clamp-1 mt-0.5">
+                              {msg.content}
+                            </p>
                           )}
 
-                          <span className="text-[11px] text-[#9BA8AB] flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-[#4A5C6A]" />
-                            <span>{formattedDate}</span>
-                          </span>
+                          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-[10.5px] text-[#9BA8AB]/75">
+                            <span className="inline-flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatTimestamp(msg.created_at)}</span>
+                            </span>
+
+                            {hasRewards && (
+                              <span
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9.5px] font-bold border ${
+                                  msg.is_claimed
+                                    ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300/80'
+                                    : 'bg-amber-500/15 border-amber-400/40 text-amber-300'
+                                }`}
+                              >
+                                <Gift className="w-2.5 h-2.5" />
+                                <span>{msg.is_claimed ? 'Đã nhận quà' : 'Có quà tặng'}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
-
-                        <h4
-                          className={`text-sm tracking-wide ${
-                            !msg.is_read ? 'font-bold text-white' : 'font-medium text-[#CCD0CF]'
-                          }`}
-                        >
-                          {msg.subject}
-                        </h4>
-
-                        {!isExpanded && (
-                          <p className="text-xs text-[#9BA8AB] line-clamp-1">
-                            {msg.content}
-                          </p>
-                        )}
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 pt-0.5 text-[#9BA8AB]">
-                      {/* Quick Delete Button on Card Header (Only visible when allowed) */}
-                      {canDelete && (
-                        <button
-                          type="button"
-                          disabled={deletingId === msg.id}
-                          onClick={(e) => handleDelete(e, msg.id)}
-                          className="p-1.5 rounded-xl text-[#9BA8AB] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-                          title="Xóa thư này khỏi hộp thư"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      {/* Vùng Accordion chi tiết nội dung & nhận quà */}
+                      <div className={`u074-acc ${isExpanded ? 'is-open' : ''}`}>
+                        <div className="u074-acc-inner">
+                          <div className="px-3.5 pb-3.5 pt-2.5 border-t border-white/[0.08] bg-[#11212D]/45 space-y-3">
+                            <p className="text-xs text-[#CCD0CF] leading-relaxed whitespace-pre-wrap">
+                              {msg.content}
+                            </p>
 
-                      <div className="p-1">
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
+                            {/* Hộp Phần Thưởng Đính Kèm */}
+                            {hasRewards && (
+                              <div className="p-3 rounded-xl bg-[#06141B]/90 border border-white/10 space-y-2.5">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-[11px] font-extrabold text-amber-300 inline-flex items-center gap-1.5">
+                                    <Gift className="w-3.5 h-3.5" />
+                                    <span>Phần Thưởng Đính Kèm</span>
+                                  </span>
+                                  {msg.is_claimed && (
+                                    <span className="text-[10.5px] font-bold text-emerald-400 inline-flex items-center gap-1">
+                                      <CheckCheck className="w-3.5 h-3.5" />
+                                      <span>Đã nhận</span>
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {Boolean(msg.reward_exp && msg.reward_exp > 0) && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-950/50 border border-cyan-500/30 text-[11px] font-bold text-cyan-300">
+                                      <Sparkles className="w-3 h-3 text-cyan-400" />
+                                      <span>+{msg.reward_exp} EXP</span>
+                                    </span>
+                                  )}
+
+                                  {Boolean(msg.reward_coins && msg.reward_coins > 0) && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-950/50 border border-amber-500/30 text-[11px] font-bold text-amber-300">
+                                      <Coins className="w-3 h-3 text-amber-400" />
+                                      <span>+{msg.reward_coins} Xu</span>
+                                    </span>
+                                  )}
+
+                                  {Boolean(msg.reward_stars && msg.reward_stars > 0) && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-yellow-950/50 border border-yellow-500/30 text-[11px] font-bold text-yellow-300">
+                                      <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                      <span>+{msg.reward_stars} Sao</span>
+                                    </span>
+                                  )}
+
+                                  {msg.reward_items?.map((item) => (
+                                    <span
+                                      key={item.id}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#11212D] border border-white/15 text-[11px] font-semibold text-[#CCD0CF]"
+                                    >
+                                      <span>{item.icon}</span>
+                                      <span>{item.name}</span>
+                                      <span className="text-amber-300 font-bold">x{item.count}</span>
+                                    </span>
+                                  ))}
+                                </div>
+
+                                {!msg.is_claimed && (
+                                  <button
+                                    type="button"
+                                    disabled={claimingId === msg.id}
+                                    onClick={(e) => handleClaim(e, msg.id)}
+                                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#06141B] font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-[0.98] transition cursor-pointer disabled:opacity-60"
+                                  >
+                                    {claimingId === msg.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Sparkles className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>{claimingId === msg.id ? 'Đang nhận quà...' : 'Nhận Quà'}</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Footer dòng thư: Đánh dấu đã đọc / Xóa thư lẻ */}
+                            <div className="flex items-center justify-between gap-2 pt-1 text-[11px] text-[#9BA8AB]">
+                              {!msg.is_read ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markMessageAsRead(msg.id);
+                                  }}
+                                  className="text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Đánh dấu đã đọc</span>
+                                </button>
+                              ) : (
+                                <span className="text-[10.5px] text-[#9BA8AB]/60">Đã xem</span>
+                              )}
+
+                              {canDelete && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteRow(e, msg.id)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-rose-500/15 border border-white/10 hover:border-rose-500/40 text-[#9BA8AB] hover:text-rose-300 transition cursor-pointer"
+                                  title="Xóa thư này"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Xóa thư</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Expanded Content */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 pt-1 border-t border-[#253745]/60 bg-[#11212D]/40 space-y-3.5">
-                      <p className="text-xs sm:text-sm text-[#CCD0CF] leading-relaxed whitespace-pre-wrap">
-                        {msg.content}
-                      </p>
-
-                      {/* Attached Rewards Section */}
-                      {hasRewards && (
-                        <div className="p-3.5 rounded-2xl bg-[#06141B] border border-[#253745] space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300">
-                              <Gift className="w-4 h-4 text-emerald-400" />
-                              <span>🎁 Phần Thưởng Đính Kèm</span>
-                            </div>
-
-                            {msg.is_claimed && (
-                              <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                                <CheckCheck className="w-3.5 h-3.5" />
-                                <span>Đã nhận quà</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Reward Badges Grid / Flex */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            {Boolean(msg.reward_exp && msg.reward_exp > 0) && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs font-mono font-bold text-cyan-300">
-                                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-                                <span>+{msg.reward_exp} EXP</span>
-                              </span>
-                            )}
-
-                            {Boolean(msg.reward_coins && msg.reward_coins > 0) && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs font-mono font-bold text-amber-300">
-                                <Coins className="w-3.5 h-3.5 text-amber-400" />
-                                <span>+{msg.reward_coins} Xu Vàng</span>
-                              </span>
-                            )}
-
-                            {Boolean(msg.reward_stars && msg.reward_stars > 0) && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-yellow-950/40 border border-yellow-500/30 text-xs font-mono font-bold text-yellow-300">
-                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                                <span>+{msg.reward_stars} Sao Vinh Dự</span>
-                              </span>
-                            )}
-
-                            {msg.reward_items &&
-                              msg.reward_items.map((item) => (
-                                <span
-                                  key={item.id}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#11212D] border border-[#4A5C6A] text-xs font-semibold text-[#CCD0CF]"
-                                >
-                                  <span>{item.icon}</span>
-                                  <span>{item.name}</span>
-                                  <span className="font-mono text-amber-300 font-bold">x{item.count}</span>
-                                </span>
-                              ))}
-                          </div>
-
-                          {/* Action Button: Nhận Thưởng or Đã Nhận Quà kèm nút Xóa */}
-                          <div className="pt-2 border-t border-[#253745]/60 flex items-center justify-between">
-                            <span className="text-[11px] text-[#9BA8AB]">
-                              {!msg.is_claimed
-                                ? '* Vật phẩm sẽ chuyển vào Túi Đồ với hạn dùng 7 ngày'
-                                : 'Đã nhận toàn bộ phần thưởng vào tài khoản'}
-                            </span>
-
-                            {!msg.is_claimed ? (
-                              <button
-                                type="button"
-                                disabled={claimingId === msg.id}
-                                onClick={(e) => handleClaim(e, msg.id)}
-                                className="px-4 py-2 rounded-xl bg-[#CCD0CF] hover:bg-white text-[#06141B] font-extrabold text-xs transition flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer disabled:opacity-50"
-                              >
-                                <Sparkles className="w-3.5 h-3.5 text-[#06141B]" />
-                                <span>{claimingId === msg.id ? 'Đang nhận quà...' : '✨ Nhận Thưởng'}</span>
-                              </button>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#253745]/60 border border-[#4A5C6A]/50 text-[#9BA8AB] text-xs font-bold cursor-default">
-                                  <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                  <span>✔ Đã Nhận Quà</span>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  disabled={deletingId === msg.id}
-                                  onClick={(e) => handleDelete(e, msg.id)}
-                                  className="p-1.5 rounded-xl text-[#9BA8AB] hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer border border-[#253745] hover:border-rose-500/30"
-                                  title="Xóa thư này"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-1 border-t border-[#253745]/40 text-[11px] text-[#9BA8AB]">
-                        <span>Hệ thống Live-Ops FaeQuest</span>
-                        <div className="flex items-center gap-3">
-                          {canDelete && !hasRewards && (
-                            <button
-                              type="button"
-                              disabled={deletingId === msg.id}
-                              onClick={(e) => handleDelete(e, msg.id)}
-                              className="text-xs text-[#9BA8AB] hover:text-rose-400 flex items-center gap-1 transition cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Xóa thư</span>
-                            </button>
-                          )}
-                          {!msg.is_read && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                markMessageAsRead(msg.id);
-                              }}
-                              className="text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Đánh dấu đã đọc</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })
           )}
         </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-[#253745] bg-[#06141B]/80 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={() => setUserInboxOpen(false)}
-            className="px-5 py-2 rounded-xl bg-[#253745] hover:bg-[#4A5C6A] text-white text-xs font-bold transition cursor-pointer border border-[#4A5C6A]"
-          >
-            Đóng Hộp Thư
-          </button>
-        </div>
       </div>
-    </div>,
+    </>,
     document.body
   );
 };

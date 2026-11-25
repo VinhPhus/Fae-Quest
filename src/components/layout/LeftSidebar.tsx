@@ -5,6 +5,7 @@ import { useChillyAudioStore } from '../../store/useChillyAudioStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
 import { StreakFlameCard } from '../streak/StreakFlameCard';
+import { InboxBellButton } from './InboxBellButton';
 import './NavigationRail.css';
 import {
   CheckSquare,
@@ -16,7 +17,6 @@ import {
   Scroll,
   ChevronLeft,
   ShieldAlert,
-  Mail,
   User,
   Award,
   HeartPulse,
@@ -42,9 +42,7 @@ export const LeftSidebar: React.FC = () => {
     isSidebarCollapsed,
     setSidebarCollapsed,
     userRole,
-    unreadMessagesCount,
     unreadAnnouncementsCount,
-    setUserInboxOpen,
     isFocusModalOpen,
     activeFocusTaskId,
     signOut,
@@ -682,17 +680,7 @@ export const LeftSidebar: React.FC = () => {
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => setUserInboxOpen(true)}
-            className="p-1.5 rounded-lg bg-[#0D1821] border border-white/10 text-[#F4F0E8] hover:border-white/25 transition shadow-sm relative cursor-pointer"
-            title={unreadMessagesCount > 0 ? `Hộp Thư (${unreadMessagesCount} chưa đọc)` : 'Hộp Thư Thợ Săn'}
-          >
-            <Mail className="w-4 h-4" />
-            {unreadMessagesCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-rose-500 border border-[#06141B] animate-pulse" />
-            )}
-          </button>
+          <InboxBellButton variant="mobile" />
 
           <button
             type="button"

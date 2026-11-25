@@ -1136,9 +1136,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             userMessages: prev.userMessages.map((m) => ({ ...m, is_read: true })),
             unreadMessagesCount: 0,
           }));
-          get().addToast('Đã đánh dấu tất cả thư là đã đọc', 'info');
+          toast.ok('Đã đọc tất cả thư', 'Toàn bộ hộp thư đã được cập nhật');
         } catch (e) {
           console.error('Error marking all messages read:', e);
+          toast.err('Không thể cập nhật trạng thái thư');
         }
       },
 
@@ -1155,7 +1156,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         );
 
         if (hasRewards && !msg.is_claimed) {
-          get().addToast('⚠️ Thư có phần thưởng chưa nhận, không thể xóa!', 'error');
+          toast.err('Chưa thể xóa thư này', 'Thư còn phần thưởng chưa nhận');
           return false;
         }
 
@@ -1174,10 +1175,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           playSoundEffect('trash', get().soundEnabled);
-          get().addToast('🗑️ Đã xóa thư khỏi hộp thư.', 'info');
+          toast.info('Đã xóa thư khỏi hộp thư');
           return true;
         } catch (err: any) {
-          get().addToast(localizeError(err, 'Lỗi khi xóa thư'), 'error');
+          toast.err('Lỗi khi xóa thư', localizeError(err, 'Vui lòng thử lại sau'));
           return false;
         }
       },
@@ -1195,7 +1196,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         });
 
         if (deletable.length === 0) {
-          get().addToast('Không có thư đã nhận hoặc đã đọc nào để dọn dẹp', 'info');
+          toast.info('Không có thư cần dọn dẹp', 'Chưa có thư đã đọc hoặc đã nhận quà');
           return 0;
         }
 
@@ -1215,10 +1216,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           playSoundEffect('trash', get().soundEnabled);
-          get().addToast(`🗑️ Đã dọn dẹp ${ids.length} thư khỏi hộp thư thành công!`, 'success');
+          toast.ok('Đã dọn dẹp hộp thư', `Đã xóa ${ids.length} thư đã đọc / đã nhận quà`);
           return ids.length;
         } catch (err: any) {
-          get().addToast(localizeError(err, 'Lỗi khi dọn dẹp hộp thư'), 'error');
+          toast.err('Lỗi khi dọn dẹp hộp thư', localizeError(err, 'Vui lòng thử lại sau'));
           return 0;
         }
       },
@@ -1967,12 +1968,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const state = get();
         const msg = state.userMessages.find((m) => m.id === messageId);
         if (!msg) {
-          get().addToast('Không tìm thấy thư yêu cầu nhận thưởng', 'error');
+          toast.err('Không tìm thấy thư yêu cầu nhận thưởng');
           return { success: false, error: 'Thư không tồn tại' };
         }
 
         if (msg.is_claimed) {
-          get().addToast('Phần thưởng trong thư này đã được nhận rồi!', 'info');
+          toast.info('Phần thưởng trong thư này đã được nhận rồi!');
           return { success: false, error: 'Đã nhận thưởng' };
         }
 
@@ -1980,7 +1981,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const itemsCount = rewardItems.reduce((acc, it) => acc + (it.count || 1), 0);
         if (state.inventory.length + itemsCount > 50) {
           playSound('error_block', state.soundEnabled);
-          get().addToast('⚠️ Túi Đồ đã đầy (tối đa 50 ô). Hãy dùng bớt vật phẩm trong Túi Đồ trước khi nhận thưởng!', 'error');
+          toast.err('Túi Đồ đã đầy (tối đa 50 ô)', 'Hãy dùng bớt vật phẩm trước khi nhận quà!');
           return { success: false, error: 'Túi Đồ đã đầy (tối đa 50 ô)' };
         }
 
@@ -1990,7 +1991,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           });
 
           if (error) {
-            get().addToast(localizeError(error, 'Lỗi khi nhận quà từ thư'), 'error');
+            toast.err('Không thể nhận quà từ thư', localizeError(error, 'Lỗi máy chủ'));
             return { success: false, error: localizeError(error) };
           }
 
@@ -2015,24 +2016,28 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             }));
           });
 
-          set((prev) => ({
-            exp: newExp,
-            coins: newCoins,
-            stars: newStars,
-            inventory: [...newTickets, ...prev.inventory],
-            userMessages: prev.userMessages.map((m) =>
+          set((prev) => {
+            const updatedMessages = prev.userMessages.map((m) =>
               m.id === messageId
                 ? { ...m, is_claimed: true, is_read: true, claimed_at: new Date().toISOString() }
                 : m
-            ),
-          }));
+            );
+            return {
+              exp: newExp,
+              coins: newCoins,
+              stars: newStars,
+              inventory: [...newTickets, ...prev.inventory],
+              userMessages: updatedMessages,
+              unreadMessagesCount: updatedMessages.filter((m) => !m.is_read).length,
+            };
+          });
 
           playSound('coin_purchase', get().soundEnabled);
-          get().addToast('🎁 Nhận toàn bộ phần thưởng thành công! Vật phẩm đã được chuyển vào Túi Đồ.', 'success');
+          toast.reward('Đã nhận quà từ Hộp Thư!', `«${msg.subject}» • Đã cộng vào hồ sơ`);
           debouncedAutoSync(get());
           return { success: true };
         } catch (err: any) {
-          get().addToast(localizeError(err, 'Lỗi khi nhận thưởng'), 'error');
+          toast.err('Lỗi khi nhận thưởng', localizeError(err, 'Vui lòng thử lại sau'));
           return { success: false, error: localizeError(err) };
         }
       },

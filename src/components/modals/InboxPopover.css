@@ -1,0 +1,462 @@
+/* ============== FaeQuest Hunter Inbox Popover (Lucian Prompt #074 Physics) ============== */
+
+/* Nút Hộp Thư trên Header */
+.u074-bell {
+  position: relative;
+  background: #0d1821;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccd0cf;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.45, 0.64, 1),
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.u074-bell:hover {
+  background: #142431;
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.u074-bell:active {
+  transform: scale(0.9);
+}
+
+.u074-bell.is-open {
+  background: #172a39;
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.u074-bell-ic {
+  transform-origin: center 3px;
+}
+
+.u074-bell.is-ringing .u074-bell-ic {
+  animation: u074-ring 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes u074-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(18deg);
+  }
+  30% {
+    transform: rotate(-16deg);
+  }
+  45% {
+    transform: rotate(12deg);
+  }
+  62% {
+    transform: rotate(-8deg);
+  }
+  78% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* Badge số đỏ #FF5A6E + ẩn mượt khi = 0 */
+.u074-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: #ff5a6e;
+  border: 2px solid #06141b;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(255, 90, 110, 0.45);
+  pointer-events: none;
+  transform: scale(1);
+  opacity: 1;
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.45, 0.64, 1),
+    opacity 0.25s ease;
+}
+
+.u074-badge.zero {
+  transform: scale(0);
+  opacity: 0;
+}
+
+.u074-badge.is-bumping {
+  animation: u074-badge-bump 0.52s cubic-bezier(0.34, 1.7, 0.5, 1);
+}
+
+@keyframes u074-badge-bump {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.5);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Khung Popover nổi trên Desktop (>= 640px) & Hộp thoại gọn trên Mobile (< 640px) */
+.u074-pan {
+  position: fixed;
+  z-index: 105;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  background: rgba(11, 25, 34, 0.96);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 30px 55px -24px rgba(0, 0, 0, 0.82);
+  color: #ccd0cf;
+  overflow: visible;
+}
+
+@media (min-width: 640px) {
+  .u074-pan {
+    width: min(430px, calc(100vw - 24px));
+    max-height: min(78vh, 560px);
+    transform-origin: calc(100% - var(--u074-arrow-right, 24px)) -10px;
+  }
+
+  .u074-pan::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: var(--u074-arrow-right, 20px);
+    width: 12px;
+    height: 12px;
+    background: rgba(11, 25, 34, 0.97);
+    border-left: 1px solid rgba(255, 255, 255, 0.11);
+    border-top: 1px solid rgba(255, 255, 255, 0.11);
+    transform: translateX(50%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .u074-pan.is-open {
+    animation: u074-open 0.45s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+  }
+
+  .u074-pan.is-closing {
+    animation: u074-close 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 639.98px) {
+  .u074-pan {
+    left: 12px;
+    right: 12px;
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    max-height: 80dvh;
+    transform-origin: top right;
+  }
+
+  .u074-pan.is-open {
+    animation: u074-open-mobile 0.35s cubic-bezier(0.34, 1.35, 0.64, 1) forwards;
+  }
+
+  .u074-pan.is-closing {
+    animation: u074-close-mobile 0.24s ease-in forwards;
+    pointer-events: none;
+  }
+}
+
+@keyframes u074-open {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes u074-close {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes u074-open-mobile {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes u074-close-mobile {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+/* Tab lọc viên thuốc */
+.u074-tab {
+  padding: 5px 11px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(6, 20, 27, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9ba8ab;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.u074-tab:hover {
+  color: #f4f0e8;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.u074-tab:active {
+  transform: scale(0.95);
+}
+
+.u074-tab[aria-selected='true'] {
+  background: #ccd0cf;
+  border-color: #ffffff;
+  color: #06141b;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(204, 208, 207, 0.2);
+}
+
+.u074-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccd0cf;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.u074-all:hover:not(:disabled) {
+  background: rgba(52, 211, 153, 0.14);
+  border-color: rgba(52, 211, 153, 0.42);
+  color: #6ee7b7;
+}
+
+.u074-all:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* Vùng cuộn danh sách thanh cuộn siêu mảnh */
+.u074-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) rgba(0, 0, 0, 0);
+}
+
+.u074-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.u074-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0);
+}
+
+.u074-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 9999px;
+}
+
+/* Nở/thu dòng thư bằng grid-template-rows */
+.u074-row-shell {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease;
+}
+
+.u074-row-shell.is-entering {
+  animation: u074-row-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.u074-row-shell.is-leaving {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.u074-row-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+@keyframes u074-row-enter {
+  0% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateY(-24px);
+  }
+  100% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Avatar tròn phân loại + huy hiệu góc */
+.u074-av {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.u074-av.is-warning {
+  background: linear-gradient(140deg, #f43f5e 0%, #9f1239 100%);
+}
+
+.u074-av.is-gift {
+  background: linear-gradient(140deg, #f5b942 0%, #d97706 100%);
+}
+
+.u074-av.is-notice {
+  background: linear-gradient(140deg, #38bdf8 0%, #6366f1 100%);
+}
+
+.u074-av-sub {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 9999px;
+  background: #0b1922;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Chấm tròn chưa đọc phát sáng theo màu loại thư */
+.u074-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  transform: scale(1);
+  opacity: 1;
+  transition:
+    transform 0.34s cubic-bezier(0.34, 1.45, 0.64, 1),
+    opacity 0.25s ease;
+}
+
+.u074-dot.is-warning {
+  background: #ff5a6e;
+  box-shadow: 0 0 10px rgba(255, 90, 110, 0.8);
+}
+
+.u074-dot.is-gift {
+  background: #f5b942;
+  box-shadow: 0 0 10px rgba(245, 185, 66, 0.8);
+}
+
+.u074-dot.is-notice {
+  background: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+}
+
+.u074-dot.is-read {
+  transform: scale(0);
+  opacity: 0;
+}
+
+/* Accordion chi tiết dòng thư */
+.u074-acc {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.u074-acc.is-open {
+  grid-template-rows: 1fr;
+}
+
+.u074-acc-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u074-bell,
+  .u074-bell.is-ringing .u074-bell-ic,
+  .u074-badge,
+  .u074-badge.is-bumping,
+  .u074-pan.is-open,
+  .u074-pan.is-closing,
+  .u074-row-shell,
+  .u074-row-shell.is-entering,
+  .u074-dot,
+  .u074-acc {
+    animation: none !important;
+    transition: none !important;
+  }
+}
