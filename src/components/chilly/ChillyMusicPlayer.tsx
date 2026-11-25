@@ -283,7 +283,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
       return (
         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-400/10 text-amber-300 border border-amber-400/30 text-[9px] font-bold">
           <Sparkles className="w-2.5 h-2.5" />
-          <span>Synth</span>
+          <span>Âm nền</span>
         </span>
       );
     }
@@ -299,14 +299,14 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
       return (
         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/30 text-[9px] font-bold">
           <Music className="w-2.5 h-2.5" />
-          <span>Audius</span>
+          <span>Trực tuyến</span>
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 text-[9px] font-bold">
         <Upload className="w-2.5 h-2.5" />
-        <span>File máy</span>
+        <span>Từ máy</span>
       </span>
     );
   };
@@ -586,7 +586,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
                 {isSearching && (
                   <div className="py-6 flex flex-col items-center justify-center text-xs text-[#9BA8AB] gap-2">
                     <Loader2 className="w-5 h-5 animate-spin text-[#7EE8C0]" />
-                    <span>Đang kết nối Audius Public API...</span>
+                    <span>Đang tìm kiếm bài hát...</span>
                   </div>
                 )}
 
@@ -599,7 +599,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
                 {!isSearching && !hasSearched && (
                   <div className="py-6 text-center text-xs text-[#9BA8AB]/70 flex flex-col items-center gap-1">
                     <Sparkles className="w-4 h-4 text-[#7EE8C0]" />
-                    <span>Hàng triệu bản nhạc trọn vẹn miễn phí từ Audius Public API</span>
+                    <span>Khám phá kho nhạc thư giãn miễn phí trọn bài</span>
                   </div>
                 )}
 
@@ -669,7 +669,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
               <div className="p-3 rounded-xl bg-[#06141B] border border-white/10 space-y-2.5">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-[#CCD0CF]">
                   <YouTubeIcon className="w-4 h-4 text-rose-500" />
-                  <span>Dán Link YouTube (Phát Trọn Bài Ẩn)</span>
+                  <span>Thêm Nhạc Từ Link YouTube</span>
                 </div>
                 <input
                   type="url"
@@ -712,7 +712,7 @@ export const ChillyMusicPlayer: React.FC<ChillyMusicPlayerProps> = ({
                     <span>Tải File Từ Máy Tính / Điện Thoại</span>
                   </div>
                   <div className="text-[10px] text-[#9BA8AB] mt-0.5">
-                    Hỗ trợ file .mp3, .m4a, .wav, .ogg (Lưu vĩnh viễn vào IndexedDB)
+                    Hỗ trợ nhạc từ máy (.mp3, .m4a, .wav, .ogg) — lưu sẵn ngoại tuyến
                   </div>
                 </div>
 

@@ -10,7 +10,7 @@ export const BUILT_IN_SYNTH_TRACKS: ChillyTrack[] = [
   {
     id: 'synth_afterglow_pad',
     title: 'Afterglow Ambient Pad',
-    artist: 'Fae Chilly Synth (Web Audio)',
+    artist: 'Âm Nền FaeQuest',
     isBuiltInSynth: true,
     synthType: 'ambient_pad',
     sourceType: 'synth',
@@ -19,7 +19,7 @@ export const BUILT_IN_SYNTH_TRACKS: ChillyTrack[] = [
   {
     id: 'synth_midnight_rain',
     title: 'Midnight Rain Lo-Fi',
-    artist: 'Fae Chilly Synth (Web Audio)',
+    artist: 'Âm Nền FaeQuest',
     isBuiltInSynth: true,
     synthType: 'rain_lofi',
     sourceType: 'synth',
@@ -42,6 +42,7 @@ interface ChillyAudioState {
   isSeeking: boolean;
   isDrawerOpen: boolean;
   activeDrawerTab: DrawerTab;
+  isChillyFullscreen: boolean;
 
   // Cờ lệnh tìm kiếm / thao tác tức thời gửi đến Audio Host
   seekRequestTime: number | null;
@@ -67,6 +68,7 @@ interface ChillyAudioState {
   setIsLoading: (loading: boolean) => void;
   setIsDrawerOpen: (open: boolean) => void;
   setActiveDrawerTab: (tab: DrawerTab) => void;
+  setIsChillyFullscreen: (fullscreen: boolean) => void;
   handleTrackEnded: () => void;
 }
 
@@ -83,6 +85,7 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
   isSeeking: false,
   isDrawerOpen: false,
   activeDrawerTab: 'playlist',
+  isChillyFullscreen: false,
   seekRequestTime: null,
   seekRequestNonce: 0,
 
@@ -233,6 +236,7 @@ export const useChillyAudioStore = create<ChillyAudioState>((set, get) => ({
   setIsLoading: (isLoading: boolean) => set({ isLoading }),
   setIsDrawerOpen: (isDrawerOpen: boolean) => set({ isDrawerOpen }),
   setActiveDrawerTab: (activeDrawerTab: DrawerTab) => set({ activeDrawerTab }),
+  setIsChillyFullscreen: (isChillyFullscreen: boolean) => set({ isChillyFullscreen }),
 
   handleTrackEnded: () => {
     const { repeatMode, playlist, currentTrackIndex } = get();

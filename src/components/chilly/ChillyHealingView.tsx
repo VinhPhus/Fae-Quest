@@ -54,8 +54,20 @@ export const ChillyHealingView: React.FC = () => {
   const zenTimerRef = useRef<any>(null);
 
   // Store nhạc để render viên thuốc phát nhạc mini khi thu gọn ở màn ngang nhỏ
-  const { playlist, currentTrackIndex, isPlaying, togglePlay, isDrawerOpen } = useChillyAudioStore();
+  const {
+    playlist,
+    currentTrackIndex,
+    isPlaying,
+    togglePlay,
+    isDrawerOpen,
+    setIsChillyFullscreen,
+  } = useChillyAudioStore();
   const currentTrack = playlist[currentTrackIndex] || playlist[0];
+
+  useEffect(() => {
+    setIsChillyFullscreen(isFullscreen);
+    return () => setIsChillyFullscreen(false);
+  }, [isFullscreen, setIsChillyFullscreen]);
 
   const isMobileDevice = viewport.isCoarsePointer || viewport.width <= 1024;
   const isPortraitScreen = viewport.height > viewport.width;
@@ -327,7 +339,7 @@ export const ChillyHealingView: React.FC = () => {
               <span>Khoảnh Khắc Hồi Phục Thợ Săn</span>
             </span>
             <span className="text-xs font-extrabold text-[#7EE8C0] px-2 py-0.5 rounded-full bg-[#7EE8C0]/10 border border-[#7EE8C0]/30 hidden sm:inline-block">
-              Relax & Lo-Fi
+              Thư Giãn
             </span>
           </div>
           <h2 className="text-xl sm:text-2xl font-extrabold text-[#CCD0CF] font-rpg tracking-wide flex items-center gap-2">
