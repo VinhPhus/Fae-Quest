@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { useChillyAudioStore } from '../../store/useChillyAudioStore';
 import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
+import { StreakFlameCard } from '../streak/StreakFlameCard';
 import './NavigationRail.css';
 import {
   CheckSquare,
@@ -19,6 +21,7 @@ import {
   Award,
   HeartPulse,
   LogOut,
+  X,
 } from 'lucide-react';
 
 const RAIL_STORAGE_KEY = 'faequest_sidebar_rail';
@@ -300,6 +303,39 @@ export const LeftSidebar: React.FC = () => {
     return () => ro.disconnect();
   }, [activeTab, mobileBottomMenuItems.length]);
 
+  const [desktopStreakOpen, setDesktopStreakOpen] = useState<boolean>(false);
+  const [mobileStreakOpen, setMobileStreakOpen] = useState<boolean>(false);
+  const desktopStreakRef = useRef<HTMLDivElement | null>(null);
+  const desktopStatRowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!desktopStreakOpen && !mobileStreakOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDesktopStreakOpen(false);
+        setMobileStreakOpen(false);
+      }
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!desktopStreakOpen) return;
+      const target = e.target as Node;
+      if (
+        desktopStreakRef.current &&
+        !desktopStreakRef.current.contains(target) &&
+        desktopStatRowRef.current &&
+        !desktopStatRowRef.current.contains(target)
+      ) {
+        setDesktopStreakOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [desktopStreakOpen, mobileStreakOpen]);
+
   // Ẩn thanh điều hướng đáy khi đang ở toàn màn hình Chilly Healing hoặc đang tập trung
   const shouldHideMobileDock =
     isChillyFullscreen || (isFocusModalOpen && Boolean(activeFocusTaskId));
@@ -343,20 +379,64 @@ export const LeftSidebar: React.FC = () => {
 
         {/* Chỉ số nhanh: Xu & Chuỗi ngày */}
         <div
-          className="u417-stat-row"
-          title={isRail ? `${coins} Xu • Chuỗi ${streakDays} ngày` : undefined}
+          ref={desktopStatRowRef}
+          onClick={isRail ? () => setDesktopStreakOpen((prev) => !prev) : undefined}
+          role={isRail ? 'button' : undefined}
+          tabIndex={isRail ? 0 : undefined}
+          onKeyDown={
+            isRail
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setDesktopStreakOpen((prev) => !prev);
+                  }
+                }
+              : undefined
+          }
+          className={`u417-stat-row ${isRail ? 'cursor-pointer hover:brightness-110' : ''}`}
+          title={isRail ? `${coins} Xu • Chuỗi ${streakDays} ngày (Nhấn để xem ngọn lửa)` : undefined}
         >
           <div className="u417-ic">
             <CoinIcon size="sm" />
           </div>
-          <div className="u417-lb flex items-center justify-between flex-1 pr-2.5 text-xs font-bold">
+          <div className="u417-lb flex items-center justify-between flex-1 pr-2 text-xs font-bold">
             <span className="text-[#F4F0E8] tabular-nums">{coins} Xu</span>
-            <span className="inline-flex items-center gap-1 text-amber-300 tabular-nums">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDesktopStreakOpen((prev) => !prev);
+              }}
+              aria-expanded={desktopStreakOpen}
+              aria-label={`Xem Chuỗi Kỷ Luật ${streakDays} ngày`}
+              title="Xem Ngọn Lửa Chuỗi Kỷ Luật"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-amber-300 tabular-nums transition cursor-pointer ${
+                desktopStreakOpen
+                  ? 'border-amber-400/80 bg-amber-500/25 shadow-[0_0_16px_rgba(255,146,43,0.42)]'
+                  : 'border-amber-400/35 bg-amber-500/10 hover:bg-amber-500/20 hover:border-amber-400/65 shadow-[0_0_12px_rgba(255,146,43,0.2)]'
+              }`}
+            >
               <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
               <span>{streakDays}N</span>
-            </span>
+            </button>
           </div>
         </div>
+
+        {/* Desktop Popover hiển thị thẻ Ngọn Lửa Chuỗi Kỷ Luật */}
+        <AnimatePresence>
+          {desktopStreakOpen && (
+            <motion.div
+              ref={desktopStreakRef}
+              initial={{ opacity: 0, x: -10, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -8, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="hidden md:block absolute left-[calc(100%+14px)] top-12 z-[95] w-[360px] shadow-[0_28px_60px_rgba(0,0,0,0.85)] rounded-[26px]"
+            >
+              <StreakFlameCard mode="view" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Danh sách mục điều hướng với Viên thuốc trượt lò xo */}
         <nav
@@ -570,10 +650,16 @@ export const LeftSidebar: React.FC = () => {
             <span className="text-[#F4F0E8]">{coins}</span>
           </div>
 
-          <div className="flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-lg bg-[#0D1821] border border-white/10 text-[11px] sm:text-xs font-bold text-amber-300 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setMobileStreakOpen(true)}
+            aria-label={`Xem Chuỗi Kỷ Luật ${streakDays} ngày`}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/12 border border-amber-400/45 text-[11px] sm:text-xs font-bold text-amber-300 shadow-[0_0_12px_rgba(255,146,43,0.22)] hover:border-amber-400/75 active:scale-95 transition cursor-pointer"
+            title="Xem Chuỗi Kỷ Luật"
+          >
             <Flame className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-amber-400 fill-amber-400 shrink-0" />
             <span>{streakDays}N</span>
-          </div>
+          </button>
         </div>
 
         {/* Right: Cụm nút tiện ích (Thành Tựu, Hộp Thư, Khế Ước & Cài Đặt) */}
@@ -627,6 +713,42 @@ export const LeftSidebar: React.FC = () => {
           </button>
         </div>
       </header>
+
+      {/* Mobile Modal hiển thị thẻ Ngọn Lửa Chuỗi Kỷ Luật */}
+      <AnimatePresence>
+        {mobileStreakOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setMobileStreakOpen(false)}
+            className="md:hidden fixed inset-0 z-[110] flex items-center justify-center p-4 bg-[#06141B]/82 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Chi tiết Chuỗi Kỷ Luật"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 8 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-[360px] flex flex-col items-center gap-3"
+            >
+              <button
+                type="button"
+                onClick={() => setMobileStreakOpen(false)}
+                aria-label="Đóng thẻ Chuỗi Kỷ Luật"
+                className="self-end w-8 h-8 rounded-full bg-[#11212D]/90 border border-white/15 text-[#F4F0E8] flex items-center justify-center shadow-lg active:scale-95 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <StreakFlameCard mode="view" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

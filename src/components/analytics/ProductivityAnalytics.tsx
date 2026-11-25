@@ -3,6 +3,7 @@ import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { CATEGORIES, DIFFICULTIES } from '../../constants/categories';
 import { TaskCategory, TaskDifficulty, Task } from '../../types';
 import { getLocalDateStr, getTodayString } from '../../utils/dateUtils';
+import { StreakFlameCard } from '../streak/StreakFlameCard';
 import {
   Flame,
   CheckCircle,
@@ -605,10 +606,10 @@ export const ProductivityAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* BENTO GRID 2 CỘT */}
+      {/* BENTO GRID 12 CỘT: SƠ ĐỒ LỤC GIÁC + NGỌN LỬA CHUỖI KỶ LUẬT + PHÂN BỔ HOẠT ĐỘNG */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* ================= CỘT TRÁI (6/12): SƠ ĐỒ LỤC GIÁC NĂNG LỰC ================= */}
-        <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-4">
+        {/* ================= CỘT TRÁI (7/12): SƠ ĐỒ LỤC GIÁC NĂNG LỰC ================= */}
+        <div className="lg:col-span-7 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-4">
           {/* Card Header */}
           <div className="flex items-center justify-between pb-3 border-b border-[#253745]">
             <div className="flex items-center gap-2.5">
@@ -912,8 +913,31 @@ export const ProductivityAnalytics: React.FC = () => {
           </div>
         </div>
 
-        {/* ================= CỘT PHẢI (6/12): PHÂN BỔ HOẠT ĐỘNG, ĐỘ KHÓ & PHONG ĐỘ 7 NGÀY ================= */}
-        <div className="lg:col-span-6 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-4">
+        {/* ================= CỘT PHẢI (5/12): THẺ NGỌN LỬA CHUỖI KỶ LUẬT ================= */}
+        <div className="lg:col-span-5 rounded-3xl p-4 sm:p-5 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col items-center justify-center min-w-0">
+          <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-[#253745]">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-[#253745] border border-amber-400/40 flex items-center justify-center text-amber-300 shadow-inner shrink-0">
+                <Flame className="w-4 h-4 text-amber-400 fill-amber-400" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-rpg font-bold text-base text-white tracking-wide truncate">
+                  Chuỗi Kỷ Luật
+                </h3>
+                <span className="text-[10px] text-amber-300/90 uppercase tracking-wider font-semibold block truncate">
+                  GIỮ LỬA RÈN LUYỆN MỖI NGÀY
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full flex-1 flex items-center justify-center min-w-0">
+            <StreakFlameCard mode="view" />
+          </div>
+        </div>
+
+        {/* ================= HÀNG DƯỚI (12/12): PHÂN BỔ HOẠT ĐỘNG, ĐỘ KHÓ & PHONG ĐỘ 7 NGÀY ================= */}
+        <div className="lg:col-span-12 rounded-3xl p-5 sm:p-6 bg-[#11212D] border border-[#253745] shadow-[0_16px_40px_rgba(0,0,0,0.7)] flex flex-col justify-between space-y-4">
           {/* Card Header */}
           <div className="flex items-center justify-between pb-3 border-b border-[#253745]">
             <div className="flex items-center gap-2.5">

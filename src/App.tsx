@@ -19,6 +19,7 @@ import { ChroniclesHeader, ChroniclesView } from './components/chronicles/Chroni
 import { LeaderboardHeader, LeaderboardTable } from './components/leaderboard/LeaderboardTable';
 import { ProductivityAnalyticsHeader, ProductivityAnalytics } from './components/analytics/ProductivityAnalytics';
 import { RankUpModal } from './components/modals/RankUpModal';
+import { StreakCelebrationModal } from './components/modals/StreakCelebrationModal';
 import { RewardPopupOverlay } from './components/modals/RewardPopupOverlay';
 import { RankRoadmapModal } from './components/modals/RankRoadmapModal';
 import { RenameModal } from './components/modals/RenameModal';
@@ -378,6 +379,7 @@ export const App: React.FC = () => {
       {/* Modals & Overlays */}
       <RewardPopupOverlay />
       <RankUpModal />
+      <StreakCelebrationModal />
       <RankRoadmapModal />
       <ChillyGlobalAudioHost />
       <AddShopItemModal />

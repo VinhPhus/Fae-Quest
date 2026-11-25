@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import confetti from 'canvas-confetti';
 import { toast } from './useToastStore';
+import { useChillyAudioStore } from './useChillyAudioStore';
 import {
   Task,
   TaskCategory,
@@ -435,6 +436,7 @@ interface FaeQuestState {
   activeStatusFilter: string;
   activeDayTab: 'today' | 'tomorrow';
   rankUpData: { achievedTier: RankTier; bonusCoins: number } | null;
+  streakCelebrationData: { prevStreak: number; newStreak: number } | null;
   searchQuery: string;
   isCreateQuestOpen: boolean;
   questViewMode: 'bento' | 'list';
@@ -569,6 +571,7 @@ interface FaeQuestState {
   triggerRewardPopup: (data: Omit<RewardPopupData, 'isOpen'>) => void;
   closeRewardPopup: () => void;
   closeRankUpModal: () => void;
+  closeStreakCelebrationModal: () => void;
   setRoadmapOpen: (open: boolean) => void;
   setRenameOpen: (open: boolean) => void;
   setResetOpen: (open: boolean) => void;
@@ -596,7 +599,7 @@ interface FaeQuestState {
   addToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   removeToast: (id: string) => void;
   checkDailyReset: () => void;
-  syncDailyLoginStreak: (profileInput?: any) => Promise<number | null>;
+  syncDailyLoginStreak: (profileInput?: any, options?: { skipModal?: boolean }) => Promise<number | null>;
   checkInStreakQuest: (questId: string) => Promise<void> | void;
   resetStreakQuest: (questId: string) => void;
   claimSystemQuestReward: (questId: string) => void;
@@ -823,6 +826,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       isCreateQuestOpen: false,
       questViewMode: 'bento',
       rankUpData: null,
+      streakCelebrationData: null,
       isRoadmapOpen: false,
       isRenameOpen: false,
       isResetOpen: false,
@@ -2985,6 +2989,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       },
 
       closeRankUpModal: () => set({ rankUpData: null }),
+      closeStreakCelebrationModal: () => set({ streakCelebrationData: null }),
 
       setRoadmapOpen: (open: boolean) => set({ isRoadmapOpen: open }),
       setRenameOpen: (open: boolean) => set({ isRenameOpen: open }),
@@ -3747,7 +3752,10 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         }
       },
 
-      syncDailyLoginStreak: async (targetUserId?: string): Promise<number | null> => {
+      syncDailyLoginStreak: async (
+        targetUserId?: string,
+        options?: { skipModal?: boolean }
+      ): Promise<number | null> => {
         if (isSyncingStreakLock) return null;
         isSyncingStreakLock = true;
 
@@ -3831,15 +3839,43 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           }
 
           const finalStreak = updatedProfile?.streak ?? nextStreak;
+          const prevStreakValue =
+            savedDate === yesterday || state.lastStreakDate === yesterday ? currentStreak : 0;
 
-          // 5. Luôn cập nhật state giao diện và thông báo ăn mừng
+          // 5. Kiểm tra điều kiện mở Modal chúc mừng ngày mới (tối đa 1 lần/ngày)
+          const didAdvanceStreak = finalStreak >= 1 && savedDate !== today;
+          let shouldOpenCelebrationModal = false;
+          if (didAdvanceStreak && typeof window !== 'undefined') {
+            const celebratedDate = localStorage.getItem('faequest_streak_celebrated_date');
+            const isFullscreenBusy = useChillyAudioStore.getState().isChillyFullscreen;
+            const isFocusBusy = Boolean(state.isFocusModalOpen);
+
+            if (options?.skipModal) {
+              localStorage.setItem('faequest_streak_celebrated_date', today);
+            } else if (celebratedDate !== today && !isFullscreenBusy && !isFocusBusy) {
+              shouldOpenCelebrationModal = true;
+              localStorage.setItem('faequest_streak_celebrated_date', today);
+            }
+          }
+
+          // 6. Luôn cập nhật state giao diện và thông báo ăn mừng (không bắn Toast trùng khi mở Modal)
           set({
             streakDays: finalStreak,
             lastStreakDate: today,
+            ...(shouldOpenCelebrationModal
+              ? {
+                  streakCelebrationData: {
+                    prevStreak: prevStreakValue,
+                    newStreak: finalStreak,
+                  },
+                }
+              : {}),
           });
 
-          if (finalStreak > currentStreak || currentStreak === 0) {
-            toast.reward(`Chuỗi Kỷ Luật đạt ${finalStreak}N`, 'Điểm danh ngày mới thành công');
+          if (didAdvanceStreak) {
+            if (!shouldOpenCelebrationModal) {
+              toast.reward(`Chuỗi Kỷ Luật đạt ${finalStreak}N`, 'Điểm danh ngày mới thành công');
+            }
             playSoundEffect('rankup', get().soundEnabled);
           }
 
