@@ -1,0 +1,284 @@
+/* ============== FaeQuest Account Avatar Menu (Lucian Prompt #408) ============== */
+
+/* Nút kích hoạt Tài khoản ở chân Sidebar Desktop & góc phải Header Mobile */
+.u408-trigger {
+  position: relative;
+  border: 0;
+  background: rgba(6, 20, 27, 0.52);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  color: #f4f0e8;
+  cursor: pointer;
+  transition:
+    background-color 0.22s ease,
+    box-shadow 0.25s ease,
+    padding 0.45s cubic-bezier(0.3, 1.3, 0.45, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.u408-trigger:hover {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.u408-trigger.is-desktop {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 14px;
+  padding: 6px 8px;
+  gap: 10px;
+}
+
+.u417-aside.is-rail .u408-trigger.is-desktop {
+  padding: 5px 1px;
+  gap: 0;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+}
+
+.u408-trigger.is-mobile {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 9999px;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Avatar tròn + Vòng sáng & Chấm xanh online */
+.u408-av {
+  position: relative;
+  border-radius: 9999px;
+  background: #0d1821;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.16),
+    0 6px 14px rgba(0, 0, 0, 0.48);
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.45, 0.64, 1),
+    box-shadow 0.28s ease;
+}
+
+.u408-trigger.is-desktop .u408-av {
+  width: 40px;
+  height: 40px;
+}
+
+.u417-aside.is-rail .u408-trigger.is-desktop .u408-av {
+  width: 42px;
+  height: 42px;
+}
+
+.u408-trigger.is-mobile .u408-av {
+  width: 38px;
+  height: 38px;
+}
+
+.u408-trigger:hover .u408-av {
+  transform: scale(1.05);
+}
+
+.u408-trigger:active .u408-av {
+  transform: scale(0.94);
+}
+
+/* Vòng viền mảnh khi đang ở trang Hồ Sơ hoặc Cài Đặt */
+.u408-trigger.is-personal-active .u408-av {
+  box-shadow:
+    0 0 0 2px #06141b,
+    0 0 0 3.5px rgba(245, 185, 66, 0.72),
+    0 0 16px rgba(245, 185, 66, 0.28);
+}
+
+/* Vòng viền kép nổi bật khi menu đang mở (aria-expanded="true") */
+.u408-trigger[aria-expanded='true'] .u408-av {
+  box-shadow:
+    0 0 0 3px #06141b,
+    0 0 0 5px var(--u408-ring, #f5b942),
+    0 8px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* Chấm xanh online */
+.u408-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: #34d399;
+  border: 2px solid #0d1821;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.55);
+  pointer-events: none;
+}
+
+/* Khung Menu Popover Dark Fantasy (#408) qua Portal */
+.u408-m {
+  position: fixed;
+  z-index: 9992;
+  width: 244px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(11, 25, 34, 0.96);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 22px 44px -18px rgba(0, 0, 0, 0.82);
+  color: #f4f0e8;
+  transform: scale(0.16);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.22s ease,
+    visibility 0s linear 0.28s;
+  will-change: transform, opacity;
+}
+
+.u408-m.is-open {
+  transform: scale(1);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform 0.55s cubic-bezier(0.34, 1.45, 0.64, 1),
+    opacity 0.22s ease,
+    visibility 0s linear 0s;
+}
+
+/* Mũi tên tam giác chỉ về nút Avatar theo hướng mở */
+.u408-m::before {
+  content: '';
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  background: rgba(11, 25, 34, 0.98);
+  pointer-events: none;
+}
+
+.u408-m.pos-top-left {
+  transform-origin: bottom left;
+}
+.u408-m.pos-top-left::before {
+  left: 20px;
+  bottom: -6px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+}
+
+.u408-m.pos-right-bottom {
+  transform-origin: bottom left;
+}
+.u408-m.pos-right-bottom::before {
+  left: -6px;
+  bottom: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+}
+
+.u408-m.pos-bottom-right {
+  transform-origin: top right;
+}
+.u408-m.pos-bottom-right::before {
+  right: 16px;
+  top: -6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+}
+
+/* Hiệu ứng Stagger nối đuôi (--i: 0..5) */
+.u408-stagger {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.22s ease;
+  transition-delay: 0ms;
+}
+
+.u408-m.is-open .u408-stagger {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.28s ease,
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(70ms + var(--i, 0) * 35ms);
+}
+
+/* Khối đầu menu (Tên + Rank + Email) */
+.u408-hd {
+  padding: 8px 10px 9px;
+  border-radius: 11px;
+  background: rgba(6, 20, 27, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+}
+
+.u408-hr {
+  height: 1px;
+  margin: 5px 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Mục Menu */
+.u408-it {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  padding: 8.5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ccd0cf;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.u408-it:hover,
+.u408-it:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.u408-it.is-current {
+  background: rgba(245, 185, 66, 0.12);
+  color: #fde68a;
+}
+
+.u408-it.is-out {
+  color: #fb7185;
+}
+
+.u408-it.is-out:hover,
+.u408-it.is-out:focus-visible {
+  background: rgba(251, 113, 133, 0.12);
+  color: #fda4af;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .u408-trigger,
+  .u408-av,
+  .u408-m,
+  .u408-stagger,
+  .u408-it {
+    transition: none !important;
+  }
+}

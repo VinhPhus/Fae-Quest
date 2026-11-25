@@ -442,6 +442,7 @@ interface FaeQuestState {
   isCreateQuestOpen: boolean;
   questViewMode: 'bento' | 'list';
   isRoadmapOpen: boolean;
+  isBlackCardOpen: boolean;
   isRenameOpen: boolean;
   isResetOpen: boolean;
   isSettingsOpen: boolean;
@@ -574,6 +575,7 @@ interface FaeQuestState {
   closeRankUpModal: () => void;
   closeStreakCelebrationModal: () => void;
   setRoadmapOpen: (open: boolean) => void;
+  setBlackCardOpen: (open: boolean) => void;
   setRenameOpen: (open: boolean) => void;
   setResetOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
@@ -844,6 +846,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       rankUpData: null,
       streakCelebrationData: null,
       isRoadmapOpen: false,
+      isBlackCardOpen: false,
       isRenameOpen: false,
       isResetOpen: false,
       isSettingsOpen: false,
@@ -3047,6 +3050,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       closeStreakCelebrationModal: () => set({ streakCelebrationData: null }),
 
       setRoadmapOpen: (open: boolean) => set({ isRoadmapOpen: open }),
+      setBlackCardOpen: (open: boolean) => set({ isBlackCardOpen: open }),
       setRenameOpen: (open: boolean) => set({ isRenameOpen: open }),
       setResetOpen: (open: boolean) => set({ isResetOpen: open }),
       setSettingsOpen: (open: boolean) => set({ isSettingsOpen: open }),
@@ -4920,6 +4924,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           unreadMessagesCount: 0,
           activeWarningMessage: null,
           isUserInboxOpen: false,
+          isBlackCardOpen: false,
           hunterId: getOrInitHunterId(),
           playerName: 'Thợ Săn Fae',
           avatarUrl: '',
@@ -4942,7 +4947,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           lastSyncedAt: undefined,
         });
 
-        get().addToast('🚪 Đã đăng xuất an toàn. Dữ liệu đã được lưu trữ trên Đám Mây.', 'info');
+        toast.info('Đã đăng xuất', 'Hẹn gặp lại Thợ Săn trong Đấu Trường');
       },
     }),
     {

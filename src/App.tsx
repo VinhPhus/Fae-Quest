@@ -22,6 +22,7 @@ import { RankUpModal } from './components/modals/RankUpModal';
 import { StreakCelebrationModal } from './components/modals/StreakCelebrationModal';
 import { RewardPopupOverlay } from './components/modals/RewardPopupOverlay';
 import { RankRoadmapModal } from './components/modals/RankRoadmapModal';
+import { HunterBlackCardModal } from './components/modals/HunterBlackCardModal';
 import { RenameModal } from './components/modals/RenameModal';
 import { ResetModal } from './components/modals/ResetModal';
 import { SettingsModal } from './components/modals/SettingsModal';
@@ -55,6 +56,8 @@ export const App: React.FC = () => {
     activeTab,
     hasSeenTutorial,
     isOathOpen,
+    isBlackCardOpen,
+    setBlackCardOpen,
     bannedUntil,
     checkDailyReset,
     checkSystemMilestones,
@@ -397,6 +400,10 @@ export const App: React.FC = () => {
       <RankUpModal />
       <StreakCelebrationModal />
       <RankRoadmapModal />
+      <HunterBlackCardModal
+        isOpen={isBlackCardOpen}
+        onClose={() => setBlackCardOpen(false)}
+      />
       <ChillyGlobalAudioHost />
       <AddShopItemModal />
       <RenameModal />

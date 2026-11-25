@@ -9,7 +9,6 @@ import { compressImageToDataUrl } from '../../utils/imageCompressor';
 import { CoinIcon } from '../ui/CoinIcon';
 import { DEFAULT_COVER_URL } from '../modals/ChangeCoverModal';
 import { ProductivityAnalytics } from '../analytics/ProductivityAnalytics';
-import { HunterBlackCardModal } from '../modals/HunterBlackCardModal';
 import {
   User,
   Camera,
@@ -108,6 +107,7 @@ export const ProfileView: React.FC = () => {
     focusSessionsCompleted,
     lastActiveDate,
     setRoadmapOpen,
+    setBlackCardOpen,
     setOathOpen,
     setActiveTab,
     addToast,
@@ -117,7 +117,6 @@ export const ProfileView: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [showAnalyticsSection, setShowAnalyticsSection] = useState(true);
-  const [isBlackCardOpen, setIsBlackCardOpen] = useState(false);
 
   const currentIdx = getRankIndexByExp(exp);
   const currentTier = RANK_TIERS[currentIdx];
@@ -388,7 +387,7 @@ export const ProfileView: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsBlackCardOpen(true)}
+                  onClick={() => setBlackCardOpen(true)}
                   className="px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-[#06141B] font-extrabold text-xs flex items-center gap-1 shadow-md transition active:scale-95 cursor-pointer"
                   title="Mở Hắc Thẻ Thợ Săn 3D & Xuất Ảnh"
                 >
@@ -632,12 +631,6 @@ export const ProfileView: React.FC = () => {
           </motion.div>
         )}
       </div>
-
-      {/* ================= MODAL HẮC THẺ THỢ SĂN 3D & XUẤT PNG ================= */}
-      <HunterBlackCardModal
-        isOpen={isBlackCardOpen}
-        onClose={() => setIsBlackCardOpen(false)}
-      />
     </div>
   );
 };

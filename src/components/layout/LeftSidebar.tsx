@@ -6,6 +6,7 @@ import { ActiveTab } from '../../types';
 import { CoinIcon } from '../ui/CoinIcon';
 import { StreakFlameCard } from '../streak/StreakFlameCard';
 import { InboxBellButton } from './InboxBellButton';
+import { AccountMenuPopover } from './AccountMenuPopover';
 import './NavigationRail.css';
 import {
   CheckSquare,
@@ -13,14 +14,11 @@ import {
   Trophy,
   BookOpen,
   Flame,
-  Settings,
   Scroll,
   ChevronLeft,
   ShieldAlert,
-  User,
   Award,
   HeartPulse,
-  LogOut,
   X,
 } from 'lucide-react';
 
@@ -35,17 +33,14 @@ export const LeftSidebar: React.FC = () => {
     systemQuests,
     coins,
     streakDays,
-    playerName,
-    avatarUrl,
-    setSettingsOpen,
     setOathOpen,
+    isSettingsOpen,
     isSidebarCollapsed,
     setSidebarCollapsed,
     userRole,
     unreadAnnouncementsCount,
     isFocusModalOpen,
     activeFocusTaskId,
-    signOut,
   } = useFaeQuestStore();
 
   const isChillyFullscreen = useChillyAudioStore((s) => s.isChillyFullscreen);
@@ -162,12 +157,6 @@ export const LeftSidebar: React.FC = () => {
       icon: <Award />,
       badge: actionableSystemQuestsCount > 0 ? actionableSystemQuestsCount : undefined,
     },
-    {
-      id: 'profile',
-      label: 'Hồ Sơ',
-      mobileLabel: 'Hồ Sơ',
-      icon: <User />,
-    },
     ...(userRole === 'admin'
       ? [
           {
@@ -196,7 +185,7 @@ export const LeftSidebar: React.FC = () => {
   useLayoutEffect(() => {
     const activeIdx = menuItems.findIndex((m) => m.id === activeTab);
     const activeEl = desktopBtnRefs.current[activeIdx];
-    if (activeEl) {
+    if (activeEl && activeTab !== 'profile' && !isSettingsOpen) {
       setDesktopPillY(activeEl.offsetTop);
       setDesktopPillVisible(true);
     } else {
@@ -210,7 +199,7 @@ export const LeftSidebar: React.FC = () => {
       });
       return () => cancelAnimationFrame(raf);
     }
-  }, [activeTab, isRail, menuItems.length]);
+  }, [activeTab, isRail, isSettingsOpen, menuItems.length]);
 
   useEffect(() => {
     const navEl = desktopNavRef.current;
@@ -338,8 +327,6 @@ export const LeftSidebar: React.FC = () => {
   const shouldHideMobileDock =
     isChillyFullscreen || (isFocusModalOpen && Boolean(activeFocusTaskId));
 
-  const playerInitial = (playerName?.trim()?.[0] || 'T').toUpperCase();
-
   return (
     <>
       {/* ================= DESKTOP FLOATING SIDEBAR (>= 768px) ================= */}
@@ -466,13 +453,7 @@ export const LeftSidebar: React.FC = () => {
                   desktopBtnRefs.current[idx] = el;
                 }}
                 type="button"
-                id={
-                  item.id === 'profile'
-                    ? 'tour-sidebar-profile'
-                    : item.id === 'shop'
-                    ? 'tour-sidebar-shop'
-                    : undefined
-                }
+                id={item.id === 'shop' ? 'tour-sidebar-shop' : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => setActiveTab(item.id)}
                 className={`u417-it ${isActive ? 'is-active' : ''} ${
@@ -496,64 +477,9 @@ export const LeftSidebar: React.FC = () => {
           })}
         </nav>
 
-        {/* Chân thanh điều hướng: Cài Đặt, Hồ sơ nhỏ & Đăng xuất */}
+        {/* Chân thanh điều hướng: Duy nhất nút Tài khoản Avatar (#408) */}
         <div className="u417-ft">
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="u417-foot-btn"
-          >
-            <span className="u417-ic">
-              <Settings />
-            </span>
-            <span className="u417-lb">Cài Đặt</span>
-            <span className="u417-tip" role="tooltip">
-              Cài Đặt
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('profile')}
-            className="u417-foot-btn"
-          >
-            <span className="u417-ic">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={playerName}
-                  className="w-[26px] h-[26px] rounded-full object-cover ring-1 ring-white/20"
-                />
-              ) : (
-                <span className="w-[26px] h-[26px] rounded-full bg-[#162633] ring-1 ring-white/20 flex items-center justify-center text-[11px] font-extrabold text-[#F4F0E8]">
-                  {playerInitial}
-                </span>
-              )}
-            </span>
-            <span className="u417-lb flex flex-col leading-tight min-w-0 pr-2">
-              <span className="text-[12px] font-bold text-[#F4F0E8] truncate">
-                {playerName || 'Thợ Săn'}
-              </span>
-              <span className="text-[10px] text-white/45 truncate">Tài khoản cá nhân</span>
-            </span>
-            <span className="u417-tip" role="tooltip">
-              {playerName || 'Thợ Săn'} • Hồ Sơ
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => signOut()}
-            className="u417-foot-btn hover:!text-rose-300"
-          >
-            <span className="u417-ic">
-              <LogOut />
-            </span>
-            <span className="u417-lb">Đăng Xuất</span>
-            <span className="u417-tip" role="tooltip">
-              Đăng Xuất
-            </span>
-          </button>
+          <AccountMenuPopover variant="desktop" isRail={isRail} />
         </div>
       </aside>
 
@@ -587,13 +513,7 @@ export const LeftSidebar: React.FC = () => {
                   mobileBtnRefs.current[idx] = el;
                 }}
                 type="button"
-                id={
-                  item.id === 'profile'
-                    ? 'tour-mobile-profile'
-                    : item.id === 'shop'
-                    ? 'tour-mobile-shop'
-                    : undefined
-                }
+                id={item.id === 'shop' ? 'tour-mobile-shop' : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => setActiveTab(item.id)}
                 className={`u417-m-it ${isActive ? 'is-active' : ''} ${
@@ -660,8 +580,8 @@ export const LeftSidebar: React.FC = () => {
           </button>
         </div>
 
-        {/* Right: Cụm nút tiện ích (Thành Tựu, Hộp Thư, Khế Ước & Cài Đặt) */}
-        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        {/* Right: Cụm nút tiện ích (Thành Tựu, Hộp Thư, Khế Ước & Tài Khoản #408) */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('system-quests')}
@@ -685,20 +605,13 @@ export const LeftSidebar: React.FC = () => {
           <button
             type="button"
             onClick={() => setOathOpen(true)}
-            className="p-1.5 rounded-lg bg-[#0D1821] border border-white/10 text-[#F4F0E8] hover:border-white/25 transition shadow-sm cursor-pointer"
+            className="hidden sm:inline-flex p-1.5 rounded-lg bg-[#0D1821] border border-white/10 text-[#F4F0E8] hover:border-white/25 transition shadow-sm cursor-pointer"
             title="Khế Ước Thợ Săn"
           >
             <Scroll className="w-4 h-4" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="p-1.5 rounded-lg bg-[#0D1821] border border-white/10 text-white/75 hover:text-[#F4F0E8] hover:border-white/25 transition shadow-sm cursor-pointer"
-            title="Cài Đặt"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+          <AccountMenuPopover variant="mobile" />
         </div>
       </header>
 

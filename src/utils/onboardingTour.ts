@@ -153,7 +153,7 @@ export function getOnboardingTourDriver(): Driver {
         },
       },
 
-      // Bước 4: Menu Hồ Sơ Thợ Săn
+      // Bước 4: Nút Tài Khoản Thợ Săn (Avatar #408)
       {
         element: () => {
           if (typeof window !== 'undefined' && window.innerWidth < 768) {
@@ -162,11 +162,11 @@ export function getOnboardingTourDriver(): Driver {
           return document.querySelector('#tour-sidebar-profile') as HTMLElement;
         },
         popover: {
-          title: '👤 Thẻ Căn Cước',
+          title: '👤 Tài Khoản & Hắc Thẻ',
           description:
-            'Xem lại toàn bộ hành trình rèn luyện, chuỗi kỷ luật, danh hiệu hiện tại và bảng thành tích cá nhân. Bạn cũng có thể tùy biến ảnh đại diện và ảnh bìa tại đây.',
-          side: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'right' : 'top',
-          align: 'start',
+            'Chạm vào Avatar để mở nhanh Hồ Sơ Cá Nhân, xem và xuất Hắc Thẻ Chiến Tích 3D, điều chỉnh Cài Đặt hoặc Đăng Xuất an toàn.',
+          side: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'right' : 'bottom',
+          align: typeof window !== 'undefined' && window.innerWidth >= 768 ? 'start' : 'end',
         },
       },
 
