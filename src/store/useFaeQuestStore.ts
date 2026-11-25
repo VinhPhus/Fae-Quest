@@ -622,7 +622,7 @@ interface FaeQuestState {
     email: string,
     password: string,
     onSuccessHold?: () => Promise<void> | void
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; needsEmailConfirmation?: boolean }>;
   signIn: (
     email: string,
     password: string,
@@ -4426,9 +4426,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       ) => {
         const cleanName = name.trim();
         const cleanEmail = email.trim();
-        if (!cleanName) return { success: false, error: 'Vui lòng nhập Tên Thợ Săn' };
+        if (cleanName.length < 2) return { success: false, error: 'Tên Thợ Săn cần tối thiểu 2 ký tự' };
         if (!cleanEmail) return { success: false, error: 'Vui lòng nhập Email' };
-        if (password.length < 6) return { success: false, error: 'Mật khẩu phải chứa ít nhất 6 ký tự' };
+        if (
+          password.length < 8 ||
+          !/\d/.test(password) ||
+          !/[^A-Za-z0-9\s]/.test(password)
+        ) {
+          return {
+            success: false,
+            error: 'Mật khẩu phải từ 8 ký tự, có ít nhất 1 chữ số và 1 ký tự đặc biệt',
+          };
+        }
 
         try {
           const { data, error } = await supabase.auth.signUp({
@@ -4437,6 +4446,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             options: {
               data: {
                 display_name: cleanName,
+                username: cleanName,
               },
             },
           });
@@ -4447,6 +4457,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           if (!data.user) {
             return { success: false, error: 'Không thể khởi tạo tài khoản Thợ Săn, vui lòng thử lại' };
+          }
+
+          // Supabase trả identities rỗng nếu email đã tồn tại khi bật xác nhận email
+          if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+            return { success: false, error: 'Email này đã thuộc về một Thợ Săn khác' };
           }
 
           const newUserId = data.user.id;
@@ -4552,7 +4567,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             get().fetchSystemAchievements();
             get().fetchJournals();
             playSound('coin_purchase', get().soundEnabled);
-            toast.ok(`Chào mừng Tân Binh "${cleanName}"!`, 'Khởi đầu bậc ĐỒNG • Tặng ngay 25 Xu Vàng');
+            toast.ok('Khởi tạo hồ sơ thành công', 'Chào mừng Thợ Săn mới gia nhập FaeQuest');
             return { success: true };
           } else {
             // Auto sign in with password in case confirmation isn't blocking
@@ -4596,16 +4611,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               get().fetchSystemShopItems();
               get().fetchSystemAchievements();
               playSound('coin_purchase', get().soundEnabled);
-              toast.ok(`Chào mừng Tân Binh "${cleanName}"!`, 'Khởi đầu bậc ĐỒNG • Tặng ngay 25 Xu Vàng');
+              toast.ok('Khởi tạo hồ sơ thành công', 'Chào mừng Thợ Săn mới gia nhập FaeQuest');
               return { success: true };
             }
 
             if (onSuccessHold) {
               await onSuccessHold();
             }
+            toast.info('Đã gửi thư kích hoạt', `Kiểm tra hộp thư ${cleanEmail} để xác nhận tài khoản`);
             return {
               success: true,
-              error: 'Đăng ký thành công! Vui lòng kiểm tra email xác nhận hoặc đăng nhập ngay.',
+              needsEmailConfirmation: true,
+              error: `Đã gửi thư kích hoạt tới ${cleanEmail}. Hãy kiểm tra hộp thư để xác nhận tài khoản!`,
             };
           }
         } catch (err: any) {

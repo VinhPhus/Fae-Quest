@@ -299,8 +299,206 @@
   box-shadow: 0 14px 30px -10px rgba(255, 255, 255, 0.42);
 }
 
-.u403-go:active:not(:disabled):not(.is-busy):not(.is-ok) {
+.u403-go:active:not(:disabled):not(.is-busy):not(.is-ok):not(.is-sleep) {
   transform: scale(0.97, 0.94);
+}
+
+/* Trạng thái ngủ & thức tỉnh cho nút Đăng Ký (#404) */
+.u403-go.is-sleep {
+  background: #162633;
+  color: rgba(244, 240, 232, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  cursor: not-allowed;
+}
+
+.u403-go.is-sleep:hover {
+  background: #1a2d3d;
+  transform: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.u403-go.is-awake:not(.is-busy):not(.is-ok) {
+  animation: u404-wake 0.52s cubic-bezier(0.34, 1.45, 0.64, 1);
+  box-shadow:
+    0 12px 28px -8px rgba(234, 231, 225, 0.45),
+    0 0 0 3px rgba(245, 185, 66, 0.16);
+}
+
+@keyframes u404-wake {
+  0% {
+    transform: scale(0.96);
+  }
+  38% {
+    transform: scale(1.04, 0.94) translateY(-2px);
+  }
+  72% {
+    transform: scale(0.98, 1.03);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ============== Thanh Đo Độ Mạnh & Checklist (#404) ============== */
+.u404-st {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(6, 20, 27, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.u404-st-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.u404-st-cap {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ba8ab;
+}
+
+.u404-st-lv {
+  font-size: 11px;
+  font-weight: 800;
+  transition: color 0.25s ease;
+}
+
+.u404-st[data-lv='0'] .u404-st-lv {
+  color: rgba(155, 168, 171, 0.7);
+}
+.u404-st[data-lv='1'] .u404-st-lv {
+  color: #fb7185;
+}
+.u404-st[data-lv='2'] .u404-st-lv {
+  color: #ffb26b;
+}
+.u404-st[data-lv='3'] .u404-st-lv {
+  color: #34d399;
+}
+.u404-st[data-lv='4'] .u404-st-lv {
+  color: #7ee8c0;
+}
+
+.u404-bars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.u404-bar {
+  position: relative;
+  height: 5px;
+  border-radius: 3px;
+  background: #162633;
+  overflow: hidden;
+}
+
+.u404-bar-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition:
+    transform 0.5s cubic-bezier(0.34, 1.45, 0.64, 1),
+    background-color 0.28s ease;
+}
+
+.u404-bar.is-on .u404-bar-fill {
+  transform: scaleX(1);
+}
+
+.u404-st[data-lv='1'] .u404-bar.is-on .u404-bar-fill {
+  background: #fb7185;
+}
+.u404-st[data-lv='2'] .u404-bar.is-on .u404-bar-fill {
+  background: #ffb26b;
+}
+.u404-st[data-lv='3'] .u404-bar.is-on .u404-bar-fill {
+  background: #34d399;
+}
+.u404-st[data-lv='4'] .u404-bar.is-on .u404-bar-fill {
+  background: #7ee8c0;
+  box-shadow: 0 0 8px rgba(126, 232, 192, 0.5);
+}
+
+.u404-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.u404-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(155, 168, 171, 0.85);
+  transition: color 0.24s ease;
+}
+
+.u404-rule.is-met {
+  color: #f4f0e8;
+}
+
+.u404-rchk {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  background: rgba(6, 20, 27, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease;
+}
+
+.u404-rule.is-met .u404-rchk {
+  background: #34d399;
+  border-color: #34d399;
+  animation: u404-pop 0.4s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.u404-rchk svg {
+  width: 10px;
+  height: 10px;
+}
+
+.u404-rchk path {
+  fill: none;
+  stroke: #06141b;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 12;
+  stroke-dashoffset: 12;
+  transition: stroke-dashoffset 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.u404-rule.is-met .u404-rchk path {
+  stroke-dashoffset: 0;
+}
+
+@keyframes u404-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  55% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .u403-go.is-busy {
@@ -390,14 +588,20 @@
   .u403-eye .lid,
   .u403-eye .lash,
   .u403-msg,
-  .u403-go {
+  .u403-go,
+  .u404-bar-fill,
+  .u404-rchk,
+  .u404-rchk path {
     transition: none;
   }
   .u403-f.is-shake,
-  .u403-go.is-ok .u403-ok-ic path {
+  .u403-go.is-ok .u403-ok-ic path,
+  .u403-go.is-awake,
+  .u404-rule.is-met .u404-rchk {
     animation: none;
   }
-  .u403-go.is-ok .u403-ok-ic path {
+  .u403-go.is-ok .u403-ok-ic path,
+  .u404-rule.is-met .u404-rchk path {
     stroke-dashoffset: 0;
   }
 }
