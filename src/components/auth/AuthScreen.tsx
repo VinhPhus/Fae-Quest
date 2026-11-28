@@ -5,6 +5,11 @@ import { CoinIcon } from '../ui/CoinIcon';
 import { InstallAppButton } from '../ui/InstallAppButton';
 import { EASING_SPRING } from '../../constants/motion';
 import { Lock, Mail, User, Sparkles, ArrowRight } from 'lucide-react';
+import {
+  MAX_HUNTER_NAME_LENGTH,
+  MIN_HUNTER_NAME_LENGTH,
+  validateHunterName,
+} from '../../utils/hunterName';
 import './AuthForm403.css';
 
 type FieldKey = 'name' | 'email' | 'password';
@@ -82,7 +87,8 @@ export const AuthScreen: React.FC = () => {
   }, [password]);
 
   const isEmailValid = EMAIL_REGEX.test(email.trim());
-  const isNameValid = hunterName.trim().length >= 2;
+  const nameValidation = validateHunterName(hunterName);
+  const isNameValid = nameValidation.valid;
   const isRegisterReady =
     mode === 'register' && isNameValid && isEmailValid && passwordChecks.allMet;
 
@@ -193,7 +199,7 @@ export const AuthScreen: React.FC = () => {
     setConfirmationNotice(null);
 
     const cleanEmail = email.trim();
-    const cleanName = hunterName.trim();
+    const cleanName = nameValidation.cleanName;
 
     if (mode === 'login') {
       // Tab Đăng Nhập (#403): giữ tương thích tài khoản cũ >= 6 ký tự
@@ -222,9 +228,12 @@ export const AuthScreen: React.FC = () => {
       return;
     }
 
-    // Tab Đăng Ký (#404): kiểm tra Tên >= 2 ký tự, Email chuẩn & đủ 3 tiêu chí mật khẩu
-    if (!isNameValid) {
-      triggerFieldError('name', 'Tên Thợ Săn cần tối thiểu 2 ký tự');
+    // Tab Đăng Ký (#404): kiểm tra Tên 2-20 ký tự, Email chuẩn & đủ 3 tiêu chí mật khẩu
+    if (!nameValidation.valid) {
+      triggerFieldError(
+        'name',
+        nameValidation.error || `Tên Thợ Săn cần từ ${MIN_HUNTER_NAME_LENGTH} đến ${MAX_HUNTER_NAME_LENGTH} ký tự`
+      );
       return;
     }
     if (!isEmailValid) {
@@ -403,6 +412,8 @@ export const AuthScreen: React.FC = () => {
                             id="auth-hunter-name"
                             type="text"
                             autoComplete="nickname"
+                            minLength={MIN_HUNTER_NAME_LENGTH}
+                            maxLength={MAX_HUNTER_NAME_LENGTH}
                             value={hunterName}
                             onFocus={() => setFocusedField('name')}
                             onBlur={() => setFocusedField((prev) => (prev === 'name' ? null : prev))}
@@ -414,7 +425,7 @@ export const AuthScreen: React.FC = () => {
                             className="u403-in"
                           />
                           <label htmlFor="auth-hunter-name" className="u403-lbl">
-                            Tên Thợ Săn (tối thiểu 2 ký tự)
+                            Tên Thợ Săn ({MIN_HUNTER_NAME_LENGTH}–{MAX_HUNTER_NAME_LENGTH} ký tự)
                           </label>
                         </div>
                         <p className={`u403-msg ${fieldErrors.name ? 'is-on' : ''}`} role="alert">

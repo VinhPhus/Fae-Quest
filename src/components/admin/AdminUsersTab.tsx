@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import { AdminUserOverview } from '../../types';
+import { normalizeStoredHunterName } from '../../utils/hunterName';
 import { RANK_TIERS, getRankIndexByExp } from '../../constants/ranks';
 import { CoinIcon } from '../ui/CoinIcon';
 import { AdminUserLogsModal } from './AdminUserLogsModal';
@@ -56,7 +57,11 @@ export const AdminUsersTab: React.FC = () => {
       // Gọi RPC rpc_admin_get_users_overview() nếu có, hoặc query profiles kết hợp activity_logs
       const { data: rpcData, error: rpcErr } = await supabase.rpc('rpc_admin_get_users_overview');
       if (!rpcErr && rpcData) {
-        setUsers(rpcData as AdminUserOverview[]);
+        const sanitized = (rpcData as AdminUserOverview[]).map((u) => ({
+          ...u,
+          username: normalizeStoredHunterName(u.username).name,
+        }));
+        setUsers(sanitized);
         return;
       }
 
@@ -81,7 +86,7 @@ export const AdminUsersTab: React.FC = () => {
 
           return {
             id: p.id,
-            username: p.username || 'Thợ Săn Fae',
+            username: normalizeStoredHunterName(p.username).name,
             avatar_url: p.avatar_url,
             cover_url: p.cover_url || null,
             exp: p.exp || 0,

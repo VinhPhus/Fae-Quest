@@ -65,6 +65,12 @@ import { triggerCoinBurst } from '../components/ui/CoinBurstOverlay';
 import { deleteCloudinaryImages } from '../utils/cloudinaryDelete';
 import { localizeError } from '../utils/errorLocalization';
 import {
+  DEFAULT_HUNTER_NAME,
+  MAX_HUNTER_NAME_LENGTH,
+  normalizeStoredHunterName,
+  validateHunterName,
+} from '../utils/hunterName';
+import {
   syncProfileAndStateToCloud,
   restoreUserStateFromCloud,
   getOrInitHunterId,
@@ -2166,12 +2172,29 @@ export const useFaeQuestStore = create<FaeQuestState>()(
       toasts: [],
 
       setPlayerName: (name: string) => {
-        const trimmed = name.trim();
-        if (trimmed) {
-          set({ playerName: trimmed });
-          get().addToast(`Đã đổi tên nhân vật thành "${trimmed}"`, 'success');
-          debouncedAutoSync(get());
+        const res = validateHunterName(name);
+        if (!res.valid) {
+          get().addToast(res.error || `Tên Thợ Săn tối đa ${MAX_HUNTER_NAME_LENGTH} ký tự`, 'error');
+          return;
         }
+        const trimmed = res.cleanName;
+        const currUser = get().currentUser;
+        set({
+          playerName: trimmed,
+          ...(currUser ? { currentUser: { ...currUser, name: trimmed } } : {}),
+        });
+        get().addToast(`Đã đổi tên nhân vật thành "${trimmed}"`, 'success');
+        if (currUser?.id) {
+          supabase
+            .from('profiles')
+            .update({
+              username: trimmed,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', currUser.id)
+            .then(() => {}, () => {});
+        }
+        debouncedAutoSync(get());
       },
 
       setAvatarUrl: async (url: string) => {
@@ -3373,7 +3396,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             // C. Ghi đè snapshot public.user_states về cấu trúc mặc định (chủ sở hữu luôn có toàn quyền)
             const freshStateJson: UserStateCloud & { resetAt: string } = {
-              playerName: currentUser.name || state.playerName || 'Thợ Săn Fae',
+              playerName: normalizeStoredHunterName(currentUser.name || state.playerName).name,
               avatarUrl: '',
               coverUrl: '',
               exp: 0,
@@ -3470,7 +3493,7 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
         // 3. Cập nhật Zustand Store về giá trị khởi điểm ban đầu
         set({
-          playerName: currentUser?.name || state.playerName || 'Thợ Săn Fae',
+          playerName: normalizeStoredHunterName(currentUser?.name || state.playerName).name,
           avatarUrl: '',
           coverUrl: '',
           exp: 0,
@@ -4047,8 +4070,11 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         const savedActiveDate = String(s.lastActiveDate || '').slice(0, 10);
         const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
 
+        const normalizedRemoteName = normalizeStoredHunterName(s.playerName || curr.playerName);
+
         set({
-          playerName: s.playerName || curr.playerName,
+          playerName: normalizedRemoteName.name,
+          ...(curr.currentUser ? { currentUser: { ...curr.currentUser, name: normalizedRemoteName.name } } : {}),
           avatarUrl: s.avatarUrl !== undefined ? s.avatarUrl : curr.avatarUrl,
           coverUrl: s.coverUrl !== undefined ? s.coverUrl : curr.coverUrl,
           exp: typeof s.exp === 'number' ? s.exp : curr.exp,
@@ -4116,10 +4142,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           const savedActiveDate = s.lastActiveDate || '';
           const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
 
+          const restoredNameRes = normalizeStoredHunterName(s.playerName || get().playerName);
+
           setStoredHunterId(cleanId);
           set({
             hunterId: cleanId,
-            playerName: s.playerName || get().playerName,
+            playerName: restoredNameRes.name,
             avatarUrl: s.avatarUrl || '',
             coverUrl: s.coverUrl || '',
             exp: typeof s.exp === 'number' ? s.exp : get().exp,
@@ -4155,9 +4183,16 @@ export const useFaeQuestStore = create<FaeQuestState>()(
           get().checkDailyReset();
           playSoundEffect('complete', get().soundEnabled);
           get().addToast(
-            `🎉 Đã khôi phục thành công dữ liệu của "${s.playerName || cleanId}"!`,
+            `🎉 Đã khôi phục thành công dữ liệu của "${restoredNameRes.name || cleanId}"!`,
             'success'
           );
+          if (restoredNameRes.wasOverflow) {
+            get().addToast(
+              `Tên tài khoản vượt quá ${MAX_HUNTER_NAME_LENGTH} ký tự nên đã được đặt lại về "${DEFAULT_HUNTER_NAME}"`,
+              'info'
+            );
+            void get().syncToCloud(true);
+          }
           return true;
         } else {
           set({ cloudSyncStatus: 'error' });
@@ -4200,11 +4235,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               .maybeSingle();
             if (profileError) throw profileError;
 
-            const hunterName =
+            const rawHunterName =
               profile?.username ||
               user.user_metadata?.display_name ||
               user.email?.split('@')[0] ||
-              'Thợ Săn Fae';
+              DEFAULT_HUNTER_NAME;
+            const hunterNameRes = normalizeStoredHunterName(rawHunterName);
+            const hunterName = hunterNameRes.name;
 
             const userEmail = user.email || '';
             const isAdminCandidate =
@@ -4265,6 +4302,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
             if (stateRow?.state_json) {
               const s = stateRow.state_json;
+              const stateNameRes = normalizeStoredHunterName(s.playerName || hunterName);
+              const resolvedPlayerName = stateNameRes.name;
+              const didResetOverflowName = hunterNameRes.wasOverflow || stateNameRes.wasOverflow;
               const isVeteranPlayer =
                 (profile?.completed_tasks_count || 0) > 0 ||
                 (profile?.exp || 0) > 0 ||
@@ -4285,14 +4325,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               const isCloudNewDay = !savedActiveDate || savedActiveDate < today;
 
               set({
-                currentUser: { id: user.id, email: user.email || '', name: hunterName },
+                currentUser: { id: user.id, email: user.email || '', name: resolvedPlayerName },
                 hunterId,
                 userRole,
                 bannedUntil,
                 banReason,
                 activeTab: isAdmin ? 'admin' : 'quests',
                 isOathOpen: false,
-                playerName: s.playerName || hunterName,
+                playerName: resolvedPlayerName,
                 avatarUrl: s.avatarUrl || profile?.avatar_url || '',
                 coverUrl:
                   profile?.cover_url !== undefined && profile?.cover_url !== null
@@ -4337,6 +4377,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               });
 
               get().checkDailyReset();
+              if (didResetOverflowName) {
+                void supabase
+                  .from('profiles')
+                  .update({ username: resolvedPlayerName, updated_at: new Date().toISOString() })
+                  .eq('id', hunterId)
+                  .then(() => {}, () => {});
+                void get().syncToCloud(true);
+                toast.info(
+                  'Đã chuẩn hóa tên tài khoản',
+                  `Tên vượt quá ${MAX_HUNTER_NAME_LENGTH} ký tự đã được đặt lại về "${DEFAULT_HUNTER_NAME}"`
+                );
+              }
             } else {
               // Brand new user profile in auth but no user_states: initialize clean
               const starterTasks: Task[] = [
@@ -4398,6 +4450,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               });
 
               await get().syncToCloud(true);
+              if (hunterNameRes.wasOverflow) {
+                toast.info(
+                  'Đã chuẩn hóa tên tài khoản',
+                  `Tên vượt quá ${MAX_HUNTER_NAME_LENGTH} ký tự đã được đặt lại về "${DEFAULT_HUNTER_NAME}"`
+                );
+              }
             }
 
             // Tự động kiểm tra & đồng bộ chuỗi kỷ luật ngày mới
@@ -4446,9 +4504,15 @@ export const useFaeQuestStore = create<FaeQuestState>()(
         password: string,
         onSuccessHold?: () => Promise<void> | void
       ) => {
-        const cleanName = name.trim();
+        const nameRes = validateHunterName(name);
+        const cleanName = nameRes.cleanName;
         const cleanEmail = email.trim();
-        if (cleanName.length < 2) return { success: false, error: 'Tên Thợ Săn cần tối thiểu 2 ký tự' };
+        if (!nameRes.valid) {
+          return {
+            success: false,
+            error: nameRes.error || `Tên Thợ Săn cần từ 2 đến ${MAX_HUNTER_NAME_LENGTH} ký tự`,
+          };
+        }
         if (!cleanEmail) return { success: false, error: 'Vui lòng nhập Email' };
         if (
           password.length < 8 ||
@@ -4689,11 +4753,13 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             .eq('id', userId)
             .maybeSingle();
 
-          const hunterName =
+          const rawHunterName =
             profile?.username ||
             data.user.user_metadata?.display_name ||
             cleanEmail.split('@')[0] ||
-            'Thợ Săn Fae';
+            DEFAULT_HUNTER_NAME;
+          const hunterNameRes = normalizeStoredHunterName(rawHunterName);
+          const hunterName = hunterNameRes.name;
 
           const isAdminCandidate =
             cleanEmail.toLowerCase().includes('admin') ||
@@ -4745,6 +4811,9 @@ export const useFaeQuestStore = create<FaeQuestState>()(
 
           if (stateRow?.state_json) {
             const s = stateRow.state_json;
+            const stateNameRes = normalizeStoredHunterName(s.playerName || hunterName);
+            const resolvedPlayerName = stateNameRes.name;
+            const didResetOverflowName = hunterNameRes.wasOverflow || stateNameRes.wasOverflow;
             const isVeteranPlayer =
               (profile?.completed_tasks_count || 0) > 0 ||
               (profile?.exp || 0) > 0 ||
@@ -4769,14 +4838,14 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             }
 
             set({
-              currentUser: { id: userId, email: cleanEmail, name: hunterName },
+              currentUser: { id: userId, email: cleanEmail, name: resolvedPlayerName },
               hunterId: userId,
               userRole,
               bannedUntil,
               banReason,
               activeTab: isAdmin ? 'admin' : 'quests',
               isOathOpen: false,
-              playerName: s.playerName || hunterName,
+              playerName: resolvedPlayerName,
               avatarUrl: s.avatarUrl || profile?.avatar_url || '',
               coverUrl:
                 profile?.cover_url !== undefined && profile?.cover_url !== null
@@ -4821,6 +4890,18 @@ export const useFaeQuestStore = create<FaeQuestState>()(
             });
 
             get().checkDailyReset();
+            if (didResetOverflowName) {
+              void supabase
+                .from('profiles')
+                .update({ username: resolvedPlayerName, updated_at: new Date().toISOString() })
+                .eq('id', userId)
+                .then(() => {}, () => {});
+              void get().syncToCloud(true);
+              toast.info(
+                'Đã chuẩn hóa tên tài khoản',
+                `Tên vượt quá ${MAX_HUNTER_NAME_LENGTH} ký tự đã được đặt lại về "${DEFAULT_HUNTER_NAME}"`
+              );
+            }
           } else {
             // First time login with no user_states:
             const starterTasks: Task[] = [
@@ -4889,6 +4970,12 @@ export const useFaeQuestStore = create<FaeQuestState>()(
               authLoading: false,
             });
             await get().syncToCloud(true);
+            if (hunterNameRes.wasOverflow) {
+              toast.info(
+                'Đã chuẩn hóa tên tài khoản',
+                `Tên vượt quá ${MAX_HUNTER_NAME_LENGTH} ký tự đã được đặt lại về "${DEFAULT_HUNTER_NAME}"`
+              );
+            }
           }
 
           // Đồng bộ dữ liệu Live-Ops

@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { getRankIndexByExp, RANK_TIERS } from '../constants/ranks';
 import { Task, ShopItem, InventoryTicket, Rival, SystemQuest, UserRole, TaskCategory, TaskDifficulty, CategoryStatRecord, DailyActivityRecord, ChillyTrack } from '../types';
+import { normalizeStoredHunterName } from './hunterName';
 
 export interface HunterProfileCloud {
   id: string;
@@ -86,7 +87,12 @@ export const syncProfileAndStateToCloud = async (
   }
 
   try {
-    const rankIdx = getRankIndexByExp(state.exp);
+    const safePlayerName = normalizeStoredHunterName(state.playerName).name;
+    const safeState: UserStateCloud = {
+      ...state,
+      playerName: safePlayerName,
+    };
+    const rankIdx = getRankIndexByExp(safeState.exp);
     const tier = RANK_TIERS[rankIdx];
 
     // 1. Cập nhật hoặc khởi tạo thông tin trên public.profiles
@@ -98,25 +104,25 @@ export const syncProfileAndStateToCloud = async (
 
     if (!existingProfile) {
       // Tự động nhận diện role admin nếu email hoặc tên chứa từ khóa quản trị
-      const lowerName = (state.playerName || '').toLowerCase();
+      const lowerName = safePlayerName.toLowerCase();
       const detectedRole: UserRole = initialRole || (
         lowerName.includes('quản trị') || lowerName.includes('admin') ? 'admin' : 'user'
       );
 
       const { error: insErr } = await supabase.from('profiles').insert({
         id: hunterId,
-        username: state.playerName || 'Thợ Săn Fae',
-        avatar_url: state.avatarUrl || null,
-        cover_url: state.coverUrl || null,
-        exp: state.exp || 0,
-        coins: state.coins || 25,
-        stars: state.stars || 0,
+        username: safePlayerName,
+        avatar_url: safeState.avatarUrl || null,
+        cover_url: safeState.coverUrl || null,
+        exp: safeState.exp || 0,
+        coins: safeState.coins || 25,
+        stars: safeState.stars || 0,
         rank_id: tier?.id || 'dong',
-        equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
-        streak: state.streakDays || 0,
-        completed_tasks_count: state.completedTotal || 0,
+        equipped_title: safeState.equippedTitleId || 'title_tan_binh_gai_do',
+        streak: safeState.streakDays || 0,
+        completed_tasks_count: safeState.completedTotal || 0,
         role: detectedRole,
-        has_seen_tutorial: state.hasSeenTutorial ?? false,
+        has_seen_tutorial: safeState.hasSeenTutorial ?? false,
         updated_at: new Date().toISOString(),
       });
 
@@ -124,45 +130,45 @@ export const syncProfileAndStateToCloud = async (
         // Fallback insert nếu bảng profiles chưa có cột role/stars
         await supabase.from('profiles').insert({
           id: hunterId,
-          username: state.playerName || 'Thợ Săn Fae',
-          avatar_url: state.avatarUrl || null,
-          cover_url: state.coverUrl || null,
-          exp: state.exp || 0,
-          coins: state.coins || 25,
+          username: safePlayerName,
+          avatar_url: safeState.avatarUrl || null,
+          cover_url: safeState.coverUrl || null,
+          exp: safeState.exp || 0,
+          coins: safeState.coins || 25,
           rank_id: 'dong',
-          equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
-          streak: state.streakDays || 0,
-          completed_tasks_count: state.completedTotal || 0,
+          equipped_title: safeState.equippedTitleId || 'title_tan_binh_gai_do',
+          streak: safeState.streakDays || 0,
+          completed_tasks_count: safeState.completedTotal || 0,
           updated_at: new Date().toISOString(),
         });
       }
     } else {
       const { data: updatedProfile, error: updErr } = await supabase.from('profiles').update({
-        username: state.playerName || 'Thợ Săn Fae',
-        avatar_url: state.avatarUrl || null,
-        cover_url: state.coverUrl || null,
-        equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
-        exp: state.exp || 0,
-        coins: state.coins || 0,
-        stars: state.stars || 0,
-        streak: state.streakDays || 0,
-        completed_tasks_count: state.completedTotal || 0,
-        has_seen_tutorial: state.hasSeenTutorial ?? false,
+        username: safePlayerName,
+        avatar_url: safeState.avatarUrl || null,
+        cover_url: safeState.coverUrl || null,
+        equipped_title: safeState.equippedTitleId || 'title_tan_binh_gai_do',
+        exp: safeState.exp || 0,
+        coins: safeState.coins || 0,
+        stars: safeState.stars || 0,
+        streak: safeState.streakDays || 0,
+        completed_tasks_count: safeState.completedTotal || 0,
+        has_seen_tutorial: safeState.hasSeenTutorial ?? false,
         updated_at: new Date().toISOString(),
       })
         .eq('id', hunterId)
         // Quest completion updates the profile and increments this counter in one transaction.
-        .eq('completed_tasks_count', state.completedTotal || 0)
+        .eq('completed_tasks_count', safeState.completedTotal || 0)
         .select('id')
         .maybeSingle();
 
       if (updErr || !updatedProfile) {
         // A stale snapshot can still save display preferences.
         await supabase.from('profiles').update({
-          username: state.playerName || 'Thợ Săn Fae',
-          avatar_url: state.avatarUrl || null,
-          cover_url: state.coverUrl || null,
-          equipped_title: state.equippedTitleId || 'title_tan_binh_gai_do',
+          username: safePlayerName,
+          avatar_url: safeState.avatarUrl || null,
+          cover_url: safeState.coverUrl || null,
+          equipped_title: safeState.equippedTitleId || 'title_tan_binh_gai_do',
           updated_at: new Date().toISOString(),
         }).eq('id', hunterId);
       }
@@ -172,7 +178,7 @@ export const syncProfileAndStateToCloud = async (
     const { error: stateErr } = await supabase.from('user_states').upsert(
       {
         user_id: hunterId,
-        state_json: state,
+        state_json: safeState,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' }
@@ -212,10 +218,13 @@ export const fetchCommunityLeaderboard = async (
       return { profiles: [], error: error.message };
     }
 
-    // Đảm bảo loại bỏ tuyệt đối bất kỳ tài khoản nào mang role admin
-    const nonAdminProfiles = ((data as HunterProfileCloud[]) || []).filter(
-      (p) => p.role !== 'admin'
-    );
+    // Đảm bảo loại bỏ tuyệt đối bất kỳ tài khoản nào mang role admin và chuẩn hóa tên vượt giới hạn
+    const nonAdminProfiles = ((data as HunterProfileCloud[]) || [])
+      .filter((p) => p.role !== 'admin')
+      .map((p) => ({
+        ...p,
+        username: normalizeStoredHunterName(p.username).name,
+      }));
     return { profiles: nonAdminProfiles };
   } catch (err: any) {
     console.error('Leaderboard fetch error:', err);
@@ -255,8 +264,12 @@ export const restoreUserStateFromCloud = async (
       .maybeSingle();
 
     const rawState = data.state_json as UserStateCloud;
+    const normalizedName = normalizeStoredHunterName(
+      profileData?.username || rawState.playerName
+    ).name;
     const finalState: UserStateCloud = {
       ...rawState,
+      playerName: normalizedName,
       // Luôn đọc cover_url từ profiles làm nguồn chuẩn
       coverUrl:
         profileData?.cover_url !== undefined && profileData?.cover_url !== null

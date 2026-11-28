@@ -6,6 +6,7 @@ import { toast } from '../../store/useToastStore';
 import { CoinIcon } from '../ui/CoinIcon';
 import { AdminUserLogsModal } from './AdminUserLogsModal';
 import { AdminSendMailModal } from './AdminSendMailModal';
+import { normalizeStoredHunterName } from '../../utils/hunterName';
 import './AdminActivityFeed271.css';
 import {
   BarChart2,
@@ -168,7 +169,7 @@ export const AdminLiveOpsTab: React.FC = () => {
           profiles.forEach((p: any) => {
             map[p.id] = {
               id: p.id,
-              username: p.username || 'Thợ Săn Fae',
+              username: normalizeStoredHunterName(p.username).name,
               avatar_url: p.avatar_url,
               exp: p.exp || 0,
               coins: p.coins || 0,
@@ -191,7 +192,11 @@ export const AdminLiveOpsTab: React.FC = () => {
           .limit(100);
 
         if (!error && logsData) {
-          setLogs(logsData as ActivityLog[]);
+          const normalizedLogs = (logsData as ActivityLog[]).map((l) => ({
+            ...l,
+            username: normalizeStoredHunterName(l.username).name,
+          }));
+          setLogs(normalizedLogs);
           const oneDayAgo = Date.now() - 24 * 3600 * 1000;
           const flaggedCount = logsData.filter(
             (l) => l.is_flagged && new Date(l.created_at).getTime() >= oneDayAgo

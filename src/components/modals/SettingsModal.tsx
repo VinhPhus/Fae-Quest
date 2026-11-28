@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { playSoundEffect } from '../../utils/soundEffects';
@@ -6,6 +6,13 @@ import { playSound, AmbientType } from '../../utils/soundEngine';
 import { CoinIcon } from '../ui/CoinIcon';
 import { InstallAppButton } from '../ui/InstallAppButton';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import {
+  MAX_HUNTER_NAME_LENGTH,
+  MIN_HUNTER_NAME_LENGTH,
+  collapseHunterNameSpaces,
+  normalizeStoredHunterName,
+  validateHunterName,
+} from '../../utils/hunterName';
 import {
   Settings,
   X,
@@ -82,6 +89,10 @@ export const SettingsModal: React.FC = () => {
 
   useBodyScrollLock(isSettingsOpen);
 
+  useEffect(() => {
+    setEditingName(playerName);
+  }, [playerName, isSettingsOpen]);
+
   if (!isSettingsOpen || typeof document === 'undefined') return null;
 
   const handleClearCache = async () => {
@@ -140,9 +151,12 @@ export const SettingsModal: React.FC = () => {
 
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingName.trim()) {
-      setPlayerName(editingName.trim());
+    const res = validateHunterName(editingName);
+    if (!res.valid) {
+      addToast(res.error || `Tên Thợ Săn cần từ ${MIN_HUNTER_NAME_LENGTH} đến ${MAX_HUNTER_NAME_LENGTH} ký tự`, 'error');
+      return;
     }
+    setPlayerName(res.cleanName);
   };
 
   const handleCopySTK = () => {
@@ -253,7 +267,7 @@ export const SettingsModal: React.FC = () => {
         }
 
         useFaeQuestStore.setState({
-          playerName: parsed.playerName || 'Thợ Săn Fae',
+          playerName: normalizeStoredHunterName(parsed.playerName).name,
           exp: typeof parsed.exp === 'number' ? parsed.exp : 110,
           coins: typeof parsed.coins === 'number' ? parsed.coins : 25,
           completedTotal: typeof parsed.completedTotal === 'number' ? parsed.completedTotal : 2,
@@ -434,18 +448,24 @@ export const SettingsModal: React.FC = () => {
               <InstallAppButton variant="settings" />
 
               {/* Profile Rename Section */}
-              <div className="space-y-3">
-                <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
-                  <User className="w-4 h-4 text-fae" />
-                  <span>Biệt Danh Nhân Vật</span>
-                </label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-parchment/80 flex items-center gap-2">
+                    <User className="w-4 h-4 text-fae" />
+                    <span>Biệt Danh Nhân Vật</span>
+                  </label>
+                  <span className="text-[11px] font-mono font-bold text-parchment/60 tabular-nums">
+                    {collapseHunterNameSpaces(editingName).length}/{MAX_HUNTER_NAME_LENGTH} ký tự
+                  </span>
+                </div>
                 <form onSubmit={handleSaveName} className="flex gap-2">
                   <input
                     type="text"
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
-                    maxLength={30}
-                    placeholder="Nhập tên nhân vật..."
+                    minLength={MIN_HUNTER_NAME_LENGTH}
+                    maxLength={MAX_HUNTER_NAME_LENGTH}
+                    placeholder={`Nhập tên nhân vật (${MIN_HUNTER_NAME_LENGTH}–${MAX_HUNTER_NAME_LENGTH} ký tự)...`}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 text-sm text-parchment focus:border-fae focus:outline-none"
                   />
                   <button

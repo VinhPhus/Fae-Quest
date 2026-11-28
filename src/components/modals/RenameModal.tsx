@@ -3,25 +3,38 @@ import { createPortal } from 'react-dom';
 import { useFaeQuestStore } from '../../store/useFaeQuestStore';
 import { Pencil, X } from 'lucide-react';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import {
+  MAX_HUNTER_NAME_LENGTH,
+  MIN_HUNTER_NAME_LENGTH,
+  collapseHunterNameSpaces,
+  validateHunterName,
+} from '../../utils/hunterName';
 
 export const RenameModal: React.FC = () => {
   const { isRenameOpen, setRenameOpen, playerName, setPlayerName } = useFaeQuestStore();
   const [name, setName] = useState(playerName);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setName(playerName);
+    setError(null);
   }, [playerName, isRenameOpen]);
 
   useBodyScrollLock(isRenameOpen);
 
   if (!isRenameOpen || typeof document === 'undefined') return null;
 
+  const cleanLen = collapseHunterNameSpaces(name).length;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      setPlayerName(name.trim());
-      setRenameOpen(false);
+    const res = validateHunterName(name);
+    if (!res.valid) {
+      setError(res.error || `Tên Thợ Săn cần từ ${MIN_HUNTER_NAME_LENGTH} đến ${MAX_HUNTER_NAME_LENGTH} ký tự`);
+      return;
     }
+    setPlayerName(res.cleanName);
+    setRenameOpen(false);
   };
 
   return createPortal(
@@ -52,15 +65,33 @@ export const RenameModal: React.FC = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nhập biệt danh của bạn..."
-            required
-            maxLength={30}
-            className="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 text-sm text-parchment focus:border-fae focus:outline-none shadow-inner"
-          />
+          <div className="space-y-1.5">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError(null);
+              }}
+              placeholder="Nhập biệt danh (2–20 ký tự)..."
+              required
+              minLength={MIN_HUNTER_NAME_LENGTH}
+              maxLength={MAX_HUNTER_NAME_LENGTH}
+              className="w-full px-4 py-2.5 rounded-xl bg-thorn-dark border border-opal/40 text-sm text-parchment focus:border-fae focus:outline-none shadow-inner"
+            />
+            <div className="flex items-center justify-between text-[11px] px-1">
+              <span className={error ? 'text-rose-400 font-semibold' : 'text-parchment/60'}>
+                {error || `Từ ${MIN_HUNTER_NAME_LENGTH} đến ${MAX_HUNTER_NAME_LENGTH} ký tự`}
+              </span>
+              <span
+                className={`font-mono font-bold tabular-nums ${
+                  cleanLen > MAX_HUNTER_NAME_LENGTH ? 'text-rose-400' : 'text-parchment/70'
+                }`}
+              >
+                {cleanLen}/{MAX_HUNTER_NAME_LENGTH}
+              </span>
+            </div>
+          </div>
 
           <div className="flex justify-end gap-2">
             <button
@@ -72,7 +103,8 @@ export const RenameModal: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment shadow"
+              disabled={cleanLen < MIN_HUNTER_NAME_LENGTH || cleanLen > MAX_HUNTER_NAME_LENGTH}
+              className="px-5 py-2 rounded-xl rpg-btn-primary text-xs font-bold text-parchment shadow disabled:opacity-50"
             >
               Lưu Tên
             </button>
